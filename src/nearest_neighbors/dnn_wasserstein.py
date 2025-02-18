@@ -41,4 +41,4 @@ def dissim(list1: list[np.array], list2: list[np.array]) -> float:
     return distance / size
 
 class DNNWasserstein(DistNNEstimator):
-    
+    pass

@@ -18,7 +18,7 @@ pip install .
 
 ```
 **Windows Systems:**
-```bash
+```powershell
 python --version   # Ensure this outputs Python 3.10.4
 python -m venv .venv
 .venv\Scripts\activate

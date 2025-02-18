@@ -1,5 +1,10 @@
-import numpy as np
+"""Base class for all nearest neighbors algorithms
 
+TODO: add type hints and docstring to all methods
+"""
+
+import numpy as np
+import abc
 
 from hyperopt import hp, Trials, fmin, tpe
 from datetime import datetime
@@ -78,41 +83,77 @@ class NNImputer(object):
         if np.nansum(M == 1) == 0:
             raise ValueError("All values are masked.")
 
-    # "Abstract" methods -> these should be overridden by any subclasses.
-    def estimate(self, inds=None, *args, **kwargs):
-        # if inds is not None, only estimate inds indices in Z
-        raise ValueError(
-            "{}.estimate is unimplemented and needs to be overridden in a subclass".format(
-                self.__name__
-            )
-        )
+    @abc.abstractmethod
+    def estimate(
+        self, 
+        Z: np.array, 
+        M: np.array, 
+        eta: np.array | tuple[np.array, np.array],
+        dists: np.array | tuple[np.array, np.array],
+        inds: np.array = None, #TODO
+        cv: bool = True,
+        debug: bool = False,
+        ret_nn: bool = False,
+    ):
+        """Estimate entries in inds using entries M = 1 and an eta-neighborhood
 
-    def distances(self, *args, **kwargs):
-        raise ValueError(
-            "{}.distances is unimplemented and needs to be overridden in a subclass".format(
-                self.__name__
-            )
-        )
+        Parameters:
+        ----------
+        Z : np.array of shape (N, T, d)
+            The data matrix.
+        M : np.array of shape (N, T)
+            The missingness/treatment assignment pattern
+        eta : the threshold for the neighborhood
+            NOTE: if a tuple is passed, then the first element is the row etas with shape (N, N) and the second element is the col etas with shape (T, T)
+        dists : the row/column distances of Z
+            NOTE: if a tuple is passed, then the first element is the row dists with shape (N, N) and the second element is the col dists with shape (T, T)
+        inds : an array-like of indices into Z that will be estimated
+        cv: NOTE: is this used in any of the methods?
+        ret_nn : boolean, whether to return the neighbors or not
 
+        Returns:
+        --------
+        est : an np.array of shape (N, T, d) that consists of the estimates
+              at inds.
+
+        """
+        pass
+    @abc.abstractmethod
+    def distances(
+        self, 
+        Z_masked: np.array, 
+        M: np.array = None, 
+        i: int = 0, 
+        t: int = 0, 
+        dist_type: str = "all",
+    ):
+        """
+        Compute the row/column-wise MSE distance
+
+        Parameters:
+        -----------
+        Z_masked : a (masked) matrix of size N x T
+        M : a masking matrix of size N x T
+        i : the row index to compute the distance for
+        t : the column index to compute the distance for
+        dist_type : string in ("all", "single entry", "u", "i")
+
+        Arguments:
+        ----------
+        """
+        pass
+    @abc.abstractmethod
     def avg_error(self, ests, truth, *args, **kwargs):
         """
         Average error over a 1d array-like of entries
         """
-        raise ValueError(
-            "{}.avg_error is unimplemented and needs to be overridden in a subclass".format(
-                self.__name__
-            )
-        )
-
+        pass
+    @abc.abstractmethod
     def entry_error(self, est, truth, *args, **kwarags):
         """
         Error for a single entry
         """
-        raise ValueError(
-            "{}.entry_error is unimplemented and needs to be overridden in a subclass".format(
-                self.__name__
-            )
-        )
+        pass
 
     # Common Code
     def cross_validate(self, Z, M, inds, dists, eta, *args, **kwargs):

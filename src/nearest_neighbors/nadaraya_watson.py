@@ -1,24 +1,11 @@
 """
 Ref: https://github.com/jmetzen/kernel_regression/blob/master/kernel_regression.py
 """
-from ..util_k import (
-    gaussian, laplace, sobolev,
-    gaussian_M, laplace_M,
-    # singular, box
-    box, epanechnikov,
-    wendland,
-)
-# from .util_thin import sd_thin, kt_thin2
-# from .util_thin_dnc import sd_thin_dnc, kt_thin2_dnc, kt_thin1_dnc
-# from .util_k_mmd import kernel_eval, to_regression_kernel, get_kernel, gauss, laplacian, euclidean_distances
-# from ..util_sample import get_Xy
-# from ..rfm2.util_rfm_estimators import get_rfm_regressor
-
-from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from .utils.kernels import gaussian, laplace, sobolev, singular, singular_box, box
+from .nnimputer import NNImputer
 import numpy as np
 
-class NadarayaWatsonBase(BaseEstimator):
+class NadarayaWatsonNN(NNImputer):
 
     def __init__(self, kernel='epanechnikov', sigma=1, postprocess=None, M=None, **kwargs):
         assert kernel in [
@@ -36,18 +23,6 @@ class NadarayaWatsonBase(BaseEstimator):
         self.postprocess = postprocess
 
         self.M = M
-
-    def fit(self, X, y, X2=None):
-        # Check that X and y have correct shape
-        X, y = check_X_y(X, y, multi_output=True)
-        if self.postprocess:
-            y = self._validate_targets(y)
-
-        self.X_fit_, self.y_fit_ = X, y
-        # allow for different X in numerator and denominator
-        self.X2_ = X if X2 is None else X2
-
-        return self
 
     def predict(self, X):
         check_is_fitted(self)
@@ -138,22 +113,3 @@ class NadarayaWatsonBase(BaseEstimator):
 
         return pred
     
-    def _validate_targets(self, y):
-        # y = column_or_1d(y, warn=True)
-        cls = np.unique(y)
-        if len(cls) < 2:
-            print(y)
-            # raise ValueError(
-            #     "The number of classes has to be greater than one; got %d class"
-            #     % len(cls)
-            # )
-
-        self.classes_ = cls
-
-        return y
-    
-
-class NadarayaWatsonRegressor(NadarayaWatsonBase, RegressorMixin):
-    pass
-class NadarayaWatsonClassifier(NadarayaWatsonBase, ClassifierMixin):
-    pass

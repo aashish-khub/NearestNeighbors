@@ -3,14 +3,14 @@ name: CI Workflow
 on:
   push:
     branches:
-      - main  
+      - main
   pull_request:
     branches:
-      - main  
+      - main
 
 jobs:
   test:
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
@@ -26,10 +26,10 @@ jobs:
         python -m venv .venv
         source .venv/bin/activate
         pip install -U pip
-        pip install .  
-        pip install pytest  
+        pip install .
+        pip install pytest
 
     - name: Run tests with pytest
       run: |
         source .venv/bin/activate
-        pytest  
+        pytest

@@ -1,51 +1,83 @@
-"""
-Ref: https://github.com/jmetzen/kernel_regression/blob/master/kernel_regression.py
+"""Implementation of Nadaraya-Watson nearest neighbor algorithm.
 """
 from .utils.kernels import gaussian, laplace, sobolev, singular, singular_box, box
 from .nnimputer import NNImputer
+
 import numpy as np
+from hyperopt import fmin, Trials, tpe
+from hyperopt import hp
 
 class NadarayaWatsonNN(NNImputer):
+    valid_kernels = ['gaussian', 'laplace', 'sobolev', 'singular', 'box']
 
-    def __init__(self, kernel='epanechnikov', sigma=1, postprocess=None, M=None, **kwargs):
-        assert kernel in [
-            'gaussian', 
-            # 'laplace', 'sobolev', 
-            # 'gaussian_M', 'laplace_M', 
-            # 'box', 
-            'epanechnikov',
-            'wendland',
-            ]
-
+    def __init__(
+        self,
+        kernel="gaussian",
+        nn_type="ii",
+        eta_axis=0,
+        eta_space=hp.uniform('eta', 0, 1),
+        search_algo=tpe.suggest,
+        k=None,
+        rand_seed=None,
+    ):
+        """
+        Parameters:
+        -----------
+        kernel : string in valid_kernels
+        nn_type : string in ("ii", "uu")
+            represents the type of nearest neighbors to use
+            "ii" is "item-item" nn, which is column-wise
+            "uu" is "user-user" nn, which is row-wise
+        eta_axis : integer in [-1, 0, 1].
+                   Indicates which axis to compute the eta search over. If -1, then eta search is
+                   done via blocks (i.e. not row-wise or column-wise).
+        eta_space : a hyperopt hp search space
+                    for example: hp.uniform('eta', 0, 1). If no eta_space is given,
+                    then this example will be the default search space.
+        search_algo : a hyperopt algorithm
+                      for example: tpe.suggest, default is tpe.suggest.
+        k : integer > 1, the number of folds in k-fold cross validation over.
+            If k = None (default), the LOOCV is used. 
+        rand_seed : the random seed to be used for reproducible results. 
+                    If None is used (default), then the system time is used (not reproducible)
+        """
+        if kernel not in self.valid_kernels:
+            raise ValueError(
+                "{} is not a valid kernel. Currently supported kernels are {}".format(
+                    kernel, ", ".join(self.valid_kernels)
+                )
+            )
+        super().__init__(
+            nn_type=nn_type,
+            eta_axis=eta_axis,
+            eta_space=eta_space,
+            search_algo=search_algo,
+            k=k,
+            rand_seed=rand_seed,
+        )
         self.kernel = kernel
-        # self.alpha = alpha
-        self.sigma = sigma
-        self.postprocess = postprocess
 
-        self.M = M
+    def estimate(
+        self, 
+        Z, 
+        M, 
+        eta, 
+        dists, 
+        inds, 
+        cv=True, 
+        debug=False,
+        ret_nn=False,
+    ):
+        """Estimate entries in inds using entries M = 1 and an eta-bandwidth.
 
-    def predict(self, X):
-        check_is_fitted(self)
-
-        # Input validation
-        X = check_array(X)
+        TODO:
+        - implement kernel functions so that they take the bandwidth eta as an argument
+        """
 
         if self.kernel == 'gaussian_M':
-            # print('76> M_gauss')
-            # K = gauss(
-            #     self.X_fit_, # (n, rank)
-            #     X @ self.W.T, # (?, rank)
-            #     self.sigma
-            # )
-            # print('M_', self.M_)
             K = gaussian_M(self.X_fit_, X, self.M_, self.sigma)
             K2 = gaussian_M(self.X2_, X, self.M_, self.sigma)
         elif self.kernel == 'laplace_M':
-            # K = laplacian(
-            #     self.X_fit_, # (n, rank)
-            #     X @ self.W.T, # (?, rank)
-            #     self.sigma
-            # )
             K = laplace_M(self.X_fit_, X, self.M_, self.sigma)
             K2 = laplace_M(self.X2_, X, self.M_, self.sigma)
         elif self.kernel == 'gaussian':
@@ -57,9 +89,6 @@ class NadarayaWatsonNN(NNImputer):
         elif self.kernel == 'sobolev':
             K = sobolev(self.X_fit_, X)
             K2 = sobolev(self.X2_, X)
-        # elif self.kernel == 'singular':
-        #     K = singular(self.X_fit_, X, self.sigma)
-        #     K2 = singular(self.X2_, X, self.sigma)
         elif self.kernel == 'box':
             K = box(self.X_fit_, X, self.sigma)
             K2 = box(self.X2_, X, self.sigma)
@@ -89,27 +118,6 @@ class NadarayaWatsonNN(NNImputer):
             pred[j] = self.y_fit_[i]
         # if an entry of K2_sum is zero, set the corresponding entry of pred to the value of y at the corresponding index
         pred = np.where(K2_sum == 0, 0, pred)
-
-        
-        if self.postprocess == 'round':
-            pred = np.maximum(pred, 0)
-            pred = np.minimum(pred, 1)
-            return np.round(pred)
-        
-        elif self.postprocess == 'argmax':
-            max_index = np.argmax(pred, axis=1)
-            one_hot = np.zeros_like(pred)
-            one_hot[np.arange(len(pred)), max_index] = 1
-            return one_hot
-        
-        elif self.postprocess == 'threshold':
-            # print('thresholding')
-            # only for binary classification
-            pred[pred > 0.5] = 1
-            pred[pred <= 0.5] = 0
-            # cast pred to int
-        else:
-            assert self.postprocess is None
 
         return pred
     

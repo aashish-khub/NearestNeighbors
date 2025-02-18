@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nearest_neighbors"
+requires-python = "==3.10.4"
 description = ""
 version = "0.0.0"
 authors = [
@@ -45,7 +46,7 @@ exclude = [
     "docs/*",
 ]
 
-ignore = [
+lint.ignore = [
     "ANN101",
     "ANN401",
     "N801",
@@ -66,12 +67,13 @@ ignore = [
     "D100",
     "D101",
     "D107",
+    "D203",
     "D213",
     "ANN204",
     "ANN102",
 ]
-select = ["D", "E", "F", "N", "ANN"]
-fixable = [
+lint.select = ["D", "E", "F", "N", "ANN"]
+lint.fixable = [
     "A",
     "B",
     "C",
@@ -117,4 +119,4 @@ fixable = [
     "UP",
     "YTT",
 ]
-unfixable = []
+lint.unfixable = []

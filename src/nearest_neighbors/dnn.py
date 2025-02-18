@@ -106,6 +106,8 @@ class DistNNEstimator(ABC):
         distance_dict = defaultdict(float)
         
         for i,j in distance_cells:
+            if data[i][j] is None:
+                continue
             other_cells = None
             key = None
             if self.nn_type == 'user-user':
@@ -116,7 +118,8 @@ class DistNNEstimator(ABC):
             for k,l in other_cells:
                 key = k if self.nn_type == 'user-user' else l
                 # Add to total distance for the row or column
-                distance_dict[key] += self.distributional_distance(data[i][j], data[k][l])
+                if data[k][l] is not None:
+                    distance_dict[key] += self.distributional_distance(data[i][j], data[k][l])
                 
         # Calculate the average distance for each row or column
         for key in distance_dict.keys():

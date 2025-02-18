@@ -6,7 +6,7 @@ This repository aims to consolidate code implementations for various Nearest Nei
 Dependencies:
 ```bash
 conda create -n nn python=3.12
-pip install numpy pandas plotly 
+pip install numpy hyperopt pandas matplotlib
 ```
 
 ## Methods to Be Consolidated

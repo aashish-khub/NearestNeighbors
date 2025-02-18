@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nearest_neighbors"
+description = ""
+version = "0.0.0"
+authors = [
+    {name="Aashish Khubchandani", email="akk223@cornell.edu"},
+    {name="Albert Gong", email="agong@cs.cornell.edu"},
+    {name="Caleb Chin", email="ctc92@cornell.edu"},
+    {name="Harshvardan Maskara", email="hm475@cornell.edu"},
+    {name="Kyuseong Choi", email="kc728@cornell.edu"},
+    {name="Manit Paul", email="paulman@wharton.upenn.edu"},
+    {name="Raaz Dwivedi", email="dwivedi@cornell.edu"},
+    {name="Tathagata Sadhukhan", email="ts767@cornell.edu"},
+]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+]
+
+[project.urls]
+Homepage = "https://github.com/aashish-khub/NearestNeighbors"
+Issues = "https://github.com/aashish-khub/NearestNeighbors/issues"
+Repository = "https://github.com/aashish-khub/NearestNeighbors.git"

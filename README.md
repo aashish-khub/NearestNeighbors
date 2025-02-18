@@ -2,6 +2,13 @@
 ## Overview
 This repository aims to consolidate code implementations for various Nearest Neighbor (NN) methods. 
 
+## Setup
+Dependencies:
+```bash
+conda create -n nn python=3.12
+pip install numpy pandas plotly 
+```
+
 ## Methods to Be Consolidated
 1. **Vanilla Nearest Neighbors**  
    Paper: [arXiv:2202.06891](https://arxiv.org/pdf/2202.06891)

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import ot
 
 from .dnn import DistNNEstimator
 
@@ -17,6 +18,22 @@ def empirical_2_wasserstein(u: np.array, v: np.array):
     assert is_sorted(u) and is_sorted(v)
     
     return np.sum(np.power(u - v,2)) / len(u)
+
+def wasserstein2(sample1, sample2):
+    """Compute the squared 2-Wasserstein distance between two samples.
+    Inputs need to be in format (sample, dimension).
+    Args:
+        sample1 (np.array): 2D array of samples from the first distribution
+        sample2 (np.array): 2D array of samples from the second distribution
+    """
+    C = ot.dist(sample1, sample2, metric='sqeuclidean')
+    # Uniform weights for each empirical distribution
+    a = np.ones(len(sample1)) / len(sample1)
+    b = np.ones(len(sample2)) / len(sample2)
+
+    # Compute optimal transport plan and Wasserstein distance
+    P = ot.emd(a, b, C)
+    return np.sum(P * C)
 
 def dissim(list1: list[np.array], list2: list[np.array]) -> float:
     """
@@ -41,4 +58,11 @@ def dissim(list1: list[np.array], list2: list[np.array]) -> float:
     return distance / size
 
 class DNNWasserstein(DistNNEstimator):
-    pass
+    def distributional_distance(self, x, y):
+        if len(x) == len(y):
+            return empirical_2_wasserstein(x, y)
+        else:
+            return wasserstein2(x, y)
+        
+    def average_distributions(self, distributions):
+        pass

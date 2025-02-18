@@ -123,6 +123,7 @@ def gendata_nonlin_mcar(
     Theta: np.ndarray = Y
     Y += np.random.normal(0, 0.001, size=(N, T))
 
+    # TODO: clean up this code
     Masking: np.ndarray = np.zeros((N, T))
 
     Masking: np.ndarray = np.reshape(np.random.binomial(1, p, (N * T)), (N, T))

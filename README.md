@@ -3,12 +3,12 @@
 This repository aims to consolidate code implementations for various Nearest Neighbor (NN) methods.
 
 ## Setup
-This package requires Python 3.10.4 as specified in the pyproject.toml. Please verify your Python version by running `python --version` in your terminal. If you’re not running Python 3.10.4, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10.4`).
+This package requires Python 3.10.4. Please verify your Python version by running `python --version` in your terminal. If you’re not running Python 3.10.4, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10.4`).
 
 > [!NOTE]
 > To install pyenv, follow the instructions here: https://github.com/pyenv/pyenv?tab=readme-ov-file#installation.
 
-Dependencies are managed in pyproject.toml. To install the dependencies, run the following commands, based on your Operating System:
+Dependencies are managed in `pyproject.toml`. To install the dependencies, run the following commands, based on your Operating System:
 
 **POSIX Systems (MacOS/Linux):**
 ```bash

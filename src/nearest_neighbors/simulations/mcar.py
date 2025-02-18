@@ -1,3 +1,8 @@
+"""MCAR simulation data
+
+TODO: remove commented out code
+"""
+
 import numpy as np
 from typing import Tuple
 
@@ -28,6 +33,7 @@ def gendata_lin_mcar(
         Masking (np.ndarray): Masking matrix indicating observed entries of shape (N, T).
 
     """
+    # TODO: pass in random number generator rather than seed
     np.random.seed(seed=seed)
     ## Data Matrix (N * T)
     Data: np.ndarray = np.zeros((N, T))
@@ -59,7 +65,7 @@ def gendata_lin_mcar(
     # gaussian noise
     Theta: np.ndarray = Y
     Y += np.random.normal(0, 0.001, size=(N, T))
-
+    # TODO: clean up this code
     Masking: np.ndarray = np.zeros((N, T))
 
     Masking = np.reshape(np.random.binomial(1, p, (N * T)), (N, T))
@@ -98,6 +104,7 @@ def gendata_nonlin_mcar(
         Masking (np.ndarray): Masking matrix indicating observed entries of shape (N, T).
 
     """
+    # TODO: pass in random number generator rather than seed
     np.random.seed(seed=seed)
 
     def expit(x: np.ndarray) -> np.ndarray:

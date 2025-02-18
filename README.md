@@ -5,6 +5,8 @@ This repository aims to consolidate code implementations for various Nearest Nei
 ## Setup
 This package requires Python 3.10.4 as specified in the pyproject.toml. Please verify your Python version by running `python --version` in your terminal. If you’re not running Python 3.10.4, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10.4`).
 
+> [!NOTE]
+> To install pyenv, follow the instructions here: https://github.com/pyenv/pyenv?tab=readme-ov-file#installation.
 
 Dependencies are managed in pyproject.toml. To install the dependencies, run the following commands, based on your Operating System:
 
@@ -14,8 +16,7 @@ python --version   # Ensure this outputs Python 3.10.4
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install .
-
+pip install -e . # Install in editable mode
 ```
 **Windows Systems:**
 ```powershell
@@ -23,8 +24,12 @@ python --version   # Ensure this outputs Python 3.10.4
 python -m venv .venv
 .venv\Scripts\activate
 pip install -U pip
-pip install .
+pip install -e . # Install in editable mode
 ```
+
+> [!NOTE]
+> If using VSCode, make sure to set the interpreter to the .venv environment using `Cmd + Shift + P` -> `Python: Select Interpreter`.
+
 ## Submitting Changes
 ### Linting
 Before submitting changes, please run pre-commit hooks to ensure that the code is formatted correctly. To do so, run the following command:

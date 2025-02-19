@@ -90,7 +90,6 @@ def gendata_s_adopt(N, T, n, d, beta, seed) :
 T, n, d = 80, 30, 4
 beta = [3.9/6, 3.9/5]
 kernel = "square"
-# eta_pool = np.arange(1, 30, 0.5)/3
 eta_pool = np.concatenate( ( np.arange(1, 25, 0.5)/6, np.arange(22, 50, 1.5)/5 ) )
 i, t = 0, T - 1
 

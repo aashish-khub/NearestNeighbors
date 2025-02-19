@@ -26,6 +26,8 @@ classifiers = [
 
 dependencies = [
     "numpy",
+    "pandas",
+    "matplotlib",
     "hyperopt",
     "pre-commit",
     "ruff",

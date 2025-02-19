@@ -98,7 +98,7 @@ class NNImputer(object):
         Parameters
         ----------
         Z : np.ndarray
-            The data matrix of shape (N, T, d).
+            The data matrix of shape (N, T, d) in the scalar setting and (N, T, n, d) in the distributional setting.
         M : np.ndarray
             The missingness/treatment assignment pattern of shape (N, T).
         eta : np.ndarray | Tuple[np.ndarray, np.ndarray]
@@ -127,17 +127,17 @@ class NNImputer(object):
     @abc.abstractmethod
     def distances(
         self,
-        Z_masked: np.ndarray,
-        M: Optional[np.ndarray] = None,
+        Z: np.ndarray,
+        M: np.ndarray,
         i: int = 0,
         t: int = 0,
         dist_type: str = "all",
-    ) -> np.ndarray:
+    ) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
         """Compute the row/column-wise MSE distance
 
         Parameters
         ----------
-        Z_masked : np.ndarray
+        Z_masked : np.ma.MaskedArray
             A (masked) matrix of size N x T.
         M : Optional[np.ndarray]
             A masking matrix of size N x T.

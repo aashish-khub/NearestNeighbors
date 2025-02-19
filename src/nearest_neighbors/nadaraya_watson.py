@@ -1,15 +1,15 @@
 """Implementation of Nadaraya-Watson nearest neighbor algorithm."""
 
-from .utils.kernels import gaussian, laplace, sobolev, box
+from .utils.kernels import gaussian, laplace, singular_box, box
 from .nnimputer import NNImputer
 
 import numpy as np
 from hyperopt import tpe
 from hyperopt import hp
-
+from typing import Optional, Tuple
 
 class NadarayaWatsonNN(NNImputer):
-    valid_kernels = ["gaussian", "laplace", "sobolev", "singular", "box"]
+    valid_kernels = ["gaussian", "laplace", "singular_box", "box"]
 
     def __init__(
         self,
@@ -60,48 +60,57 @@ class NadarayaWatsonNN(NNImputer):
 
     def estimate(
         self,
-        Z,
-        M,
-        eta,
-        dists,
-        inds,
-        cv=True,
-        debug=False,
-        ret_nn=False,
-    ):
-        """Estimate entries in inds using entries M = 1 and an eta-bandwidth.
+        Z: np.ndarray,
+        M: np.ndarray,
+        eta: np.ndarray | Tuple[np.ndarray, np.ndarray],
+        dists: np.ndarray | Tuple[np.ndarray, np.ndarray],
+        inds: Optional[np.ndarray] = None,  # TODO
+        cv: bool = True,
+        debug: bool = False,
+        ret_nn: bool = False,
+    ) -> np.ndarray:
+        """Estimate entries in inds using entries M = 1 and the Nadaraya-Watson estimator.
 
-        Todo:
-        ----
-        - implement kernel functions so that they take the bandwidth eta as an argument
+        NOTE: kernel is a radial kernel of the form kappa(||x - x'|| / eta) where eta is the bandwidth parameter
+
+        Parameters
+        ----------
+        Z : np.ndarray
+            The data matrix of shape (N, T, d).
+        M : np.ndarray
+            The missingness/treatment assignment pattern of shape (N, T).
+        eta : np.ndarray | Tuple[np.ndarray, np.ndarray]
+            Bandwidth parameter for the kernel
+            NOTE: if a tuple is passed, then the first element is the row etas with shape (N, N) and the second element is the col etas with shape (T, T)
+        dists : np.ndarray | Tuple[np.ndarray, np.ndarray]
+            the row/column distances of Z
+            NOTE: if a tuple is passed, then the first element is the row dists with shape (N, N) and the second element is the col dists with shape (T, T)
+        inds : np.ndarray
+            an array-like of indices into Z that will be estimated
+        debug: bool
+            boolean, whether to print debug information or not
+        cv: bool
+            NOTE: is this used in any of the methods?
+        ret_nn : bool
+            boolean, whether to return the neighbors or not
+
+        Returns
+        -------
+        est : an np.array of shape (N, T, d) that consists of the estimates
+            at inds.
 
         """
-        if self.kernel == "gaussian_M":
-            K = gaussian_M(self.X_fit_, X, self.M_, self.sigma)
-            K2 = gaussian_M(self.X2_, X, self.M_, self.sigma)
-        elif self.kernel == "laplace_M":
-            K = laplace_M(self.X_fit_, X, self.M_, self.sigma)
-            K2 = laplace_M(self.X2_, X, self.M_, self.sigma)
-        elif self.kernel == "gaussian":
-            K = gaussian(self.X_fit_, X, self.sigma)
-            K2 = gaussian(self.X2_, X, self.sigma)
-        elif self.kernel == "laplace":
-            K = laplace(self.X_fit_, X, self.sigma)
-            K2 = laplace(self.X2_, X, self.sigma)
-        elif self.kernel == "sobolev":
-            K = sobolev(self.X_fit_, X)
-            K2 = sobolev(self.X2_, X)
-        elif self.kernel == "box":
-            K = box(self.X_fit_, X, self.sigma)
-            K2 = box(self.X2_, X, self.sigma)
-        elif self.kernel == "epanechnikov":
-            K = epanechnikov(self.X_fit_, X, self.sigma)
-            K2 = epanechnikov(self.X2_, X, self.sigma)
-        elif self.kernel == "wendland":
-            K = wendland(self.X_fit_, X, self.sigma)
-            K2 = wendland(self.X2_, X, self.sigma)
-        else:
-            raise ValueError(f"kernel={self.kernel} is not supported")
+        match self.kernel:
+            case "gaussian":
+                K = gaussian(dists, eta)
+            case "laplace":
+                K = laplace(dists, eta)
+            case "singular_box":
+                K = singular_box(dists, eta)
+            case "box":
+                K = box(dists, eta)
+            case _:
+                raise ValueError(f"{self.kernel=} is not supported")
 
         # KRR version
         # pred = (self.sol_ @ K).T
@@ -122,3 +131,66 @@ class NadarayaWatsonNN(NNImputer):
         pred = np.where(K2_sum == 0, 0, pred)
 
         return pred
+
+    def distances(
+        self,
+        Z: np.ndarray,
+        M: np.ndarray,
+        i: int = 0,
+        t: int = 0,
+        dist_type: str = "all",
+    ) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+        """Compute the row/column-wise MSE distance
+
+        NOTE: Copied from https://github.com/calebchin/DistributionalNearestNeighbors/blob/ddaed00cfc9d8b69e86273477d1bcc05eedb48ad/src/scalar_nn.py#L31
+
+        Parameters
+        ----------
+        Z_masked : np.ndarray
+            A (masked) matrix of size N x T.
+        M : Optional[np.ndarray]
+            A masking matrix of size N x T.
+        i : int
+            The column index to compute the distance for.
+        t : int
+            The column index to compute the distance for.
+        dist_type : str
+            String in ("all", "single entry", "u", "i").
+
+        Returns
+        -------
+        np.ndarray
+            The computed distances.
+
+        """
+        # apply mask to the original matrix -> if something is not observed, then
+        # should not include in the mean calcs
+        Z_cp = Z.copy()
+        a, b, d = Z_cp.shape
+        Z_cp[M != 1] = np.nan 
+        if self.nn_type == "ii":
+            Z_cp = np.swapaxes(Z_cp, 0, 1)
+            M = M.T
+        Z_br = Z_cp[:, None] # add extra dim for broadcast operation
+        # all row dissims between pairs of rows
+        if d == 1:
+            dis = (Z_br - Z_cp)**2
+            #print(dis.shape)
+        else:
+            dis = np.linalg.norm((Z_br - Z_cp)**2, axis = -1)
+        
+        # take mean over the sample dimension (now the 2nd dim)
+        mean_row_dis = np.nanmean(dis, axis = 2)
+        #print(mean_row_dis.shape)
+        # overlap between every
+        overlap = np.nansum(M[:, None] * M, axis = 2).astype('float64')
+        zs = np.nonzero(overlap == 0)
+        overlap[zs] = np.nan
+        overlap = overlap[:, :, None]
+        
+        # rows with 0 overlap will have nan in this matrix
+        # entry cannot be own neighbor, so dist is infinite
+        mean_ovr = (mean_row_dis / overlap).squeeze()
+        np.fill_diagonal(mean_ovr, np.inf)
+        #print(mean_ovr.shape)
+        return mean_ovr

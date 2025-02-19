@@ -1,7 +1,4 @@
-"""Base class for all nearest neighbors algorithms
-
-TODO: resolve ruff errors
-"""
+"""Base class for all nearest neighbors algorithms"""
 
 import numpy as np
 import abc
@@ -86,9 +83,9 @@ class NNImputer(object):
         self,
         Z: np.ndarray,
         M: np.ndarray,
-        eta: np.ndarray | Tuple[np.ndarray, np.ndarray],
+        eta: float | np.floating[Any],
         dists: np.ndarray | Tuple[np.ndarray, np.ndarray],
-        inds: Optional[np.ndarray] = None,  # TODO
+        inds: Optional[np.ndarray] = None,
         cv: bool = True,
         debug: bool = False,
         ret_nn: bool = False,
@@ -157,29 +154,61 @@ class NNImputer(object):
         pass
 
     @abc.abstractmethod
-    def avg_error(self, ests, truth, *args, **kwargs):
+    def avg_error(
+        self,
+        ests: np.ndarray | list,
+        truth: np.ndarray | list,
+        *args: object,
+        **kwargs: object,
+    ) -> np.floating[Any]:
         """Average error over a 1d array-like of entries"""
         pass
 
     @abc.abstractmethod
-    def entry_error(self, est, truth, *args, **kwarags):
-        """Error for a single entry"""
+    def entry_error(
+        self,
+        est: np.ndarray | list,
+        truth: np.ndarray | list,
+        *args: object,
+        **kwargs: object,
+    ) -> np.floating[Any]:
+        """Error for a single entry
+
+        Args:
+        ----
+        est : the estimated value
+        truth : the true value
+        *args : additional arguments
+        **kwargs : additional keyword arguments
+
+        """
         pass
 
     # Common Code
-    def cross_validate(self, Z, M, inds, dists, eta, *args, **kwargs):
+    def cross_validate(
+        self,
+        Z: np.ndarray,
+        M: np.ndarray,
+        inds: np.ndarray | list | int,
+        dists: np.ndarray,
+        eta: float,
+        *args: object,
+        **kwargs: object,
+    ) -> np.floating[Any]:
         """Given a neighborhood radius eta, compute the average validation error
         over k folds
 
-        Parameters
-        ----------
+        Args:
+        ----
         Z : N x T x n x d data tensor
         M : N x T masking matrix
         inds : scalar or 1d array like
         dists : N x N or T x T (relies on search axis) of row/col distances
         eta : the neighborhood threshold (radius)
+        *args : additional arguments
+        **kwargs : additional keyword arguments
 
-        Returns
+        Returns:
         -------
         avg_error : the average error of estimates over k validation folds
 
@@ -275,21 +304,21 @@ class NNImputer(object):
 
     def search_eta(
         self,
-        Z,
-        M,
-        inds,
-        dists,
-        max_evals=200,
-        ret_trials=False,
-        verbose=True,
-        *args,
-        **kwargs,
-    ):
+        Z: np.ndarray,
+        M: np.ndarray,
+        inds: np.ndarray | list | int,
+        dists: np.ndarray,
+        max_evals: int = 200,
+        ret_trials: bool = False,
+        verbose: bool = True,
+        *args: object,
+        **kwargs: object,
+    ) -> float | Tuple[float, Trials]:
         """Search for an optimal eta using cross validation on
         the observed data.
 
-        Parameters
-        ----------
+        Args:
+        ----
         Z : array with shape (N, T, n, d)
         M : array with shape (N, T)
         inds : 1d array-like or scalar, the indices to perform cross-valdiation over.
@@ -299,10 +328,13 @@ class NNImputer(object):
         max_evals : the maximum number of values to test in the eta search, default 200.
         ret_trials : boolean, whether to return the hyperopt trials object or not.
         verbose : boolean, whether to print the search progress or not.
+        *args : additional arguments
+        **kwargs : additional keyword arguments
 
         """
 
-        def obj(eta):
+        def obj(eta: float) -> np.floating[Any]:
+            """Objective function to minimize"""
             return self.cross_validate(Z, M, inds, dists, eta)
 
         trials = Trials()
@@ -320,21 +352,24 @@ class NNImputer(object):
         else:
             raise ValueError("Optimization did not return a valid result.")
 
-    def _one_eta(self, Z: np.ndarray, M: np.ndarray, dists):
+    # def _one_eta(self, Z: np.ndarray, M: np.ndarray, dists:np.ndarray) -> np.ndarray:
+    #     """Z : N x T x n x d
+    #     M : N x T
+    #     dists : columnwise or row-wise distances
+
+    #     Returns
+    #     -------
+    #     eta : a tuned eta
+    #     """
+    #     return
+
+    def _axis_eta(
+        self, Z: np.ndarray, M: np.ndarray, inds: list | np.ndarray, dists: np.ndarray
+    ) -> np.ndarray:
         """Z : N x T x n x d
         M : N x T
-        dists : columnwise or row-wise distances
-
-        Returns
-        -------
-        eta : a tuned eta
-
-        """
-
-    def _axis_eta(self, Z: np.ndarray, M: np.ndarray, inds, dists):
-        """Z : N x T x n x d
-        M : N x T
-        inds : list of indices to estimate
+        inds : list of indices to estimate. T
+                The format should be [(i1, i2, i3, ...), (t1, t2, t3, ...)]
         dists : columnwise distances
 
         Returns
@@ -354,7 +389,9 @@ class NNImputer(object):
 
         return etas
 
-    def _col_eta(self, Z: np.ndarray, M: np.ndarray, inds, dists):
+    def _col_eta(
+        self, Z: np.ndarray, M: np.ndarray, inds: list | np.ndarray, dists: np.ndarray
+    ) -> np.ndarray:
         """Z : N x T x n x d
         M : N x T
         inds : list of indices to estimate

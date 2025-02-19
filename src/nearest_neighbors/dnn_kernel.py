@@ -244,5 +244,5 @@ def mmDNN_direct(i, t, Data, row_Dissim_vec, Masking, eta_cand, delta, kernel):
     
     return(eta_star)
 
-class DNNWasserstein(DistNNEstimator):
+class DNNkernel(DistNNEstimator):
     pass

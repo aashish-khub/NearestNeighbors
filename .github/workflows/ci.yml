@@ -34,6 +34,7 @@ jobs:
         pytest
 
   add-to-project:
+    if: github.event_name == 'issues' && github.event.action == 'opened'  # Only run when an issue is opened
     runs-on: ubuntu-latest
     steps:
       - uses: actions/add-to-project@v0.5.0

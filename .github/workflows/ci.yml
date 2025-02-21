@@ -1,4 +1,4 @@
-name: CI Workflow
+name: CI Workflow and Project Management
 
 on:
   push:
@@ -7,20 +7,20 @@ on:
   pull_request:
     branches:
       - main
+  issues:
+    types: [opened]
 
 jobs:
   test:
+    if: github.event_name != 'issues'
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.10.4'
-
     - name: Install dependencies
       run: |
         python -m venv .venv
@@ -28,8 +28,69 @@ jobs:
         pip install -U pip
         pip install .
         pip install pytest
-
     - name: Run tests with pytest
       run: |
         source .venv/bin/activate
         pytest
+
+  add-to-project:
+    if: github.event_name == 'issues' && github.event.action == 'opened'  # Only run when an issue is opened
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/albertgong1/projects/6
+          github-token: ${{ secrets.MY_GITHUB_PAT }} 
+
+  collect-todos:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Collect TODOs
+      id: collect_todos
+      run: |
+        echo "TODO_LIST<<EOF" >> $GITHUB_ENV
+        git grep -n "TODO" | while IFS=: read -r file line content; do
+          author=$(git blame -L "$line","$line" -- "$file" | awk '{print $2}')
+          date=$(git log -1 --format="%ad" --date=short -L "$line","$line":"$file")
+          echo "- [$file:$line] $content (Author: $author, Date: $date)" >> $GITHUB_ENV
+        done
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Update or Create Issue
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const issueTitle = 'List of TODOs';
+          const issueBody = `# List of TODOs\n\nLast updated: ${new Date().toISOString()}\n\n${process.env.TODO_LIST}`;
+          
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open'
+          });
+
+          let existingIssue = issues.data.find(issue => issue.title === issueTitle);
+          
+          if (existingIssue) {
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssue.number,
+              body: issueBody
+            });
+          } else {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: ['todo-list']
+            });
+          }

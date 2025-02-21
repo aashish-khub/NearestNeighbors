@@ -36,10 +36,10 @@ jobs:
   add-to-project:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/add-to-project@v0.5.0
-      with:
-        project-url: https://github.com/users/albertgong1/projects/6
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/albertgong1/projects/6
+          github-token: ${{ secrets.MY_GITHUB_PAT }} 
 
   collect-todos:
     if: github.ref == 'refs/heads/main'

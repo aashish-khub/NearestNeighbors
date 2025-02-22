@@ -46,7 +46,7 @@ jobs:
           github-token: ${{ secrets.MY_GITHUB_PAT }} 
 
   collect-todos:
-    # if: github.ref == 'refs/heads/main' #skip for now
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -64,8 +64,8 @@ jobs:
             echo
             echo "Last updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             echo
-            echo "| File | Line | TODO | Author | Date | Link |"
-            echo "|------|------|------|--------|------|------|"
+            echo "| File | Line | TODO Context | Author | Date | Link |"
+            echo "|------|------|--------------|--------|------|------|"
           } > "$OUTPUT_FILE"
           
           COMMIT_HASH=$(git rev-parse HEAD)

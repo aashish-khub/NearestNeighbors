@@ -46,7 +46,7 @@ jobs:
           github-token: ${{ secrets.MY_GITHUB_PAT }} 
 
   collect-todos:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'issues'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -86,7 +86,7 @@ jobs:
             echo "| \`$file\` | $line | $content_cleaned | $author | $author_date | $link |" >> "$OUTPUT_FILE"
           done
           
-          echo "✅ TODO list saved to $OUTPUT_FILE"
+          echo "TODO list saved to $OUTPUT_FILE!"
           
           # Set the content of the file as an environment variable
           TODO_LIST=$(cat "$OUTPUT_FILE")

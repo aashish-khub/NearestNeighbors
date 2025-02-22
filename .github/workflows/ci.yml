@@ -10,6 +10,9 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write  # Ensures the workflow has permissions to modify issues
+
 jobs:
   test:
     if: github.event_name != 'issues'
@@ -43,7 +46,7 @@ jobs:
           github-token: ${{ secrets.MY_GITHUB_PAT }} 
 
   collect-todos:
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main' #skip for now
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code

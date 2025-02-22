@@ -49,51 +49,60 @@ jobs:
     # if: github.ref == 'refs/heads/main' #skip for now
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Collect TODOs
-      id: collect_todos
-      run: |
-        echo "TODO_LIST<<EOF" >> $GITHUB_ENV
-        git grep -n "TODO" | while IFS=: read -r file line content; do
-          author=$(git blame -L "$line","$line" -- "$file" | awk '{print $2}')
-          date=$(git log -1 --format="%ad" --date=short -L "$line","$line":"$file")
-          echo "- [$file:$line] $content (Author: $author, Date: $date)" >> $GITHUB_ENV
-        done
-        echo "EOF" >> $GITHUB_ENV
-
-    - name: Update or Create Issue
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        script: |
-          const issueTitle = 'List of TODOs';
-          const issueBody = `# List of TODOs\n\nLast updated: ${new Date().toISOString()}\n\n${process.env.TODO_LIST}`;
+      - name: Collect TODOs
+        run: |
+          REPO_URL="https://github.com/$GITHUB_REPOSITORY"
+          OUTPUT_FILE="todo_list.md"
           
-          const issues = await github.rest.issues.listForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            state: 'open'
-          });
-
-          let existingIssue = issues.data.find(issue => issue.title === issueTitle);
+          {
+            echo "# List of TODOs"
+            echo
+            echo "Last updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo
+            echo "| File | Line | TODO | Author | Date | Link |"
+            echo "|------|------|------|--------|------|------|"
+          } > "$OUTPUT_FILE"
           
-          if (existingIssue) {
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: existingIssue.number,
-              body: issueBody
-            });
-          } else {
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: issueTitle,
-              body: issueBody,
-              labels: ['todo-list']
-            });
-          }
+          COMMIT_HASH=$(git rev-parse HEAD)
+          
+          git grep -n "TODO" -- ':!*.github/workflows/ci.yml' | while IFS=: read -r file line content; do
+            blame_info=$(git blame -L "$line","$line" -- "$file")
+            
+            author=$(echo "$blame_info" | sed -E 's/^[^ ]+ \(([^0-9]+) .*/\1/')
+            author_date=$(echo "$blame_info" | sed -E 's/^[^ ]+ \([^0-9]+ ([0-9-]+) .*/\1/')
+            
+            author=${author:-"Unknown"}
+            author_date=${author_date:-"Unknown"}
+            
+            content_cleaned=$(echo "$content" | sed 's/|/\\|/g')
+            
+            link="[$line]($REPO_URL/blob/$COMMIT_HASH/$file#L$line)"
+            
+            echo "| \`$file\` | $line | $content_cleaned | $author | $author_date | $link |" >> "$OUTPUT_FILE"
+          done
+          
+          echo "✅ TODO list saved to $OUTPUT_FILE"
+          
+          # Set the content of the file as an environment variable
+          TODO_LIST=$(cat "$OUTPUT_FILE")
+          echo "TODO_LIST<<EOF" >> $GITHUB_ENV
+          echo "$TODO_LIST" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create or update GitHub Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issueTitle="List of TODOs"
+          issueBody="${TODO_LIST}"
+
+          existingIssueNumber=$(gh issue list --repo $GITHUB_REPOSITORY --state=open --search "$issueTitle" --json number --jq '.[0].number')
+
+          if [[ -z "$existingIssueNumber" ]]; then
+            gh issue create --title "$issueTitle" --body "$issueBody" --repo "$GITHUB_REPOSITORY"
+          else
+            gh issue edit "$existingIssueNumber" --body "$issueBody" --repo "$GITHUB_REPOSITORY"
+          fi

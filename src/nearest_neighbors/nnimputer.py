@@ -4,12 +4,58 @@ TODO: resolve ruff errors
 """
 
 import numpy as np
-import abc
+import numpy.typing as npt
+from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Callable, Any
 
 from hyperopt import hp, Trials, fmin, tpe
 from datetime import datetime
 
+class DataType(ABC):
+    """Abstract class for data types. Examples include scalars and distributions."""
+    @abstractmethod
+    def distance(self, obj1, obj2):
+        pass
+    
+    @abstractmethod
+    def average(self, object_list : list):
+        pass
+
+class EstimationMethod(ABC):
+    """Abstract class for estimation methods.
+    Examples include user-user (row-wise), item-item (column-wise), two-sided, and doubly-robust.
+    """
+    @abstractmethod
+    def impute(self, 
+               row : int, column : int, 
+               data_array : npt.NDArray, mask_array : npt.NDArray, 
+               data_type : DataType):
+        pass
+
+class NearestNeighborImputer():
+    """Nearest neighbor composed of different kinds of methods."""
+    
+    def __init__(self, estimation_method : EstimationMethod, data_type : DataType, distance_treshold : Optional[float] = None):
+        self.estimation_method = estimation_method
+        self.data_type = data_type
+        self.distance_threshold = None
+        
+    def __str__(self):
+        return f"NearestNeighborImputer(estimation_method={self.estimation_method}, data_type={self.data_type})"
+        
+    def impute(self, row : int, column : int, data_array : npt.NDArray, mask_array : npt.NDArray):
+        if self.distance_threshold is None:
+            raise ValueError("Distance threshold is not set. Call a FitMethod on this imputer or manually set it.")
+        return self.estimation_method.impute(row, column, data_array, mask_array, self.data_type)
+    
+class FitMethod(ABC):
+    """Abstract class for fiting methods. 
+    Examples include cross validation methods.
+    """
+    @abstractmethod
+    def fit(self, data_array : npt.NDArray, mask_array : npt.NDArray, 
+            imputer : NearestNeighborImputer) -> float:
+        pass
 
 class NNImputer(object):
     def __init__(

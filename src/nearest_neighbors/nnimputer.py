@@ -1,33 +1,31 @@
 """Base class for all nearest neighbors algorithms
-
-TODO: resolve ruff errors
 """
 
 import numpy.typing as npt
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 
 class DataType(ABC):
     """Abstract class for data types. Examples include scalars and distributions."""
 
     @abstractmethod
-    def distance(self, obj1, obj2) -> float:
+    def distance(self, obj1 : Any, obj2 : Any) -> float:
         """Calculate the distance between two objects.
 
         Args:
-            obj1: Object 1
-            obj2: Object 2
+            obj1 (Any): Object 1
+            obj2 (Any): Object 2
 
         """
         pass
 
     @abstractmethod
-    def average(self, object_list: list):
+    def average(self, object_list: list[Any]) -> Any:
         """Calculate the average of a list of objects.
 
         Args:
-            object_list (list): List of objects
+            object_list (list[Any]): List of objects
 
         """
         pass
@@ -35,7 +33,7 @@ class DataType(ABC):
 
 class EstimationMethod(ABC):
     """Abstract class for estimation methods.
-    Examples include user-user (row-wise), item-item (column-wise), two-sided, and doubly-robust.
+    Examples include row-row, col-col, two-sided, and doubly-robust.
     """
 
     @abstractmethod
@@ -75,7 +73,7 @@ class NearestNeighborImputer:
         """Initialize the imputer.
 
         Args:
-            estimation_method (EstimationMethod): Estimation method to use (e.g. user-user, item-item, two-sided, doubly-robust)
+            estimation_method (EstimationMethod): Estimation method to use (e.g. row-row, col-col, two-sided, doubly-robust)
             data_type (DataType): Data type to use (e.g. scalars, distributions)
             distance_treshold (Optional[float], optional): Distance threshold to use. Defaults to None.
 

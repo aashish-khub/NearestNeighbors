@@ -1,6 +1,6 @@
 from typing import Dict, Type
 
-from examples.base import NNDataLoader
+from .base import NNDataLoader
 
 # stores available dataset loaders
 _DATASETS: Dict[str, Type[NNDataLoader]] = {}

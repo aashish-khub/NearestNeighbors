@@ -111,7 +111,9 @@ def singular(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.n
     return np.power(kernel_mat, -a) * np.maximum(0, 1 - kernel_mat) ** 2
 
 
-def singular_box(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.ndarray:
+def singular_box(
+    samples: np.ndarray, centers: np.ndarray, bandwidth: float
+) -> np.ndarray:
     """Compute the Singular Box kernel between samples and centers.
 
     Args:
@@ -121,7 +123,7 @@ def singular_box(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> 
 
     Returns:
         np.ndarray: Kernel matrix.
-        
+
     """
     kernel_mat = euclidean_distances(samples, centers, squared=False)
     kernel_mat /= bandwidth
@@ -141,7 +143,7 @@ def box(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.ndarra
 
     Returns:
         np.ndarray: Kernel matrix with values 1 where the distance is within the bandwidth, otherwise 0.
-    
+
     """
     kernel_mat = euclidean_distances(samples, centers, squared=False)
     kernel_mat /= bandwidth
@@ -150,7 +152,9 @@ def box(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.ndarra
     return kernel_mat
 
 
-def epanechnikov(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.ndarray:
+def epanechnikov(
+    samples: np.ndarray, centers: np.ndarray, bandwidth: float
+) -> np.ndarray:
     r"""Compute the Epanechnikov kernel between samples and centers.
         Epanechnikov kernel: \kappa(u) = 3/4 * (1 - u^2) for u in [-1, 1],
         where u = ||x - y||_2 / bandwidth
@@ -162,7 +166,7 @@ def epanechnikov(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> 
 
     Returns:
         np.ndarray: Kernel matrix with values computed using the Epanechnikov kernel function.
-    
+
     """
     kernel_mat = euclidean_distances(samples, centers, squared=False)
     kernel_mat /= bandwidth
@@ -183,7 +187,7 @@ def wendland(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.n
 
     Returns:
         np.ndarray: Kernel matrix with values computed using the Epanechnikov kernel function.
-    
+
     """
     kernel_mat = euclidean_distances(samples, centers, squared=False)
     kernel_mat /= bandwidth
@@ -193,7 +197,9 @@ def wendland(samples: np.ndarray, centers: np.ndarray, bandwidth: float) -> np.n
 
 
 # With feature matrix M
-def euclidean_distances_M(samples: np.ndarray, centers: np.ndarray, M: np.ndarray, squared: bool = True) -> np.ndarray:
+def euclidean_distances_M(
+    samples: np.ndarray, centers: np.ndarray, M: np.ndarray, squared: bool = True
+) -> np.ndarray:
     """Returns the Euclidean distances between samples and centers with feature matrix M.
 
     Args:
@@ -226,7 +232,9 @@ def euclidean_distances_M(samples: np.ndarray, centers: np.ndarray, M: np.ndarra
     return distances
 
 
-def laplace_M(samples: np.ndarray, centers: np.ndarray, M: np.ndarray, bandwidth: float) -> np.ndarray:
+def laplace_M(
+    samples: np.ndarray, centers: np.ndarray, M: np.ndarray, bandwidth: float
+) -> np.ndarray:
     """Compute the Laplace kernel between samples and centers with feature matrix M.
 
     Args:
@@ -247,7 +255,9 @@ def laplace_M(samples: np.ndarray, centers: np.ndarray, M: np.ndarray, bandwidth
     return kernel_mat
 
 
-def gaussian_M(samples: np.ndarray, centers: np.ndarray, M: np.ndarray, bandwidth: float) -> np.ndarray:
+def gaussian_M(
+    samples: np.ndarray, centers: np.ndarray, M: np.ndarray, bandwidth: float
+) -> np.ndarray:
     """Compute the Gaussian kernel between samples and centers with feature matrix M.
 
     Args:
@@ -258,7 +268,7 @@ def gaussian_M(samples: np.ndarray, centers: np.ndarray, M: np.ndarray, bandwidt
 
     Returns:
         np.ndarray: Kernel matrix.
-        
+
     """
     assert bandwidth > 0
     kernel_mat = euclidean_distances_M(samples, centers, M, squared=True)

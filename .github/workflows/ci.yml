@@ -43,7 +43,7 @@ jobs:
       - uses: actions/add-to-project@v0.5.0
         with:
           project-url: https://github.com/users/albertgong1/projects/6
-          github-token: ${{ secrets.MY_GITHUB_PAT }} 
+          github-token: ${{ secrets.MY_GITHUB_PAT }}
 
   collect-todos:
     if: github.ref == 'refs/heads/main' && github.event_name != 'issues'
@@ -58,7 +58,7 @@ jobs:
         run: |
           REPO_URL="https://github.com/$GITHUB_REPOSITORY"
           OUTPUT_FILE="todo_list.md"
-          
+
           {
             echo "# List of TODOs"
             echo
@@ -67,27 +67,27 @@ jobs:
             echo "| File | Line | TODO Context | Author | Date | Link |"
             echo "|------|------|--------------|--------|------|------|"
           } > "$OUTPUT_FILE"
-          
+
           COMMIT_HASH=$(git rev-parse HEAD)
-          
+
           git grep -n "TODO" -- ':!*.github/workflows/ci.yml' | while IFS=: read -r file line content; do
             blame_info=$(git blame -L "$line","$line" -- "$file")
-            
+
             author=$(echo "$blame_info" | sed -E 's/^[^ ]+ \(([^0-9]+) .*/\1/')
             author_date=$(echo "$blame_info" | sed -E 's/^[^ ]+ \([^0-9]+ ([0-9-]+) .*/\1/')
-            
+
             author=${author:-"Unknown"}
             author_date=${author_date:-"Unknown"}
-            
+
             content_cleaned=$(echo "$content" | sed 's/|/\\|/g')
-            
+
             link="[$line]($REPO_URL/blob/$COMMIT_HASH/$file#L$line)"
-            
+
             echo "| \`$file\` | $line | $content_cleaned | $author | $author_date | $link |" >> "$OUTPUT_FILE"
           done
-          
+
           echo "TODO list saved to $OUTPUT_FILE!"
-          
+
           # Set the content of the file as an environment variable
           TODO_LIST=$(cat "$OUTPUT_FILE")
           echo "TODO_LIST<<EOF" >> $GITHUB_ENV

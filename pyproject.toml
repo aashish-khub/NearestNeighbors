@@ -126,5 +126,5 @@ lint.unfixable = []
 [tool.pyright]
 venv = ".venv"
 venvPath = "."
-include = ["src"]
+include = ["src", "examples"]
 pythonVersion = "3.10.4"

@@ -3,6 +3,9 @@
 Instead of identifying the nearest neighbors using a thresholding rule
 (i.e., neighbors within a certain distance), the NW estimator uses all
 neighbors, but weights their contribution according to a kernel function.
+
+TODO (Albert): Test NW on HeartSteps dataset with various kernel functions
+TODO (Albert): Implement additional kernel functions (e.g., Epanechnikov)
 """
 
 from .utils.kernels import gaussian, laplace, singular_box, box

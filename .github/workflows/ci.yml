@@ -1,0 +1,110 @@
+name: CI Workflow and Project Management
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - main
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write  # Ensures the workflow has permissions to modify issues
+
+jobs:
+  test:
+    if: github.event_name != 'issues'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10.4'
+    - name: Install dependencies
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install -U pip
+        pip install .
+        pip install pytest
+    - name: Run tests with pytest
+      run: |
+        source .venv/bin/activate
+        pytest
+
+  add-to-project:
+    if: github.event_name == 'issues' && github.event.action == 'opened'  # Only run when an issue is opened
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/albertgong1/projects/6
+          github-token: ${{ secrets.MY_GITHUB_PAT }}
+
+  collect-todos:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect TODOs
+        run: |
+          REPO_URL="https://github.com/$GITHUB_REPOSITORY"
+          OUTPUT_FILE="todo_list.md"
+
+          {
+            echo "# List of TODOs"
+            echo
+            echo "Last updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo
+            echo "| File | Line | TODO Context | Author | Date | Link |"
+            echo "|------|------|--------------|--------|------|------|"
+          } > "$OUTPUT_FILE"
+
+          COMMIT_HASH=$(git rev-parse HEAD)
+
+          git grep -n "TODO" -- ':!*.github/workflows/ci.yml' | while IFS=: read -r file line content; do
+            blame_info=$(git blame -L "$line","$line" -- "$file")
+
+            author=$(echo "$blame_info" | sed -E 's/^[^ ]+ \(([^0-9]+) .*/\1/')
+            author_date=$(echo "$blame_info" | sed -E 's/^[^ ]+ \([^0-9]+ ([0-9-]+) .*/\1/')
+
+            author=${author:-"Unknown"}
+            author_date=${author_date:-"Unknown"}
+
+            content_cleaned=$(echo "$content" | sed 's/|/\\|/g')
+
+            link="[$line]($REPO_URL/blob/$COMMIT_HASH/$file#L$line)"
+
+            echo "| \`$file\` | $line | $content_cleaned | $author | $author_date | $link |" >> "$OUTPUT_FILE"
+          done
+
+          echo "TODO list saved to $OUTPUT_FILE!"
+
+          # Set the content of the file as an environment variable
+          TODO_LIST=$(cat "$OUTPUT_FILE")
+          echo "TODO_LIST<<EOF" >> $GITHUB_ENV
+          echo "$TODO_LIST" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create or update GitHub Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issueTitle="List of TODOs"
+          issueBody="${TODO_LIST}"
+
+          existingIssueNumber=$(gh issue list --repo $GITHUB_REPOSITORY --state=open --search "$issueTitle" --json number --jq '.[0].number')
+
+          if [[ -z "$existingIssueNumber" ]]; then
+            gh issue create --title "$issueTitle" --body "$issueBody" --repo "$GITHUB_REPOSITORY"
+          else
+            gh issue edit "$existingIssueNumber" --body "$issueBody" --repo "$GITHUB_REPOSITORY"
+          fi

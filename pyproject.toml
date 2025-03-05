@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nearest_neighbors"
+requires-python = "==3.10.4"
 description = ""
 version = "0.0.0"
 authors = [
@@ -22,11 +23,106 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
 dependencies = [
     "numpy",
+    "hyperopt",
+    "pre-commit",
+    "ruff",
+    "pytest",
 ]
 
 [project.urls]
 Homepage = "https://github.com/aashish-khub/NearestNeighbors"
 Issues = "https://github.com/aashish-khub/NearestNeighbors/issues"
 Repository = "https://github.com/aashish-khub/NearestNeighbors.git"
+
+[tool.ruff]
+
+exclude = [
+    ".git",
+    "__pycache__",
+    "unconsolidated_code/*",
+    "docs/*",
+]
+
+lint.ignore = [
+    "ANN101",
+    "ANN401",
+    "N801",
+    "E203",
+    "E266",
+    "E501",
+    "E741",
+    "N803",
+    "N802",
+    "N806",
+    "D400",
+    "D401",
+    "D104", #temporary
+    "D105",
+    "D415",
+    "D402",
+    "D205",
+    "D100",
+    "D101",
+    "D107",
+    "D203",
+    "D213",
+    "ANN204",
+    "ANN102",
+]
+lint.select = ["D", "E", "F", "N", "ANN"]
+lint.fixable = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "I",
+    "N",
+    "Q",
+    "S",
+    "T",
+    "W",
+    "ANN",
+    "ARG",
+    "BLE",
+    "COM",
+    "DJ",
+    "DTZ",
+    "EM",
+    "ERA",
+    "EXE",
+    "FBT",
+    "ICN",
+    "INP",
+    "ISC",
+    "NPY",
+    "PD",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "TCH",
+    "TID",
+    "TRY",
+    "UP",
+    "YTT",
+]
+lint.unfixable = []
+
+[tool.pyright]
+venv = ".venv"
+venvPath = "."
+include = ["src"]
+pythonVersion = "3.10.4"

@@ -1,124 +1,132 @@
-"""Implementation of Nadaraya-Watson nearest neighbor algorithm."""
+"""Implementation of Nadaraya-Watson estimation method.
 
-from .utils.kernels import gaussian, laplace, sobolev, box
-from .nnimputer import NNImputer
+Instead of identifying the nearest neighbors using a thresholding rule
+(i.e., neighbors within a certain distance), the NW estimator uses all
+neighbors, but weights their contribution according to a kernel function.
 
+TODO (Albert): Test NW on HeartSteps dataset with various kernel functions
+TODO (Albert): Implement additional kernel functions (e.g., Epanechnikov)
+"""
+
+from .utils.kernels import gaussian, laplace, singular_box, box
+from .nnimputer import EstimationMethod, DataType
+
+import numpy.typing as npt
 import numpy as np
-from hyperopt import tpe
-from hyperopt import hp
 
 
-class NadarayaWatsonNN(NNImputer):
-    valid_kernels = ["gaussian", "laplace", "sobolev", "singular", "box"]
+class NadarayaWatsonEstimator(EstimationMethod):
+    valid_kernels = ["gaussian", "laplace", "singular_box", "box"]
 
-    def __init__(
-        self,
-        kernel="gaussian",
-        nn_type="ii",
-        eta_axis=0,
-        eta_space=hp.uniform("eta", 0, 1),
-        search_algo=tpe.suggest,
-        k=None,
-        rand_seed=None,
-    ):
-        """Parameters
-        ----------
-        kernel : string in valid_kernels
-        nn_type : string in ("ii", "uu")
-            represents the type of nearest neighbors to use
-            "ii" is "item-item" nn, which is column-wise
-            "uu" is "user-user" nn, which is row-wise
-        eta_axis : integer in [-1, 0, 1].
-                   Indicates which axis to compute the eta search over. If -1, then eta search is
-                   done via blocks (i.e. not row-wise or column-wise).
-        eta_space : a hyperopt hp search space
-                    for example: hp.uniform('eta', 0, 1). If no eta_space is given,
-                    then this example will be the default search space.
-        search_algo : a hyperopt algorithm
-                      for example: tpe.suggest, default is tpe.suggest.
-        k : integer > 1, the number of folds in k-fold cross validation over.
-            If k = None (default), the LOOCV is used.
-        rand_seed : the random seed to be used for reproducible results.
-                    If None is used (default), then the system time is used (not reproducible)
+    def __init__(self, kernel: str = "gaussian"):
+        """Initialize the Nadaraya-Watson estimator.
+
+        Args:
+            kernel (str, optional): The kernel to use. Defaults to "gaussian".
+
+        Raises:
+            ValueError: If the kernel is not valid.
 
         """
-        if kernel not in self.valid_kernels:
+        if self.kernel not in self.valid_kernels:
             raise ValueError(
-                "{} is not a valid kernel. Currently supported kernels are {}".format(
-                    kernel, ", ".join(self.valid_kernels)
-                )
+                f"{self.kernel=} is not a valid kernel. Currently supported kernels are {', '.join(self.valid_kernels)}"
             )
-        super().__init__(
-            nn_type=nn_type,
-            eta_axis=eta_axis,
-            eta_space=eta_space,
-            search_algo=search_algo,
-            k=k,
-            rand_seed=rand_seed,
-        )
         self.kernel = kernel
 
-    def estimate(
-        self,
-        Z,
-        M,
-        eta,
-        dists,
-        inds,
-        cv=True,
-        debug=False,
-        ret_nn=False,
-    ):
-        """Estimate entries in inds using entries M = 1 and an eta-bandwidth.
+        super().__init__()
 
-        Todo:
-        ----
-        - implement kernel functions so that they take the bandwidth eta as an argument
+    def __str__(self):
+        return f"NadarayaWatsonEstimator(kernel={self.kernel})"
+
+    def impute(
+        self,
+        row: int,
+        column: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        distance_threshold: float,
+        data_type: DataType,
+    ) -> npt.NDArray:
+        """Impute the missing value at the given row and column.
+
+        Parameters
+        ----------
+        row : int
+            The row index of the missing value.
+        column : int
+            The column index of the missing value.
+        data_array : npt.NDArray
+            The data array.
+        mask_array : npt.NDArray
+            The mask array.
+        distance_threshold : float
+            The distance threshold.
+        data_type : DataType
+            The data type.
+
+        Returns
+        -------
+        npt.NDArray
+            The imputed value.
 
         """
-        if self.kernel == "gaussian_M":
-            K = gaussian_M(self.X_fit_, X, self.M_, self.sigma)
-            K2 = gaussian_M(self.X2_, X, self.M_, self.sigma)
-        elif self.kernel == "laplace_M":
-            K = laplace_M(self.X_fit_, X, self.M_, self.sigma)
-            K2 = laplace_M(self.X2_, X, self.M_, self.sigma)
-        elif self.kernel == "gaussian":
-            K = gaussian(self.X_fit_, X, self.sigma)
-            K2 = gaussian(self.X2_, X, self.sigma)
-        elif self.kernel == "laplace":
-            K = laplace(self.X_fit_, X, self.sigma)
-            K2 = laplace(self.X2_, X, self.sigma)
-        elif self.kernel == "sobolev":
-            K = sobolev(self.X_fit_, X)
-            K2 = sobolev(self.X2_, X)
-        elif self.kernel == "box":
-            K = box(self.X_fit_, X, self.sigma)
-            K2 = box(self.X2_, X, self.sigma)
-        elif self.kernel == "epanechnikov":
-            K = epanechnikov(self.X_fit_, X, self.sigma)
-            K2 = epanechnikov(self.X2_, X, self.sigma)
-        elif self.kernel == "wendland":
-            K = wendland(self.X_fit_, X, self.sigma)
-            K2 = wendland(self.X2_, X, self.sigma)
-        else:
-            raise ValueError(f"kernel={self.kernel} is not supported")
+        data_shape = data_array.shape
+        n_rows = data_shape[0]
+        n_cols = data_shape[1]
 
-        # KRR version
-        # pred = (self.sol_ @ K).T
+        # Calculate distances between rows
+        row_distances = np.zeros(n_rows)
+        for i in range(n_rows):
+            # Get columns observed in both row i and row
+            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
 
-        # Nadaraya-Watson version
-        # NOTE: K must be symmetric
-        K2_sum = K2.sum(axis=0)
-        K2_sum_nan = np.where(K2_sum == 0, np.nan, K2_sum)
-        # print(K.shape, K2.shape, K2_sum.shape, self.y_fit_.shape)
-        pred = (self.y_fit_ @ K) / K2_sum_nan
+            if not np.any(overlap_columns):
+                row_distances[i] = np.inf
+                continue
+
+            # Calculate distance between rows
+            for j in range(n_cols):
+                if (
+                    not overlap_columns[j] or j == column
+                ):  # Skip missing values and the target column
+                    continue
+                row_distances[i] += data_type.distance(
+                    data_array[row, j], data_array[i, j]
+                )
+                row_distances[i] /= np.sum(overlap_columns)
+
+        match self.kernel:
+            case "gaussian":
+                K = gaussian(dists=row_distances, eta=distance_threshold)
+            case "laplace":
+                K = laplace(dists=row_distances, eta=distance_threshold)
+            case "singular_box":
+                K = singular_box(dists=row_distances, eta=distance_threshold)
+            case "box":
+                K = box(dists=row_distances, eta=distance_threshold)
+            case _:
+                raise ValueError(f"{self.kernel=} is not supported")
+
+        assert K.shape == (n_rows,)
+        K = K.reshape(-1, 1)
+
+        K_sum = K.sum(axis=0)
+        K_sum_nan = np.where(K_sum == 0, np.nan, K_sum)
+        # set y to be the column-th column of data_array
+        y = data_array[:, column]
+        assert y.shape == (n_rows,)
+        pred = y @ K / K_sum_nan
 
         # get index of nan in K along axis=0
         nan_idx = np.argwhere(np.isnan(K))
         for i, j in nan_idx:
-            # set the corresponding entry of pred to the value of y at the corresponding index
-            pred[j] = self.y_fit_[i]
-        # if an entry of K2_sum is zero, set the corresponding entry of pred to the value of y at the corresponding index
-        pred = np.where(K2_sum == 0, 0, pred)
+            # NOTE: for singular kernels, anytime the row-th object is one of the
+            # objects in the training set (indicated by nan values of K),
+            # we set the corresponding entry of pred to the actual value of y
+            #  at the row-th object
+            pred[j] = y[i]
+        # if an entry of K_sum is zero, set the corresponding entry of pred to zero
+        pred = np.where(K_sum == 0, 0, pred)
 
         return pred

@@ -35,42 +35,47 @@ class RowRowEstimator(EstimationMethod):
         data_shape = data_array.shape
         n_rows = data_shape[0]
         n_cols = data_shape[1]
-        
+
         # Calculate distances between rows
         row_distances = np.zeros(n_rows)
         for i in range(n_rows):
             # Get columns observed in both row i and row
             overlap_columns = np.logical_and(mask_array[row], mask_array[i])
-            
+
             if not np.any(overlap_columns):
                 row_distances[i] = np.inf
                 continue
-            
+
             # Calculate distance between rows
             for j in range(n_cols):
-                if not overlap_columns[j] or j == column: # Skip missing values and the target column
+                if (
+                    not overlap_columns[j] or j == column
+                ):  # Skip missing values and the target column
                     continue
-                row_distances[i] += data_type.distance(data_array[row, j], data_array[i, j])
+                row_distances[i] += data_type.distance(
+                    data_array[row, j], data_array[i, j]
+                )
             row_distances[i] /= np.sum(overlap_columns)
-            
+
         # Find the nearest neighbors indexes
         nearest_neighbors = np.where(row_distances <= distance_threshold)[0]
-        
+
         # If no neighbors found, return nan
         if len(nearest_neighbors) == 0:
             return np.array(np.nan)
-        
+
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = data_array[nearest_neighbors, column].flatten()
-        
+
         return data_type.average(nearest_neighbors_data)
-    
+
+
 class ColColEstimator(EstimationMethod):
     """Estimate the missing value using column-column nearest neighbors."""
-        
+
     def __str__(self):
         return "ColColEstimator"
-    
+
     def impute(
         self,
         row: int,
@@ -96,5 +101,7 @@ class ColColEstimator(EstimationMethod):
         """
         data_transposed = np.swapaxes(data_array, 0, 1)
         mask_transposed = np.swapaxes(mask_array, 0, 1)
-        
-        return RowRowEstimator().impute(column, row, data_transposed, mask_transposed, distance_threshold, data_type)
+
+        return RowRowEstimator().impute(
+            column, row, data_transposed, mask_transposed, distance_threshold, data_type
+        )

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nearest_neighbors"
 requires-python = "==3.10.4"
 description = ""
-version = "0.0.0"
+version = "0.1.0"
 authors = [
     {name="Aashish Khubchandani", email="akk223@cornell.edu"},
     {name="Albert Gong", email="agong@cs.cornell.edu"},

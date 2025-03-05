@@ -27,16 +27,17 @@ class VectorDataType(DataType):
         assert obj2.ndim == 1
         return float(np.linalg.norm(obj1 - obj2))
 
-    def average(self, object_list: list[npt.NDArray]) -> float:
+    def average(self, object_list: npt.NDArray) -> float:
         """Compute the average of a vector.
 
         Args:
-            object_list (list[npt.NDArray]): A list of vectors.
+            object_list (npt.NDArray): A list of vectors.
 
         Returns:
             float: The average of the vector.
 
         """
+        assert object_list.ndim == 2
         return np.mean(object_list, axis=0)
 
 

@@ -1,14 +1,13 @@
 """Abstract class for experiment/real data loading. There are two key attributes:"""
 from abc import ABC, abstractmethod
 import numpy as np
-from typing import Any
 import os
 
 class NNDataLoader(ABC):
     # this is an abstract attribute to contain the URLs of the data of subclassers
     urls : dict
     supported_aggs = ['mean', 'sum', 'median', 'std', 'variance']
-    def __init__(self, download:bool=False, save_dir : str="./", agg="mean", save_processed:bool=False):
+    def __init__(self, download:bool=False, save_dir : str="./", agg:str="mean", save_processed:bool=False):
         """Initializes the data loader.
         
         Args:
@@ -17,6 +16,7 @@ class NNDataLoader(ABC):
                 Default: "./" (current directory). 
             agg (str): aggregation method to use to create scalar dataset. Default: "mean". 
             save_processed (bool): whether to save the processed data.  Default: False.
+
         """
         self.save_dir = save_dir
         if not os.path.isdir(save_dir):
@@ -33,7 +33,7 @@ class NNDataLoader(ABC):
             self.download_data()
    
     @abstractmethod
-    def download_data(self):
+    def download_data(self) -> None:
         """Downloads the data to self.save_dir."""
         raise NotImplementedError
 
@@ -43,6 +43,7 @@ class NNDataLoader(ABC):
         
         Args:
             cached (bool): whether to use cached data. If False, then directly use urls, otherwise use self.save_dir. Default: False.
+
         """
         raise NotImplementedError
     
@@ -52,6 +53,7 @@ class NNDataLoader(ABC):
         
         Args:
             cached (bool): whether to use cached data. If False, then directly use urls, otherwise use self.save_dir. Default: False.
+
         """
         raise NotImplementedError
     

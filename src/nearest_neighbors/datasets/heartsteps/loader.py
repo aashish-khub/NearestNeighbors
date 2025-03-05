@@ -15,7 +15,7 @@ class HeartStepsDataLoader(NNDataLoader):
         "suggestions.csv": "https://raw.githubusercontent.com/klasnja/HeartStepsV1/refs/heads/main/data_files/suggestions.csv",
     }
     
-    def download_data(self):
+    def download_data(self) -> None:
         """Download the data from the remote source through urls."""
         print("Downloading HeartSteps V1 data...")
         df_steps, df_suggestions = self._load_data()
@@ -118,7 +118,7 @@ class HeartStepsDataLoader(NNDataLoader):
                                 constant_values=np.nan,
                             )
                             final_M[user - 1, day - 1, slot - 1] = m_pad
-                    except KeyError as e:
+                    except KeyError:
 
                         final_A[user - 1, day - 1, slot - 1] = 0
                         final_M[user - 1, day - 1, slot - 1] = np.full(

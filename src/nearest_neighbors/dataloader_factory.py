@@ -1,13 +1,13 @@
 from typing import Dict, Type
 from importlib import import_module
 from .dataloader_base import NNDataLoader
-
+from typing import Any
 # stores available dataset loaders
 _DATASETS: Dict[str, Type[NNDataLoader]] = {}
 
-def register_dataset(name: str):
+def register_dataset(name: str) -> Any:
     """Decorator to register a dataset loader."""
-    def decorator(cls):
+    def decorator(cls : Type[NNDataLoader]) -> Type[NNDataLoader]:
         _DATASETS[name] = cls
         return cls
     return decorator

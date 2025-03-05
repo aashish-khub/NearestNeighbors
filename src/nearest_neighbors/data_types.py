@@ -52,18 +52,45 @@ class DistributionKernelMMD(DataType):
         """Calculate the distance between two distributions using Kernel MMD.
         
         Args:
-            obj1 (npt.NDArray): Distribution 1
-            obj2 (npt.NDArray): Distribution 2
+            obj1 (npt.NDArray): (n, d) array of n samples of dimension d
+            obj2 (npt.NDArray): (m, d) array of m samples of dimension d
             
         Returns:
-            float: Distance between the two distributions
+            float: U-statistic of the squared MMD distance between the two distributions
         
         """
         
-        # TODO: Implement this
-        pass
-    
-    def average(self, object_list: npt.NDArray[npt.NDArray]) -> npt.NDArray:
+        m = obj1.shape[0]
+        n = obj2.shape[0]
+
+        assert obj1.shape[1] == obj2.shape[1]
+            
+
+        XX = np.matmul(obj1, np.transpose(obj1)) # m by m matrix with x_i^Tx_j
+        YY = np.matmul(obj2, np.transpose(obj2)) # n by n matrix with y_i^Ty_j
+        XY = np.matmul(obj1, np.transpose(obj2)) # m by n matrix with x_i^Ty_j  
+
+        if self.kernel == "linear" :
+            kXX, kYY, kXY = XX, YY, XY
+        if self.kernel == "square" :
+            kXX, kYY, kXY = (XX + np.ones( (m, m) ))**2, (YY + np.ones( (n, n) ))**2, (XY + np.ones( (m, n) ))**2
+        if self.kernel == "exponential" :
+            dXX_mm = np.vstack((np.diag(XX), )*m) # m*m matrix : each row is the diagonal x_i^Tx_i
+            dYY_nn = np.vstack((np.diag(YY), )*n) # n*n matrix : each row is the diagonal y_i^Ty_i
+            dXX_mn = np.vstack((np.diag(XX), )*n).transpose() # m*n matrix : each row is the diagonal x_i^Tx_i
+            dYY_mn = np.vstack((np.diag(YY), )*m) # m*n matrix : each row is the diagonal y_i^Ty_i
+
+            kXX = np.exp( -0.5*( dXX_mm + dXX_mm.transpose() - 2*XX ) ) 
+            kYY = np.exp( -0.5*( dYY_nn + dYY_nn.transpose() - 2*YY ) )
+            kXY = np.exp( -0.5*( dXX_mn + dYY_mn - 2*XY ) )
+            
+        val = (kXX.sum() - np.diag(kXX).sum())/(m*(m - 1)) + (kYY.sum() - np.diag(kYY).sum())/(n*(n - 1)) - 2*kXY.sum()/(n*m)
+        if val < 0 : 
+            val = 0
+
+        return val
+        
+    def average(self, object_list: npt.NDArray) -> npt.NDArray:
         """Calculate the average of a list of distributions.
 
         Args:
@@ -71,8 +98,9 @@ class DistributionKernelMMD(DataType):
 
         Returns:
             npt.NDArray: Average of the distributions
-        
+        (Returns is a mixture of vectors regardless of the kernel)
         """
         
-        # TODO: Implement this
-        pass
+        return object_list
+        
+        

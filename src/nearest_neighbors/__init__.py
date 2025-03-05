@@ -12,7 +12,7 @@ from .dnn_wasserstein import * # noqa: F403
 from .nnimputer import * # noqa: F403
 # from .syn_nn import * # noqa: F403
 # from .ts_nn import * # noqa: F403
-# from .vanilla_nn import * # noqa: F403
+from .vanilla_nn import * # noqa: F403
 from .utils import * # noqa: F403
 from .simulations import * # noqa: F403
 # ...add new files here

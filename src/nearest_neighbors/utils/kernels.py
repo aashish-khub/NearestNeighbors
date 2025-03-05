@@ -5,6 +5,7 @@ TODO: add linear, square, and exponential kernels from https://github.com/calebc
 
 import numpy as np
 
+
 def laplace(dists: np.ndarray, eta: float) -> np.ndarray:
     """Compute the Laplace kernel given a distance matrix.
 
@@ -128,7 +129,7 @@ def wendland(dists: np.ndarray, eta: float) -> np.ndarray:
 
     Returns:
         np.ndarray: Kernel matrix with values computed using the Wendland kernel function.
-    
+
     """
     assert eta > 0
     dists /= eta

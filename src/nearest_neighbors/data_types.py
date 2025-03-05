@@ -3,6 +3,7 @@ import numpy.typing as npt
 from typing import Any
 import numpy as np
 
+
 class Scalar(DataType):
     """Data type for scalars."""
 

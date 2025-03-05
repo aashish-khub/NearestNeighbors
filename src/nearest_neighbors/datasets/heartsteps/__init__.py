@@ -1,1 +1,1 @@
-import heartsteps.loader
+from .loader import HeartStepsDataLoader

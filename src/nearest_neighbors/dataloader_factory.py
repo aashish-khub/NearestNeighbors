@@ -1,6 +1,6 @@
 from typing import Dict, Type
-
-from .base import NNDataLoader
+from importlib import import_module
+from .dataloader_base import NNDataLoader
 
 # stores available dataset loaders
 _DATASETS: Dict[str, Type[NNDataLoader]] = {}
@@ -36,6 +36,9 @@ class NNData:
 
         """
         if dataset_name not in _DATASETS:
-            raise ValueError(f"Dataset {dataset_name} not found. Available datasets: {get_available_datasets()}")
+            try:
+                import_module(f"nearest_neighbors.datasets.{dataset_name}")
+            except ImportError:
+                raise ValueError(f"Dataset {dataset_name} not found. Available datasets: {get_available_datasets()}")
         
         return _DATASETS[dataset_name](download=download, save_dir=save_dir)

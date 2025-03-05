@@ -8,6 +8,7 @@ import os
 from datetime import timedelta
 import argparse
 from typing import Any
+import warnings
 
 def _transform_dnn(
     df : Any,
@@ -17,23 +18,23 @@ def _transform_dnn(
     num_measurements: int = 12,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Iteratively transform the processed HeartSteps data into a 4d tensor"""
+    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
     final_M = np.zeros((users, max_study_day, day_dec, num_measurements))
     final_A = np.zeros((users, max_study_day, day_dec))
+
     for user in range(1, users + 1):
         for day in range(1, max_study_day + 1):
             for slot in range(1, day_dec + 1):
                 try:
-                    df_uds = df.loc[user, day, slot]
-                    ind = df.index.get_indexer_for(df_uds.index)
+                    df_uds = df.loc[pd.IndexSlice[(user, day, slot)]]
+                    ind = df.index.get_indexer_for(df_uds.index)[0]
                     df_rng = df.iloc[
                         np.arange(ind, min(ind + num_measurements, len(df)))
                     ]
-                    if df.iloc[ind]["avail"].bool():
+                    if df.iloc[ind]["avail"]:
                         # only take send.sedentary as the treatment indicator, could use send.active later
                         val = df.iloc[ind]["send.sedentary"]
-                        if len(val) > 1:
-                            print(val)
-                        conv_val = val if val.notna().bool() else df.iloc[ind]["send"]
+                        conv_val = val if ~np.isnan(val) else df.iloc[ind]["send"]
                         final_A[user - 1, day - 1, slot - 1] = int(conv_val)
                     else:
                         final_A[user - 1, day - 1, slot - 1] = 2
@@ -48,12 +49,9 @@ def _transform_dnn(
                             constant_values=np.nan,
                         )
                         final_M[user - 1, day - 1, slot - 1] = m_pad
-                except KeyError:
-                    # this user is missing the study day/day ind
-                    # print(repr(e))
-                    final_A[user - 1, day - 1, slot - 1] = (
-                        0  # do we consider missing data as not observed or not available
-                    )
+                except KeyError as e:
+
+                    final_A[user - 1, day - 1, slot - 1] = 0
                     final_M[user - 1, day - 1, slot - 1] = np.full(
                         num_measurements, np.nan
                     )
@@ -76,7 +74,7 @@ def _reind_id(df_u: pd.DataFrame) -> pd.DataFrame:
         max(df_u.index.astype("datetime64[ns]")) + timedelta(days=1),
         normalize=True,
         inclusive="both",
-        freq="5T",
+        freq="5min",
     )
     rng = rng[rng.indexer_between_time("00:00", "23:55")]
     # print(rng)
@@ -89,7 +87,7 @@ def _reind_id(df_u: pd.DataFrame) -> pd.DataFrame:
 
 def _take_range(df: pd.DataFrame, range: int) -> pd.DataFrame:
     idx = df.index.get_indexer_for(
-        df[(pd.notna(np.argsort(df["sugg.select.slot"])))].index
+        df[pd.notna(df["sugg.select.slot"])].index
     )
     ranges = [np.arange(i, min(i + range + 1, len(df))) for i in idx]
     return df.iloc[np.concatenate(ranges)]
@@ -178,9 +176,10 @@ def preprocess_heartsteps(
         df_suggestions = pd.DataFrame()
         pass
     else:
-        df_steps = pd.read_csv(os.path.join(data_dir, "jbsteps.csv"))
-        df_suggestions = pd.read_csv(os.path.join(data_dir, "suggestions.csv"))
+        df_steps = pd.read_csv(os.path.join(data_dir, "jbsteps.csv"), low_memory=False)
+        df_suggestions = pd.read_csv(os.path.join(data_dir, "suggestions.csv"), low_memory=False)
 
+    print("Processing HeartSteps V1...")
     # get relevant cols and reformatting
     df_steps = df_steps[["user.index", "steps.utime", "steps", "study.day.nogap"]]
     df_steps["steps.utime"] = pd.to_datetime(df_steps["steps.utime"])
@@ -201,6 +200,7 @@ def preprocess_heartsteps(
             "send.sedentary",
         ]
     ]
+    df_sugg_sel = df_sugg_sel.copy()
     df_sugg_sel["sugg.decision.utime"] = pd.to_datetime(
         df_sugg_sel["sugg.decision.utime"]
     )
@@ -224,13 +224,24 @@ def preprocess_heartsteps(
     df_5min_ind = df_5min.set_index("steps.utime")
 
     # expand the step data to include all time points
-    df_expand5min = df_5min_ind.groupby("user.index", group_keys=False).apply(
-        lambda df_u: _reind_id(df_u)
-    )
+    # df_expand5min = df_5min_ind.groupby("user.index", group_keys=False).apply(
+    #     lambda df_u: _reind_id(df_u)
+    # )
+
+    result_dfs = []
+    user_indices = df_5min_ind["user.index"].unique()
+    # process each user 
+    for user_idx in user_indices:
+        # filter for just this user
+        df_u = df_5min_ind[df_5min_ind["user.index"] == user_idx].copy()
+        reindexed_df = _reind_id(df_u)
+        result_dfs.append(reindexed_df)
+    df_expand5min = pd.concat(result_dfs)
+
     df_expand5min = df_expand5min.reset_index(names="steps.utime")
+    df_expand5min["user.index"] = df_expand5min["user.index"].astype("int64")
 
     # merge the step data with the notification data
-    df_expand5min["user.index"] = df_expand5min["user.index"].astype("int64")
     df_merged = (
         pd.merge_asof(
             df_expand5min.sort_values(by="steps.utime"),
@@ -250,24 +261,43 @@ def preprocess_heartsteps(
     )
 
     # get 12 rows after each notification period (1 hour of observations)
-    df_merged_cut = (
-        df_merged.groupby("user.index", group_keys=False)
-        .apply(lambda df_u: _take_range(df_u, 12))
-        .reset_index(drop=True)
-    )
+    unique_users = df_merged["user.index"].unique()
+    result_dfs = []
+
+    for user_idx in unique_users:
+        df_user = df_merged[df_merged["user.index"] == user_idx]
+        df_user_range = _take_range(df_user, 12)
+        result_dfs.append(df_user_range)
+
+    df_merged_cut = pd.concat(result_dfs).reset_index(drop=True)
     df_merged_cut_nd = df_merged_cut.drop_duplicates()
 
     # set up column for study day
+    df_merged_cut_nd = df_merged_cut_nd.copy()
     df_merged_cut_nd["study_day"] = np.nan
     df_merged_cut_nd["new_slot"] = np.nan
 
     # align decision points
-    df_slot = df_merged_cut_nd.groupby("user.index", group_keys=False).apply(
-        lambda df_u: _create_slots(df_u)
-    )
-    df_study_day = df_slot.groupby("user.index", group_keys=False).apply(
-        lambda df_u: _study_day(df_u)
-    )
+    unique_users = df_merged_cut_nd["user.index"].unique()
+    slot_results = []
+
+    for user_idx in unique_users:
+        df_user = df_merged_cut_nd[df_merged_cut_nd["user.index"] == user_idx]
+        user_slots = _create_slots(df_user)
+        slot_results.append(user_slots)
+
+    df_slot = pd.concat(slot_results)
+
+    # Second groupby operation: study_day
+    unique_users_slot = df_slot["user.index"].unique()
+    study_day_results = []
+
+    for user_idx in unique_users_slot:
+        df_user = df_slot[df_slot["user.index"] == user_idx]
+        user_study_day = _study_day(df_user)
+        study_day_results.append(user_study_day)
+
+    df_study_day = pd.concat(study_day_results)
 
     # create unique index
     df_final = df_study_day.set_index(["user.index", "study_day", "new_slot"])
@@ -354,8 +384,6 @@ def main(args: argparse.Namespace) -> None:
         "agg must be one of 'mean', 'sum', 'median', 'std', or 'variance'"
     )
     if args.type == "scalar":
-        print(args.data_dir)
-        print(args.download)
         preprocess_heartsteps_scalar(
             data_dir=args.data_dir,
             output_dir=args.output_dir,

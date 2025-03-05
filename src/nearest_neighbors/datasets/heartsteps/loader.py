@@ -1,5 +1,12 @@
-from examples.base import NNDataLoader
-from examples.factory import register_dataset
+from nearest_neighbors.dataloader_base import NNDataLoader
+from nearest_neighbors.dataloader_factory import register_dataset
+import os
+import numpy as np
+import pandas as pd
+from typing import Any
+from datetime import timedelta
+import warnings
+
 
 @register_dataset("heartsteps")
 class HeartStepsDataLoader(NNDataLoader):
@@ -9,13 +16,323 @@ class HeartStepsDataLoader(NNDataLoader):
     }
     
     def download_data(self):
-        # download the data from urls
-        pass
-    
-    def process_data_scalar(self, cached:bool=False) -> tuple[np.ndarray, np.ndarray]:
-        # process the data into scalar matrix setting
-        pass
-    
+        """Download the data from the remote source through urls."""
+        print("Downloading HeartSteps V1 data...")
+        df_steps, df_suggestions = self._load_data()
+        df_steps.to_csv(os.path.join(self.save_dir, "jbsteps.csv"), index=False)
+        df_suggestions.to_csv(os.path.join(self.save_dir, "suggestions.csv"), index=False)
+
+
+    def process_data_scalar(self, cached:bool=False, agg:str="mean") -> tuple[np.ndarray, np.ndarray]:
+        """Process the data into scalar setting."""
+        df_steps, df_suggestions = self._load_data(cached)
+        Data, _, Mask = self._proc_dist_data(df_steps, df_suggestions)
+        if agg == "mean":
+            Data = Data.mean(axis=2)
+        elif agg == "sum":
+            Data = Data.sum(axis=2)
+        elif agg == "median":
+            Data = np.median(Data, axis=2)
+        elif agg == "std":
+            Data = np.std(Data, axis=2)
+        elif agg == "variance":
+            Data = np.var(Data, axis=2)
+        else:
+            raise ValueError(
+                "agg must be one of 'mean', 'sum', 'median', 'std', or 'variance'"
+            )
+
+        Data = np.squeeze(Data)
+        Data = Data.astype(object)
+        # write data to output_dir
+        if self.save_processed != "":
+            np.save(os.path.join(self.save_dir, "data.npy"), Data, allow_pickle=True)
+            np.save(os.path.join(self.save_dir, "mask.npy"), Mask, allow_pickle=True)
+        print("Done!")
+        return Data, Mask
+
+
     def process_data_distribution(self, cached:bool=False) -> tuple[np.ndarray, np.ndarray]:
-        # process the data into distributional setting
-        pass
+        """Process the data into distribution setting."""
+        df_steps, df_suggestions = self._load_data(cached)
+
+        _, Data2d, Mask = self._proc_dist_data(df_steps, df_suggestions)
+        print("Done!")
+        return Data2d, Mask
+
+    ## HELPER FUNCTIONS
+    def _load_data(self, cached:bool=False) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Load the data from the remote source through urls."""
+        if cached:
+            jp_path = os.path.join(self.save_dir, "jbsteps.csv") 
+            sug_path = os.path.join(self.save_dir, "suggestions.csv")
+            if not (os.path.exists(jp_path) and os.path.exists(sug_path)):
+                print("No cached data found. Retrieving from url...")
+                jp_path = self.urls["jbsteps.csv"]
+                sug_path = self.urls["suggestions.csv"]
+        else:
+            jp_path = self.urls["jbsteps.csv"]
+            sug_path = self.urls["suggestions.csv"]
+       
+        df_steps = pd.read_csv(jp_path, low_memory=False)
+        df_suggestions = pd.read_csv(sug_path, low_memory=False)
+        return df_steps, df_suggestions
+
+    def _transform_dnn(
+        self,
+        df : Any,
+        users: int = 37,
+        max_study_day: int = 52,
+        day_dec: int = 5,
+        num_measurements: int = 12,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Iteratively transform the processed HeartSteps data into a 4d tensor"""
+        warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+        final_M = np.zeros((users, max_study_day, day_dec, num_measurements))
+        final_A = np.zeros((users, max_study_day, day_dec))
+
+        for user in range(1, users + 1):
+            for day in range(1, max_study_day + 1):
+                for slot in range(1, day_dec + 1):
+                    try:
+                        df_uds = df.loc[pd.IndexSlice[(user, day, slot)]]
+                        ind = df.index.get_indexer_for(df_uds.index)[0]
+                        df_rng = df.iloc[
+                            np.arange(ind, min(ind + num_measurements, len(df)))
+                        ]
+                        if df.iloc[ind]["avail"]:
+                            # only take send.sedentary as the treatment indicator, could use send.active later
+                            val = df.iloc[ind]["send.sedentary"]
+                            conv_val = val if ~np.isnan(val) else df.iloc[ind]["send"]
+                            final_A[user - 1, day - 1, slot - 1] = int(conv_val)
+                        else:
+                            final_A[user - 1, day - 1, slot - 1] = 2
+
+                        measurements = df_rng["steps"].to_numpy()
+                        if len(measurements) == num_measurements:
+                            final_M[user - 1, day - 1, slot - 1] = measurements
+                        else:
+                            m_pad = np.pad(
+                                measurements,
+                                (0, num_measurements - len(measurements)),
+                                constant_values=np.nan,
+                            )
+                            final_M[user - 1, day - 1, slot - 1] = m_pad
+                    except KeyError as e:
+
+                        final_A[user - 1, day - 1, slot - 1] = 0
+                        final_M[user - 1, day - 1, slot - 1] = np.full(
+                            num_measurements, np.nan
+                        )
+        final_M = final_M.reshape((users, max_study_day * day_dec, num_measurements))
+        final_A = final_A.reshape((users, max_study_day * day_dec))
+        return final_M, final_A
+
+
+    def _get_mode(self, x: pd.Series) -> pd.Series:
+        if len(pd.Series.mode(x) > 1):
+            return pd.Series.mode(x, dropna=False)[0]
+        else:
+            return pd.Series.mode(x, dropna=False)
+
+
+    def _reind_id(self, df_u: pd.DataFrame) -> pd.DataFrame:
+        """Function to reindex the data to include all time points for each user."""
+        rng = pd.date_range(
+            min(df_u.index.astype("datetime64[ns]")),
+            max(df_u.index.astype("datetime64[ns]")) + timedelta(days=1),
+            normalize=True,
+            inclusive="both",
+            freq="5min",
+        )
+        rng = rng[rng.indexer_between_time("00:00", "23:55")]
+        # print(rng)
+        df_reind = df_u.reindex(rng)
+        df_reind["user.index"] = df_reind["user.index"].ffill().bfill()
+        df_reind["study.day.nogap"] = df_reind["study.day.nogap"].bfill().ffill()
+        df_reind["steps"] = df_reind["steps"].fillna(0)
+        return df_reind
+
+
+    def _take_range(self, df: pd.DataFrame, range: int) -> pd.DataFrame:
+        idx = df.index.get_indexer_for(
+            df[pd.notna(df["sugg.select.slot"])].index
+        )
+        ranges = [np.arange(i, min(i + range + 1, len(df))) for i in idx]
+        return df.iloc[np.concatenate(ranges)]
+
+
+    def _create_slots(self, df: pd.DataFrame) -> pd.DataFrame:
+        most_rec_slot = 0.0
+        for ind, row in df.iterrows():
+            curr_slot = row["sugg.select.slot"]
+            if not np.isnan(curr_slot):
+                if (
+                    most_rec_slot != 5.0
+                    and curr_slot != most_rec_slot + 1
+                    and most_rec_slot != 0.0
+                ):
+                    df.at[ind, "new_slot"] = most_rec_slot + 1
+                    most_rec_slot += 1
+                elif most_rec_slot == 5.0 and curr_slot != 1:
+                    df.at[ind, "new_slot"] = 1
+                    most_rec_slot = 1
+                else:
+                    df.at[ind, "new_slot"] = curr_slot
+                    most_rec_slot = curr_slot
+        return df
+
+
+    def _study_day(self, df: pd.DataFrame) -> pd.DataFrame:
+        most_rec_slot = 1.0
+        curr_study_day = 1
+        for ind, row in df.iterrows():
+            curr_slot = row["new_slot"]
+            if not np.isnan(curr_slot):
+                if most_rec_slot == 5.0 and curr_slot == 1:
+                    curr_study_day += 1
+                most_rec_slot = curr_slot
+                df.at[ind, "study_day"] = curr_study_day
+        return df
+
+    def _proc_dist_data(self, df_steps:pd.DataFrame, df_suggestions:pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Process the data into distribution setting."""
+        print("Processing HeartSteps V1...")
+        # get relevant cols and reformatting
+        df_steps = df_steps[["user.index", "steps.utime", "steps", "study.day.nogap"]]
+        df_steps = df_steps.copy()
+        df_steps["steps.utime"] = pd.to_datetime(df_steps["steps.utime"])
+        # create multi-index
+        df_steps = df_steps.set_index(["user.index", "steps.utime"])
+
+        # get relevant cols and reformatting
+        df_sugg_sel = df_suggestions[
+            [
+                "user.index",
+                "decision.index.nogap",
+                "sugg.select.utime",
+                "sugg.decision.utime",
+                "sugg.select.slot",
+                "avail",
+                "send",
+                "send.active",
+                "send.sedentary",
+            ]
+        ]
+        df_sugg_sel = df_sugg_sel.copy()
+        df_sugg_sel["sugg.decision.utime"] = pd.to_datetime(
+            df_sugg_sel["sugg.decision.utime"]
+        )
+        df_sugg_sel = df_sugg_sel.dropna(
+            subset=["sugg.decision.utime", "sugg.select.utime", "user.index"]
+        )
+
+        # group the step data by five minute intervals
+        df_5min = (
+            df_steps.groupby(
+                [
+                    pd.Grouper(freq="5min", level="steps.utime", label="right"),
+                    pd.Grouper(level="user.index"),
+                ],
+                sort=False,
+            )
+            .agg({"steps": "sum", "study.day.nogap": lambda x: self._get_mode(x)})
+            .reset_index()
+        )
+
+        df_5min_ind = df_5min.set_index("steps.utime")
+
+        # expand the step data to include all time points
+        # df_expand5min = df_5min_ind.groupby("user.index", group_keys=False).apply(
+        #     lambda df_u: _reind_id(df_u)
+        # )
+
+        result_dfs = []
+        user_indices = df_5min_ind["user.index"].unique()
+        # process each user 
+        for user_idx in user_indices:
+            # filter for just this user
+            df_u = df_5min_ind[df_5min_ind["user.index"] == user_idx].copy()
+            reindexed_df = self._reind_id(df_u)
+            result_dfs.append(reindexed_df)
+        df_expand5min = pd.concat(result_dfs)
+
+        df_expand5min = df_expand5min.reset_index(names="steps.utime")
+        df_expand5min["user.index"] = df_expand5min["user.index"].astype("int64")
+
+        # merge the step data with the notification data
+        df_merged = (
+            pd.merge_asof(
+                df_expand5min.sort_values(by="steps.utime"),
+                df_sugg_sel.sort_values(by="sugg.decision.utime"),
+                left_on="steps.utime",
+                right_on="sugg.decision.utime",
+                by="user.index",
+                tolerance=pd.Timedelta("5min"),
+                allow_exact_matches=False,
+                direction="backward",
+            )
+            .sort_values(by=["user.index", "steps.utime"])
+            .reset_index(drop=True)
+        )
+        df_merged["sugg.select.slot"] = np.where(
+            df_merged["decision.index.nogap"].isna(), np.nan, df_merged["sugg.select.slot"]
+        )
+
+        # get 12 rows after each notification period (1 hour of observations)
+        unique_users = df_merged["user.index"].unique()
+        result_dfs = []
+
+        for user_idx in unique_users:
+            df_user = df_merged[df_merged["user.index"] == user_idx]
+            df_user_range = self._take_range(df_user, 12)
+            result_dfs.append(df_user_range)
+
+        df_merged_cut = pd.concat(result_dfs).reset_index(drop=True)
+        df_merged_cut_nd = df_merged_cut.drop_duplicates()
+
+        # set up column for study day
+        df_merged_cut_nd = df_merged_cut_nd.copy()
+        df_merged_cut_nd["study_day"] = np.nan
+        df_merged_cut_nd["new_slot"] = np.nan
+
+        # align decision points
+        unique_users = df_merged_cut_nd["user.index"].unique()
+        slot_results = []
+
+        for user_idx in unique_users:
+            df_user = df_merged_cut_nd[df_merged_cut_nd["user.index"] == user_idx]
+            user_slots = self._create_slots(df_user)
+            slot_results.append(user_slots)
+
+        df_slot = pd.concat(slot_results)
+
+        # Second groupby operation: study_day
+        unique_users_slot = df_slot["user.index"].unique()
+        study_day_results = []
+
+        for user_idx in unique_users_slot:
+            df_user = df_slot[df_slot["user.index"] == user_idx]
+            user_study_day = self._study_day(df_user)
+            study_day_results.append(user_study_day)
+
+        df_study_day = pd.concat(study_day_results)
+
+        # create unique index
+        df_final = df_study_day.set_index(["user.index", "study_day", "new_slot"])
+
+        # transform into 4d tensor + mask
+        Data, Mask = self._transform_dnn(df_final)
+        N, T = Mask.shape
+        Data2d = np.empty([N, T], dtype=object)
+
+        # to align with 4d structure
+        Data = Data[:, :, :, np.newaxis]
+
+        for i in range(N):
+            for j in range(T):
+                Data2d[i, j] = Data[i, j]
+        return Data, Data2d, Mask
+
+    
+

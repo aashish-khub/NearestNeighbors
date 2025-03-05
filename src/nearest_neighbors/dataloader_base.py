@@ -1,18 +1,32 @@
 """Abstract class for experiment/real data loading. There are two key attributes:"""
 from abc import ABC, abstractmethod
 import numpy as np
+from typing import Any
+import os
+
 class NNDataLoader(ABC):
     # this is an abstract attribute to contain the URLs of the data of subclassers
     urls : dict
-    def __init__(self, download:bool=False, save_dir : str="./"):
+    supported_aggs = ['mean', 'sum', 'median', 'std', 'variance']
+    def __init__(self, download:bool=False, save_dir : str="./", agg="mean", save_processed:bool=False):
         """Initializes the data loader.
         
         Args:
             download (bool): whether to download the data locally. Default: False. If True, data is downloaded at save_dir
-            save_dir (str): directory to save the data. Default: "./" (current directory). 
+            save_dir (str): directory to download the data to or where it already exists. Also the directory where the processed data will be. 
+                Default: "./" (current directory). 
+            agg (str): aggregation method to use to create scalar dataset. Default: "mean". 
+            save_processed (bool): whether to save the processed data.  Default: False.
         """
         self.save_dir = save_dir
+        if not os.path.isdir(save_dir):
+            print("Save directory not found. Creating it.")
+            os.makedirs(save_dir)
         self.download = download
+        self.save_processed = save_processed
+        if agg not in self.supported_aggs:
+            raise ValueError(f"Aggregation method {agg} not supported. Supported methods: {self.supported_aggs}")
+        self.agg = agg
 
         if download:
             # this downloads the data to save_dir . 

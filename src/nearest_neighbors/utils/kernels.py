@@ -62,10 +62,6 @@ def singular(dists: np.ndarray, eta: float) -> np.ndarray:
     return kernel_matrix
 
 
-def singular_box(
-    samples: np.ndarray, centers: np.ndarray, bandwidth: float
-) -> np.ndarray:
-    """Compute the Singular Box kernel between samples and centers.
 def singular_box(dists: np.ndarray, eta: float) -> np.ndarray:
     """Compute the Singular Box kernel given a distance matrix.
 
@@ -102,10 +98,6 @@ def box(dists: np.ndarray, eta: float) -> np.ndarray:
     return kernel_mat
 
 
-def epanechnikov(
-    samples: np.ndarray, centers: np.ndarray, bandwidth: float
-) -> np.ndarray:
-    r"""Compute the Epanechnikov kernel between samples and centers.
 def epanechnikov(dists: np.ndarray, eta: float) -> np.ndarray:
     r"""Compute the Epanechnikov kernel given a distance matrix.
         Epanechnikov kernel: \kappa(u) = 3/4 * (1 - u^2) for u in [-1, 1],

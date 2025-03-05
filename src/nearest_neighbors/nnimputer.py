@@ -21,11 +21,11 @@ class DataType(ABC):
         pass
 
     @abstractmethod
-    def average(self, object_list: list[Any]) -> Any:
+    def average(self, object_list: npt.NDArray[Any]) -> Any:
         """Calculate the average of a list of objects.
 
         Args:
-            object_list (list[Any]): List of objects
+            object_list (npt.NDArray[Any]): List of objects
 
         """
         pass
@@ -43,6 +43,7 @@ class EstimationMethod(ABC):
         column: int,
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
+        distance_threshold: float,
         data_type: DataType,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -108,7 +109,7 @@ class NearestNeighborImputer:
                 "Distance threshold is not set. Call a FitMethod on this imputer or manually set it."
             )
         return self.estimation_method.impute(
-            row, column, data_array, mask_array, self.data_type
+            row, column, data_array, mask_array, self.distance_threshold, self.data_type
         )
 
 

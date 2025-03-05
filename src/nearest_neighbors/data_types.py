@@ -30,3 +30,49 @@ class Scalar(DataType):
 
         """
         return np.mean(object_list)
+    
+class DistributionKernelMMD(DataType):
+    """Data type for distributions using Kernel MMD."""
+    
+    def __init__(self, kernel: str):
+        """Initialize the distribution data type with a kernel.
+        
+        Args:
+            kernel (str): Kernel to use for the MMD
+        
+        """
+        supported_kernels = ['linear', 'square', 'exponential']
+        
+        if kernel not in supported_kernels:
+            raise ValueError(f"Kernel {kernel} is not supported. Supported kernels are {supported_kernels}")
+        
+        self.kernel = kernel
+        
+    def distance(self, obj1: npt.NDArray, obj2: npt.NDArray) -> float:
+        """Calculate the distance between two distributions using Kernel MMD.
+        
+        Args:
+            obj1 (npt.NDArray): Distribution 1
+            obj2 (npt.NDArray): Distribution 2
+            
+        Returns:
+            float: Distance between the two distributions
+        
+        """
+        
+        # TODO: Implement this
+        pass
+    
+    def average(self, object_list: npt.NDArray[npt.NDArray]) -> npt.NDArray:
+        """Calculate the average of a list of distributions.
+
+        Args:
+            object_list (npt.NDArray[npt.NDArray]): List of distributions
+
+        Returns:
+            npt.NDArray: Average of the distributions
+        
+        """
+        
+        # TODO: Implement this
+        pass

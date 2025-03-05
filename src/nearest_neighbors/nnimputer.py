@@ -1,5 +1,4 @@
-"""Base class for all nearest neighbors algorithms
-"""
+"""Base class for all nearest neighbors algorithms."""
 
 import numpy.typing as npt
 from abc import ABC, abstractmethod
@@ -53,6 +52,7 @@ class EstimationMethod(ABC):
             column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
+            distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         Returns:
@@ -134,5 +134,6 @@ class FitMethod(ABC):
 
         Returns:
             float: Best distance threshold
+        
         """
         pass

@@ -25,6 +25,7 @@ class RowRowEstimator(EstimationMethod):
             column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
+            distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         Returns:
@@ -86,6 +87,7 @@ class ColColEstimator(EstimationMethod):
             column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
+            distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         Returns:

@@ -5,6 +5,11 @@ import random as rand
 from scipy.stats import multivariate_normal
 
 from .dnn import DistNNEstimator
+from .nnimputer import NNImputer
+
+
+class KernelDNN(NNImputer):
+    valid_kernels = ["gaussian", "linear", "square"]
 
 def obs_Overlap(i, j, Masking) :
     """ Overlapping column indices for ith and jth row

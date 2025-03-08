@@ -1,3 +1,5 @@
+"""Implementation of vanilla nearest neighbor imputation."""
+
 from .nnimputer import NearestNeighborImputer
 from .data_types import Scalar
 from .estimation_methods import RowRowEstimator, ColColEstimator

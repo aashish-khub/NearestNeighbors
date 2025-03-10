@@ -41,6 +41,9 @@ class DistributionWassersteinSamples(DataType):
     def distance(self, obj1: npt.NDArray, obj2: npt.NDArray) -> float:
         """Calculate the Wasserstein distance between two distributions
         with the same number of samples.
+        
+        obj1 and obj2 should be 1-dimensional numpy arrays that represent
+        empirical distributions.
 
         Args:
             obj1 (npt.NDArray): Distribution 1
@@ -77,12 +80,29 @@ class DistributionWassersteinQuantile(DataType):
     def empirical_quantile_function(
         self, samples: npt.NDArray
     ) -> Callable[[npt.NDArray], npt.NDArray]:
-        """Create the quantile function of a distribution given samples."""
+        """Create the quantile function of a distribution given samples.
+
+        Args:
+            samples (npt.NDArray): Samples of the distribution
+
+        Returns:
+            Callable[[npt.NDArray], npt.NDArray]: Quantile function of the distribution
+        
+        """
         samples_diff = np.concatenate(
             [np.array(samples[0]).reshape(1), np.diff(samples)]
         )
 
         def quantile_function(q: npt.NDArray) -> npt.NDArray:
+            """Quantile function of the distribution.
+
+            Args:
+                q (npt.NDArray): Values between 0 and 1
+
+            Returns:
+                npt.NDArray: Quantile values
+            
+            """
             # Compute the empirical CDF values
             n = len(samples)
             cdf = np.arange(1, n + 1) / n

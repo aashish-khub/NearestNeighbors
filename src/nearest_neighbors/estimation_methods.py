@@ -48,9 +48,13 @@ class RowRowEstimator(EstimationMethod):
             
             # Calculate distance between rows
             for j in range(n_cols):
-                if not overlap_columns[j] or j == column: # Skip missing values and the target column
+                if (
+                    not overlap_columns[j] or j == column
+                ):  # Skip missing values and the target column
                     continue
-                row_distances[i] += data_type.distance(data_array[row, j], data_array[i, j])
+                row_distances[i] += data_type.distance(
+                    data_array[row, j], data_array[i, j]
+                )
             row_distances[i] /= np.sum(overlap_columns)
             
         # Find the nearest neighbors indexes

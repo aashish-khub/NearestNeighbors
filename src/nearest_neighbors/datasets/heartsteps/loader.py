@@ -14,57 +14,84 @@ class HeartStepsDataLoader(NNDataLoader):
         "jbsteps.csv": "https://raw.githubusercontent.com/klasnja/HeartStepsV1/refs/heads/main/data_files/jbsteps.csv",
         "suggestions.csv": "https://raw.githubusercontent.com/klasnja/HeartStepsV1/refs/heads/main/data_files/suggestions.csv",
     }
-    
+
     def download_data(self) -> None:
         """Download the data from the remote source through urls."""
-        print("Downloading HeartSteps V1 data...")
+        # print("Downloading HeartSteps V1 data...")
         df_steps, df_suggestions = self._load_data()
         df_steps.to_csv(os.path.join(self.save_dir, "jbsteps.csv"), index=False)
-        df_suggestions.to_csv(os.path.join(self.save_dir, "suggestions.csv"), index=False)
+        df_suggestions.to_csv(
+            os.path.join(self.save_dir, "suggestions.csv"), index=False
+        )
 
+    def process_data_scalar(
+        self, cached: bool = False, agg: str = "mean"
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Process the data into scalar setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
 
-    def process_data_scalar(self, cached:bool=False, agg:str="mean") -> tuple[np.ndarray, np.ndarray]:
-        """Process the data into scalar setting."""
+        Args:
+        ----
+            cached: Whether to use cached data. Default: False
+            agg: Aggregation method to use. Default: "mean". Options: "mean", "sum", "median", "std", "variance"
+
+        Returns:
+        -------
+            data: 2d processed data matrix of floats
+            mask: Mask for processed data
+
+        """
         df_steps, df_suggestions = self._load_data(cached)
-        Data, _, Mask = self._proc_dist_data(df_steps, df_suggestions)
+        data, _, mask = self._proc_dist_data(df_steps, df_suggestions)
         if agg == "mean":
-            Data = Data.mean(axis=2)
+            data = data.mean(axis=2)
         elif agg == "sum":
-            Data = Data.sum(axis=2)
+            data = data.sum(axis=2)
         elif agg == "median":
-            Data = np.median(Data, axis=2)
+            data = np.median(data, axis=2)
         elif agg == "std":
-            Data = np.std(Data, axis=2)
+            data = np.std(data, axis=2)
         elif agg == "variance":
-            Data = np.var(Data, axis=2)
+            data = np.var(data, axis=2)
         else:
             raise ValueError(
                 "agg must be one of 'mean', 'sum', 'median', 'std', or 'variance'"
             )
 
-        Data = np.squeeze(Data)
-        Data = Data.astype(object)
+        data = np.squeeze(data)
         # write data to output_dir
         if self.save_processed != "":
-            np.save(os.path.join(self.save_dir, "data.npy"), Data, allow_pickle=True)
-            np.save(os.path.join(self.save_dir, "mask.npy"), Mask, allow_pickle=True)
-        print("Done!")
-        return Data, Mask
+            np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
+            np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
+        # print("Done!")
+        return data, mask
 
+    def process_data_distribution(
+        self, cached: bool = False
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Process the data into distribution setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
 
-    def process_data_distribution(self, cached:bool=False) -> tuple[np.ndarray, np.ndarray]:
-        """Process the data into distribution setting."""
+        Args:
+        ----
+            cached: Whether to use cached data. Default: False
+
+        """
         df_steps, df_suggestions = self._load_data(cached)
 
         _, Data2d, Mask = self._proc_dist_data(df_steps, df_suggestions)
-        print("Done!")
+        # print("Done!")
         return Data2d, Mask
 
     ## HELPER FUNCTIONS
-    def _load_data(self, cached:bool=False) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Load the data from the remote source through urls."""
+    def _load_data(self, cached: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Load the data from the remote source through urls
+
+        Args:
+        ----
+            cached: Whether to use cached data. Default: False
+
+        """
         if cached:
-            jp_path = os.path.join(self.save_dir, "jbsteps.csv") 
+            jp_path = os.path.join(self.save_dir, "jbsteps.csv")
             sug_path = os.path.join(self.save_dir, "suggestions.csv")
             if not (os.path.exists(jp_path) and os.path.exists(sug_path)):
                 print("No cached data found. Retrieving from url...")
@@ -73,21 +100,21 @@ class HeartStepsDataLoader(NNDataLoader):
         else:
             jp_path = self.urls["jbsteps.csv"]
             sug_path = self.urls["suggestions.csv"]
-       
+
         df_steps = pd.read_csv(jp_path, low_memory=False)
         df_suggestions = pd.read_csv(sug_path, low_memory=False)
         return df_steps, df_suggestions
 
     def _transform_dnn(
         self,
-        df : Any,
+        df: Any,
         users: int = 37,
         max_study_day: int = 52,
         day_dec: int = 5,
         num_measurements: int = 12,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Iteratively transform the processed HeartSteps data into a 4d tensor"""
-        warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+        warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
         final_M = np.zeros((users, max_study_day, day_dec, num_measurements))
         final_A = np.zeros((users, max_study_day, day_dec))
 
@@ -119,7 +146,6 @@ class HeartStepsDataLoader(NNDataLoader):
                             )
                             final_M[user - 1, day - 1, slot - 1] = m_pad
                     except KeyError:
-
                         final_A[user - 1, day - 1, slot - 1] = 0
                         final_M[user - 1, day - 1, slot - 1] = np.full(
                             num_measurements, np.nan
@@ -128,41 +154,35 @@ class HeartStepsDataLoader(NNDataLoader):
         final_A = final_A.reshape((users, max_study_day * day_dec))
         return final_M, final_A
 
-
-    def _get_mode(self, x: pd.Series) -> pd.Series:
+    def _get_mode(self, x: pd.Series) -> Any:
         if len(pd.Series.mode(x) > 1):
             return pd.Series.mode(x, dropna=False)[0]
         else:
             return pd.Series.mode(x, dropna=False)
 
-
-    def _reind_id(self, df_u: pd.DataFrame) -> pd.DataFrame:
+    def _reind_id(self, df_u: Any) -> pd.DataFrame:
         """Function to reindex the data to include all time points for each user."""
-        rng = pd.date_range(
+        d_rnge = pd.date_range(
             min(df_u.index.astype("datetime64[ns]")),
             max(df_u.index.astype("datetime64[ns]")) + timedelta(days=1),
             normalize=True,
             inclusive="both",
             freq="5min",
         )
-        rng = rng[rng.indexer_between_time("00:00", "23:55")]
+        d_rnge = d_rnge[d_rnge.indexer_between_time("00:00", "23:55")]
         # print(rng)
-        df_reind = df_u.reindex(rng)
+        df_reind = df_u.reindex(d_rnge)
         df_reind["user.index"] = df_reind["user.index"].ffill().bfill()
         df_reind["study.day.nogap"] = df_reind["study.day.nogap"].bfill().ffill()
         df_reind["steps"] = df_reind["steps"].fillna(0)
         return df_reind
 
-
-    def _take_range(self, df: pd.DataFrame, range: int) -> pd.DataFrame:
-        idx = df.index.get_indexer_for(
-            df[pd.notna(df["sugg.select.slot"])].index
-        )
+    def _take_range(self, df: Any, range: int) -> pd.DataFrame:
+        idx = df.index.get_indexer_for(df[pd.notna(df["sugg.select.slot"])].index)
         ranges = [np.arange(i, min(i + range + 1, len(df))) for i in idx]
         return df.iloc[np.concatenate(ranges)]
 
-
-    def _create_slots(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _create_slots(self, df: Any) -> pd.DataFrame:
         most_rec_slot = 0.0
         for ind, row in df.iterrows():
             curr_slot = row["sugg.select.slot"]
@@ -182,8 +202,7 @@ class HeartStepsDataLoader(NNDataLoader):
                     most_rec_slot = curr_slot
         return df
 
-
-    def _study_day(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _study_day(self, df: Any) -> pd.DataFrame:
         most_rec_slot = 1.0
         curr_study_day = 1
         for ind, row in df.iterrows():
@@ -195,11 +214,15 @@ class HeartStepsDataLoader(NNDataLoader):
                 df.at[ind, "study_day"] = curr_study_day
         return df
 
-    def _proc_dist_data(self, df_steps:pd.DataFrame, df_suggestions:pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _proc_dist_data(
+        self, df_steps: pd.DataFrame, df_suggestions: pd.DataFrame
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Process the data into distribution setting."""
-        print("Processing HeartSteps V1...")
+        # print("Processing HeartSteps V1...")
         # get relevant cols and reformatting
-        df_steps = df_steps[["user.index", "steps.utime", "steps", "study.day.nogap"]]
+        df_steps = pd.DataFrame(
+            df_steps[["user.index", "steps.utime", "steps", "study.day.nogap"]]
+        )
         df_steps = df_steps.copy()
         df_steps["steps.utime"] = pd.to_datetime(df_steps["steps.utime"])
         # create multi-index
@@ -223,7 +246,8 @@ class HeartStepsDataLoader(NNDataLoader):
         df_sugg_sel["sugg.decision.utime"] = pd.to_datetime(
             df_sugg_sel["sugg.decision.utime"]
         )
-        df_sugg_sel = df_sugg_sel.dropna(
+        # TODO: (Caleb) Resolve pyright error with dropna function
+        df_sugg_sel = df_sugg_sel.dropna(  # pyright: ignore
             subset=["sugg.decision.utime", "sugg.select.utime", "user.index"]
         )
 
@@ -231,7 +255,10 @@ class HeartStepsDataLoader(NNDataLoader):
         df_5min = (
             df_steps.groupby(
                 [
-                    pd.Grouper(freq="5min", level="steps.utime", label="right"),
+                    # TODO: (Caleb) resolve this Grouper pyright error - says no parameter named 'label' but pd.Grouper param list has 'label'.
+                    # Main issue is that TimeGrouper (which has the param label) was deprecated but is still used under the hood
+                    # so the param label is not explicitly exposed in the Grouper init definition but is still accepted/used.
+                    pd.Grouper(freq="5min", level="steps.utime", label="right"),  # pyright: ignore
                     pd.Grouper(level="user.index"),
                 ],
                 sort=False,
@@ -249,7 +276,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
         result_dfs = []
         user_indices = df_5min_ind["user.index"].unique()
-        # process each user 
+        # process each user
         for user_idx in user_indices:
             # filter for just this user
             df_u = df_5min_ind[df_5min_ind["user.index"] == user_idx].copy()
@@ -268,7 +295,9 @@ class HeartStepsDataLoader(NNDataLoader):
                 left_on="steps.utime",
                 right_on="sugg.decision.utime",
                 by="user.index",
-                tolerance=pd.Timedelta("5min"),
+                # TODO: (Caleb) Resolve pyright error with pd.Timedelta. This is due to another incompatibility in the pandas type specification.
+                # tolerance does not accept NaT, but Timedelta could return NaT. Pandas documentation uses pd.Timedelta in this way exactly, so unsure of solution.
+                tolerance=pd.Timedelta("5min"),  # pyright: ignore
                 allow_exact_matches=False,
                 direction="backward",
             )
@@ -276,7 +305,9 @@ class HeartStepsDataLoader(NNDataLoader):
             .reset_index(drop=True)
         )
         df_merged["sugg.select.slot"] = np.where(
-            df_merged["decision.index.nogap"].isna(), np.nan, df_merged["sugg.select.slot"]
+            df_merged["decision.index.nogap"].isna(),
+            np.nan,
+            df_merged["sugg.select.slot"],
         )
 
         # get 12 rows after each notification period (1 hour of observations)
@@ -333,6 +364,3 @@ class HeartStepsDataLoader(NNDataLoader):
             for j in range(T):
                 Data2d[i, j] = Data[i, j]
         return Data, Data2d, Mask
-
-    
-

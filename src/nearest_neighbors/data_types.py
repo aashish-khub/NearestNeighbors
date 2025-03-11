@@ -3,6 +3,7 @@ import numpy.typing as npt
 from typing import Any
 import numpy as np
 
+
 class Scalar(DataType):
     """Data type for scalars."""
 
@@ -59,7 +60,6 @@ class DistributionKernelMMD(DataType):
             float: U-statistic of the squared MMD distance between the two distributions
         
         """
-        
         m = obj1.shape[0]
         n = obj2.shape[0]
 
@@ -98,9 +98,9 @@ class DistributionKernelMMD(DataType):
 
         Returns:
             npt.NDArray: Average of the distributions
-        (Returns is a mixture of vectors regardless of the kernel)
+            (Returns is a mixture of vectors regardless of the kernel)
+
         """
-        
         return object_list
         
         

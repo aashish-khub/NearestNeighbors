@@ -9,7 +9,7 @@ class DataType(ABC):
     """Abstract class for data types. Examples include scalars and distributions."""
 
     @abstractmethod
-    def distance(self, obj1 : Any, obj2 : Any) -> float:
+    def distance(self, obj1: Any, obj2: Any) -> float:
         """Calculate the distance between two objects.
 
         Args:
@@ -134,6 +134,6 @@ class FitMethod(ABC):
 
         Returns:
             float: Best distance threshold
-        
+
         """
         pass

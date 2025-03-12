@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import os
+from typing import Any
 
 
 class NNDataLoader(ABC):
@@ -16,6 +17,7 @@ class NNDataLoader(ABC):
         save_dir: str = "./",
         agg: str = "mean",
         save_processed: bool = False,
+        **kwargs: Any,
     ):
         """Initializes the data loader.
 
@@ -25,6 +27,7 @@ class NNDataLoader(ABC):
                 Default: "./" (current directory).
             agg (str): aggregation method to use to create scalar dataset. Default: "mean".
             save_processed (bool): whether to save the processed data.  Default: False.
+            **kwargs: additional arguments to be passed to the subclass.
 
         """
         self.save_dir = save_dir

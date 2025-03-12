@@ -7,13 +7,66 @@ from typing import Any
 from datetime import timedelta
 import warnings
 
+params = {
+    "freq": (str, "5min", "Frequency of step count samples"),
+    "participants": (int, 37, "Number of participants in the study"),
+    "max_study_day": (int, 52, "Maximum number of study days to include"),
+    "num_measurements": (int, 12, "Number of measurements per decision point"),
+}
 
-@register_dataset("heartsteps")
+
+@register_dataset("heartsteps", params)
 class HeartStepsDataLoader(NNDataLoader):
+    """Data from the Heartsteps V1 study formatted into a matrix or tensor.
+    To initialize with default settings, use: NNData.create("heartsteps").
+
+    """
+
     urls = {
         "jbsteps.csv": "https://raw.githubusercontent.com/klasnja/HeartStepsV1/refs/heads/main/data_files/jbsteps.csv",
         "suggestions.csv": "https://raw.githubusercontent.com/klasnja/HeartStepsV1/refs/heads/main/data_files/suggestions.csv",
     }
+
+    def __init__(
+        self,
+        download: bool = False,
+        save_dir: str = "./",
+        agg: str = "mean",
+        save_processed: bool = False,
+        freq: str = "5min",
+        participants: int = 37,
+        max_study_day: int = 52,
+        num_measurements: int = 12,
+        **kwargs: Any,
+    ):
+        """Initializes the HeartSteps data loader.
+
+        Args:
+        ----
+            download: Whether to download the data locally. Default: False. If True, data is downloaded at save_dir
+            save_dir: Directory to download the data to or where it already exists. Also the directory where the processed data will be. Default: "./" (current directory).
+            agg: Aggregation method to use to create scalar dataset. Default: "mean".
+            save_processed: Whether to save the processed data. Default: False.
+            freq: Frequency of step count samples. Default: "5min".
+            participants: Number of participants to include. Default: 37 (maximum).
+            max_study_day: Maximum study day. Default: 52.
+            num_measurements: Number of measurements taken after each decision point. Default: 12.
+                Note: it is recommended that you use no more than 1-2 hours of data after each decision point to avoid overlap with the next decision point.
+                This means that freq (in minutes) * num_measurements should be approximately 60.
+            kwargs: Additional keyword arguments.
+
+        """
+        super().__init__(
+            download=download,
+            save_dir=save_dir,
+            agg=agg,
+            save_processed=save_processed,
+            **kwargs,
+        )
+        self.freq = freq
+        self.participants = participants
+        self.max_study_day = max_study_day
+        self.num_measurements = num_measurements
 
     def download_data(self) -> None:
         """Download the data from the remote source through urls."""
@@ -167,7 +220,7 @@ class HeartStepsDataLoader(NNDataLoader):
             max(df_u.index.astype("datetime64[ns]")) + timedelta(days=1),
             normalize=True,
             inclusive="both",
-            freq="5min",
+            freq=self.freq,
         )
         d_rnge = d_rnge[d_rnge.indexer_between_time("00:00", "23:55")]
         # print(rng)
@@ -252,13 +305,13 @@ class HeartStepsDataLoader(NNDataLoader):
         )
 
         # group the step data by five minute intervals
-        df_5min = (
+        df_freq = (
             df_steps.groupby(
                 [
                     # TODO: (Caleb) resolve this Grouper pyright error - says no parameter named 'label' but pd.Grouper param list has 'label'.
                     # Main issue is that TimeGrouper (which has the param label) was deprecated but is still used under the hood
                     # so the param label is not explicitly exposed in the Grouper init definition but is still accepted/used.
-                    pd.Grouper(freq="5min", level="steps.utime", label="right"),  # pyright: ignore
+                    pd.Grouper(freq=self.freq, level="steps.utime", label="right"),  # pyright: ignore
                     pd.Grouper(level="user.index"),
                 ],
                 sort=False,
@@ -267,7 +320,7 @@ class HeartStepsDataLoader(NNDataLoader):
             .reset_index()
         )
 
-        df_5min_ind = df_5min.set_index("steps.utime")
+        df_freq_ind = df_freq.set_index("steps.utime")
 
         # expand the step data to include all time points
         # df_expand5min = df_5min_ind.groupby("user.index", group_keys=False).apply(
@@ -275,29 +328,29 @@ class HeartStepsDataLoader(NNDataLoader):
         # )
 
         result_dfs = []
-        user_indices = df_5min_ind["user.index"].unique()
+        user_indices = df_freq_ind["user.index"].unique()
         # process each user
         for user_idx in user_indices:
             # filter for just this user
-            df_u = df_5min_ind[df_5min_ind["user.index"] == user_idx].copy()
+            df_u = df_freq_ind[df_freq_ind["user.index"] == user_idx].copy()
             reindexed_df = self._reind_id(df_u)
             result_dfs.append(reindexed_df)
-        df_expand5min = pd.concat(result_dfs)
+        df_expandfreq = pd.concat(result_dfs)
 
-        df_expand5min = df_expand5min.reset_index(names="steps.utime")
-        df_expand5min["user.index"] = df_expand5min["user.index"].astype("int64")
+        df_expandfreq = df_expandfreq.reset_index(names="steps.utime")
+        df_expandfreq["user.index"] = df_expandfreq["user.index"].astype("int64")
 
         # merge the step data with the notification data
         df_merged = (
             pd.merge_asof(
-                df_expand5min.sort_values(by="steps.utime"),
+                df_expandfreq.sort_values(by="steps.utime"),
                 df_sugg_sel.sort_values(by="sugg.decision.utime"),
                 left_on="steps.utime",
                 right_on="sugg.decision.utime",
                 by="user.index",
                 # TODO: (Caleb) Resolve pyright error with pd.Timedelta. This is due to another incompatibility in the pandas type specification.
                 # tolerance does not accept NaT, but Timedelta could return NaT. Pandas documentation uses pd.Timedelta in this way exactly, so unsure of solution.
-                tolerance=pd.Timedelta("5min"),  # pyright: ignore
+                tolerance=pd.Timedelta(self.freq),  # pyright: ignore
                 allow_exact_matches=False,
                 direction="backward",
             )
@@ -310,13 +363,13 @@ class HeartStepsDataLoader(NNDataLoader):
             df_merged["sugg.select.slot"],
         )
 
-        # get 12 rows after each notification period (1 hour of observations)
+        # get num_measurement rows after each notification period (1 hour of observations by default args)
         unique_users = df_merged["user.index"].unique()
         result_dfs = []
 
         for user_idx in unique_users:
             df_user = df_merged[df_merged["user.index"] == user_idx]
-            df_user_range = self._take_range(df_user, 12)
+            df_user_range = self._take_range(df_user, self.num_measurements)
             result_dfs.append(df_user_range)
 
         df_merged_cut = pd.concat(result_dfs).reset_index(drop=True)
@@ -353,7 +406,12 @@ class HeartStepsDataLoader(NNDataLoader):
         df_final = df_study_day.set_index(["user.index", "study_day", "new_slot"])
 
         # transform into 4d tensor + mask
-        Data, Mask = self._transform_dnn(df_final)
+        Data, Mask = self._transform_dnn(
+            df_final,
+            users=self.participants,
+            max_study_day=self.max_study_day,
+            num_measurements=self.num_measurements,
+        )
         N, T = Mask.shape
         Data2d = np.empty([N, T], dtype=object)
 

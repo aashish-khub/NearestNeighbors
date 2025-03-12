@@ -65,7 +65,7 @@ class RowRowEstimator(EstimationMethod):
             return np.array(np.nan)
 
         # Calculate the average of the nearest neighbors
-        nearest_neighbors_data = data_array[nearest_neighbors, column].flatten()
+        nearest_neighbors_data = data_array[nearest_neighbors, column]
 
         return data_type.average(nearest_neighbors_data)
 

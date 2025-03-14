@@ -74,3 +74,13 @@ class NNDataLoader(ABC):
 
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
+        """A helpful debugging tool: returns the full state of the data loader as a dictionary.
+
+        Args:
+            include_metadata (bool): whether to include metadata in the dictionary. Default: False.
+
+        """
+        raise NotImplementedError

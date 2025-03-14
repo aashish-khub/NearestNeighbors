@@ -126,7 +126,7 @@ class DistributionKernelMMD(DataType):
         mixture = np.vstack(arrays_to_stack)
         return mixture
 
-      
+
 class DistributionWassersteinSamples(DataType):
     """Data type for distributions using Wasserstein distance
     where distributions are made with samples with the same number of samples.

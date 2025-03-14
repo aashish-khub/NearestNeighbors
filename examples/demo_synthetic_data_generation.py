@@ -1,3 +1,14 @@
+"""The following script demonstrates how to generate synthetic data using the nearest_neighbors package.
+It shows how to explore the results of the synthetic data generation, and various ways in which the 
+data generation parameters can be customized. It also documents how parameters can be accessed from the
+instance of the data generator, and how the full state dictionary can be accessed to see the true data
+before noise, the noisy data, and the availability mask, etc.
+
+To run this script, ensure you're in the root directory of the package and run:
+```
+    python examples/demo_synthetic_data_generation.py
+```
+"""
 from nearest_neighbors.dataloader_factory import NNData
 
 print("====== Synthetic Data Demo: Exploring Parameters and Full State Keys ======")

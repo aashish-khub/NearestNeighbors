@@ -1,11 +1,13 @@
 """A function to return the DRNN imputer."""
+
 from .nnimputer import NearestNeighborImputer
 from typing import Optional
 import numpy as np
 
+
 def drnn(
     distance_threshold_row: Optional[float] = None,
-    distance_threshold_col: Optional[float] = None
+    distance_threshold_col: Optional[float] = None,
 ) -> NearestNeighborImputer:
     """Create a doubly robust nearest neighbor imputer.
 

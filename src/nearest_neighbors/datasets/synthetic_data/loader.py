@@ -1,6 +1,7 @@
 from nearest_neighbors.dataloader_base import NNDataLoader
 from nearest_neighbors.dataloader_factory import register_dataset
 import numpy as np
+import math as math
 from typing import Any
 
 params = {
@@ -37,6 +38,7 @@ params = {
         "Nonlinear transformation to apply to the synthetic data, if any",
     ),
 }
+
 
 
 @register_dataset("synthetic_data", params)
@@ -123,6 +125,7 @@ class SyntheticDataLoader(NNDataLoader):
         )
         pass
 
+
     def _generate_simulated_data(self) -> None:
         """Generates the simulated data with no missing values"""
         # row and column latent factors:
@@ -186,8 +189,88 @@ class SyntheticDataLoader(NNDataLoader):
         self.availability_mask = A
 
     def _make_mnar(self) -> None:
-        raise NotImplementedError("MNAR yet to be implemented")
-        # TODO: Aashish/Caleb/Kyuesong/Tatha: come back to this later
+        """Makes values missing not at random (MNAR), specifically staggered adoption (non-positivity & confounded)"""
+        U = self.row_latent
+
+        N = self.num_rows
+        T = self.num_cols
+
+        missing_mask = np.zeros((N, T))
+        pre_Masking = np.zeros((N, T))
+
+        # Divide units into 3 groups
+        g1_inds = np.arange(0, N // 3)
+        g2_inds = np.arange(N // 3, 2 * N // 3)
+        g3_inds = np.arange(2 * N // 3, N)
+
+        gamma_1 = [2, 0.7, 1, 0.7]
+        gamma_2 = [2, 0.2, 1, 0.2]
+
+        #TODO: make beta a parameter (currently hardcoded)
+        #first group adopts at the first 30% of the time period
+        #second group adopts at the first 70% of the time period
+        beta = [0.3, 0.7]
+
+        T1_lower = math.floor(T ** beta[0])
+        T2_lower = math.floor(T ** beta[1])
+
+        for i in range(N):
+            if i in g1_inds:
+                pre_Masking[i, :] = np.concatenate(
+                    (np.ones(T1_lower), np.zeros(T - T1_lower))
+                )
+                for t in range(T - T1_lower):
+                    pre_Masking[i, (t + T1_lower)] = np.random.binomial( #each units' adoption time probability is affected by their neighbors
+                        1,
+                        self._expit(
+                            gamma_1[0]
+                            + (0.99**t) * gamma_1[1] * U[i - 1]
+                            + gamma_1[2] * U[i]
+                            + (0.99**t) * gamma_1[3] * U[i + 1]
+                        ),
+                        1,
+                    )
+                pre_A = pre_Masking[i, :]
+                if len([i for i in range(len(pre_A)) if pre_A[i] == 0]) == 0:
+                    missing_mask[i, :] = pre_A
+                elif len([i for i in range(len(pre_A)) if pre_A[i] == 0]) > 0:
+                    adopt_time = min([i for i in range(len(pre_A)) if pre_A[i] == 0])
+                    missing_mask[i, :] = np.concatenate(
+                        (np.ones(adopt_time), np.zeros(T - adopt_time))
+                    )
+            elif i in g2_inds:
+                pre_Masking[i, :] = np.concatenate(
+                    (np.ones(T2_lower), np.zeros(T - T2_lower))
+                )
+                for t in range(T - T2_lower):
+                    pre_Masking[i, (t + T2_lower)] = np.random.binomial(
+                        1,
+                        self._expit(
+                            gamma_2[0]
+                            + (1.01**t) * gamma_2[1] * U[i - 1]
+                            + gamma_2[2] * U[i]
+                            + (1.01**t) * gamma_2[3] * U[i + 1]
+                        ),
+                        1,
+                    )
+                pre_A = pre_Masking[i, :]
+                if len([i for i in range(len(pre_A)) if pre_A[i] == 0]) == 0:
+                    missing_mask[i, :] = pre_A
+                elif len([i for i in range(len(pre_A)) if pre_A[i] == 0]) > 0:
+                    adopt_time = min([i for i in range(len(pre_A)) if pre_A[i] == 0])
+                    missing_mask[i, :] = np.concatenate(
+                        (np.ones(adopt_time), np.zeros(T - adopt_time))
+                    )
+            elif i in g3_inds:
+                missing_mask[i, :] = np.ones(T)
+
+        data_obs = self.data_noisy.copy()
+        data_obs[missing_mask] = np.nan
+        A = ~missing_mask  # A = NOT M, i.e. A_ij = 1 if Y_ij is observed, 0 if missing
+        self.data_obs = data_obs
+        self.availability_mask = A
+
+
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
         """Returns the full state of this object as a dictionary"""
@@ -257,7 +340,6 @@ class SyntheticDataLoader(NNDataLoader):
         raise NotImplementedError(
             "Distributional setting not yet implemented for synthetic data"
         )
-
     # HELPER FUNCTIONS
     def _expit(self, x: np.ndarray) -> np.ndarray:
         """Helper function to apply the logistic sigmoid function to an array"""
@@ -283,3 +365,4 @@ class SyntheticDataLoader(NNDataLoader):
                 "non_lin must be one of '', 'expit', 'tanh', 'sin', 'cubic', or 'sinh'."
             )
         return Y
+    

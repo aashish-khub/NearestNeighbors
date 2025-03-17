@@ -67,6 +67,8 @@ class HeartStepsDataLoader(NNDataLoader):
         self.participants = participants
         self.max_study_day = max_study_day
         self.num_measurements = num_measurements
+        self.data = None
+        self.mask = None
 
     def download_data(self) -> None:
         """Download the data from the remote source through urls."""
@@ -116,6 +118,8 @@ class HeartStepsDataLoader(NNDataLoader):
             np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
             np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
         # print("Done!")
+        self.data = data
+        self.mask = mask
         return data, mask
 
     def process_data_distribution(
@@ -132,7 +136,30 @@ class HeartStepsDataLoader(NNDataLoader):
 
         _, Data2d, Mask = self._proc_dist_data(df_steps, df_suggestions)
         # print("Done!")
+        self.data = Data2d
+        self.mask = Mask
         return Data2d, Mask
+
+    def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
+        """Returns the full state as a dictionary. For HeartSteps, this includes the data, masking matrix, and the custom parameters (if include_metadata == True
+
+        If the data and mask are None, then the data has not been processed yet. Call process_data_scalar() or process_data_distribution() to process the data first.
+
+        Args:
+            include_metadata (bool): Whether to include metadata in the dictionary. Default: False. The metadata for HeartSteps is currently empty.
+
+        """
+        full_state = {
+            "data": self.data,
+            "mask": self.mask,
+            "custom_params": {
+                "freq": self.freq,
+                "participants": self.participants,
+                "max_study_day": self.max_study_day,
+                "num_measurements": self.num_measurements,
+            },
+        }
+        return full_state
 
     ## HELPER FUNCTIONS
     def _load_data(self, cached: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:

@@ -100,10 +100,9 @@ class DirectOptimization(FitMethod):
 
         if not perf:  # Handle case when perf list is empty
             return float('inf')  # Return infinity as a default value when no valid threshold is found
-            
+
         eta_star = eta_cand[np.argmin(perf)]
         return eta_star
-    
 
 
 
@@ -112,7 +111,7 @@ class CrossValidation(FitMethod):
 
     def fit(self, data_array: npt.NDArray, mask_array: npt.NDArray, imputer: NearestNeighborImputer) -> float:
         """Uses cross-validation to find the best distance threshold.
-        
+
         Args:
             data_array (npt.NDArray): Data array
             mask_array (npt.NDArray): Mask array

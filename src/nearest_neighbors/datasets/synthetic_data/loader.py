@@ -220,7 +220,7 @@ class SyntheticDataLoader(NNDataLoader):
                     (np.ones(T1_lower), np.zeros(T - T1_lower))
                 )
                 for t in range(T - T1_lower):
-                    pre_Masking[i, (t + T1_lower)] = np.random.binomial( #each units' adoption time probability is affected by their neighbors
+                    pre_Masking[i, (t + T1_lower)] = np.random.binomial(  # each units' adoption time probability is affected by their neighbors
                         1,
                         self._expit(
                             gamma_1[0]

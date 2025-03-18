@@ -134,11 +134,11 @@ class HeartStepsDataLoader(NNDataLoader):
         """
         df_steps, df_suggestions = self._load_data(cached)
 
-        _, Data2d, Mask = self._proc_dist_data(df_steps, df_suggestions)
+        _, data2d, mask = self._proc_dist_data(df_steps, df_suggestions)
         # print("Done!")
-        self.data = Data2d
-        self.mask = Mask
-        return Data2d, Mask
+        self.data = data2d
+        self.mask = mask
+        return data2d, mask
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
         """Returns the full state as a dictionary. For HeartSteps, this includes the data, masking matrix, and the custom parameters (if include_metadata == True
@@ -433,19 +433,19 @@ class HeartStepsDataLoader(NNDataLoader):
         df_final = df_study_day.set_index(["user.index", "study_day", "new_slot"])
 
         # transform into 4d tensor + mask
-        Data, Mask = self._transform_dnn(
+        data, mask = self._transform_dnn(
             df_final,
             users=self.participants,
             max_study_day=self.max_study_day,
             num_measurements=self.num_measurements,
         )
-        N, T = Mask.shape
-        Data2d = np.empty([N, T], dtype=object)
+        N, T = mask.shape
+        data2d = np.empty([N, T], dtype=object)
 
         # to align with 4d structure
-        Data = Data[:, :, :, np.newaxis]
+        data = data[:, :, :, np.newaxis]
 
         for i in range(N):
             for j in range(T):
-                Data2d[i, j] = Data[i, j]
-        return Data, Data2d, Mask
+                data2d[i, j] = data[i, j]
+        return data, data2d, mask

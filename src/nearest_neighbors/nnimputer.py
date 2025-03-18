@@ -2,7 +2,7 @@
 
 import numpy.typing as npt
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Any, Union, Tuple
 
 
 class DataType(ABC):
@@ -69,19 +69,19 @@ class NearestNeighborImputer:
         self,
         estimation_method: EstimationMethod,
         data_type: DataType,
-        distance_treshold: Optional[float] = None,
+        distance_threshold: Optional[float] = None,
     ):
         """Initialize the imputer.
 
         Args:
             estimation_method (EstimationMethod): Estimation method to use (e.g. row-row, col-col, two-sided, doubly-robust)
             data_type (DataType): Data type to use (e.g. scalars, distributions)
-            distance_treshold (Optional[float], optional): Distance threshold to use. Defaults to None.
+            distance_threshold (Optional[float], optional): Distance threshold to use. Defaults to None.
 
         """
         self.estimation_method = estimation_method
         self.data_type = data_type
-        self.distance_threshold = None
+        self.distance_threshold = distance_threshold
 
     def __str__(self):
         return f"NearestNeighborImputer(estimation_method={self.estimation_method}, data_type={self.data_type})"
@@ -124,7 +124,7 @@ class FitMethod(ABC):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
-    ) -> float:
+    ) -> Union[float, Tuple[float, float]]:
         """Find the best distance threshold for the given data.
 
         Args:

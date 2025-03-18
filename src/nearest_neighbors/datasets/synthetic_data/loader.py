@@ -265,8 +265,8 @@ class SyntheticDataLoader(NNDataLoader):
                 missing_mask[i, :] = np.ones(T)
 
         data_obs = self.data_noisy.copy()
-        data_obs[missing_mask] = np.nan
-        A = ~missing_mask  # A = NOT M, i.e. A_ij = 1 if Y_ij is observed, 0 if missing
+        data_obs[missing_mask.astype(bool)] = np.nan
+        A = ~missing_mask.astype(bool)  # A = NOT M, i.e. A_ij = 1 if Y_ij is observed, 0 if missing
         self.data_obs = data_obs
         self.availability_mask = A
 

@@ -172,8 +172,8 @@ def gendata_dist_mcar(N: int, T: int, n: int, d: int, p: float, seed: int) -> Tu
     v_1 = np.random.uniform(-2, 2, T)
     v_2 = np.random.uniform(0.5, 2, T)
 
-    even_ones = np.repeat([0, 1], d/2)
-    odd_ones = np.repeat([1, 0], d/2)
+    even_ones = np.repeat([0, 1], int(d/2))
+    odd_ones = np.repeat([1, 0], int(d/2))
 
     for i in range(N) : 
         for t in range(T) : 

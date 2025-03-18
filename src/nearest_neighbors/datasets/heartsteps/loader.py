@@ -180,7 +180,10 @@ class HeartStepsDataLoader(NNDataLoader):
                 logger.info("No cached data found. Retrieving from url...")
                 jp_path = self.urls["jbsteps.csv"]
                 sug_path = self.urls["suggestions.csv"]
+            else:
+                logger.info("Retrieving data from cache...")
         else:
+            logger.info("Retrieving data from url...")
             jp_path = self.urls["jbsteps.csv"]
             sug_path = self.urls["suggestions.csv"]
 

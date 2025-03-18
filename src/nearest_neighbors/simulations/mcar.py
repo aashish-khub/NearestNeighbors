@@ -139,3 +139,53 @@ def gendata_nonlin_mcar(
     # Data[Masking == 0] = Y0[Masking == 0]
     Data: np.ndarray = np.array(Y)
     return Data, Theta, Masking
+
+
+def gendata_dist_mcar(N: int, T: int, n: int, d: int, p: float, seed: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generates multivariate Gaussian data of multiple measurements with latent dimension r = 2.
+
+    Args:
+        N (int): Number of users.
+        T (int): Number of time periods.
+        n (int): Number of samples per distribution.
+        d (int): Dimension of the data.
+        p (float): Probability of an entry being observed.
+        seed (int): Random seed for reproducibility.
+
+    Returns:
+        Data (np.ndarray): Generated data matrix of shape (N, T, n, d).
+        Masking (np.ndarray): Masking matrix indicating observed entries of shape (N, T).
+        True Mean (np.ndarray): True mean of the data of shape (N, T, d).
+        True Covariance (np.ndarray): True covariance of the data of shape (N, T, d, d).
+
+    """
+    np.random.seed(seed = seed)
+
+    ## Data Matrix (N * T * n * d)
+    Data = np.zeros( (N, T, n, d) )
+    true_Mean = np.zeros( (N, T, d) )
+    true_Cov = np.zeros( (N, T, d, d) )
+
+    u_1 = np.random.uniform(-1, 1, N)
+    u_2 = np.random.uniform(0.2, 1, N)
+
+    v_1 = np.random.uniform(-2, 2, T)
+    v_2 = np.random.uniform(0.5, 2, T)
+
+    even_ones = np.repeat([0, 1], d/2)
+    odd_ones = np.repeat([1, 0], d/2)
+
+    for i in range(N) : 
+        for t in range(T) : 
+            m_it = u_1[i]*v_1[t]*(even_ones - odd_ones)
+            c_it = np.diag(u_2[i]*v_2[t]*(0.5*even_ones + odd_ones))
+            true_Mean[i, t, :] = m_it
+            true_Cov[i, t, :, :] = c_it
+            dat_mat = np.random.multivariate_normal(m_it, c_it, size = n)
+            Data[i, t, :, :] = dat_mat
+    
+    Masking = np.zeros( (N, T) )
+
+    Masking = np.reshape(np.random.binomial(1, p, (N*T)), (N, T))
+    
+    return(Data, Masking, true_Mean, true_Cov)

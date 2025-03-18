@@ -141,7 +141,9 @@ def gendata_nonlin_mcar(
     return Data, Theta, Masking
 
 
-def gendata_dist_mcar(N: int, T: int, n: int, d: int, p: float, seed: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def gendata_dist_mcar(
+    N: int, T: int, n: int, d: int, p: float, seed: int
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Generates multivariate Gaussian data of multiple measurements with latent dimension r = 2.
 
     Args:
@@ -172,19 +174,19 @@ def gendata_dist_mcar(N: int, T: int, n: int, d: int, p: float, seed: int) -> Tu
     v_1 = np.random.uniform(-2, 2, T)
     v_2 = np.random.uniform(0.5, 2, T)
 
-    even_ones = np.repeat([0, 1], int(d/2))
-    odd_ones = np.repeat([1, 0], int(d/2))
+    even_ones = np.repeat([0, 1], int(d / 2))
+    odd_ones = np.repeat([1, 0], int(d / 2))
 
     for i in range(N):
         for t in range(T):
-            m_it = u_1[i]*v_1[t]*(even_ones - odd_ones)
-            c_it = np.diag(u_2[i]*v_2[t]*(0.5*even_ones + odd_ones))
+            m_it = u_1[i] * v_1[t] * (even_ones - odd_ones)
+            c_it = np.diag(u_2[i] * v_2[t] * (0.5 * even_ones + odd_ones))
             true_Mean[i, t, :] = m_it
             true_Cov[i, t, :, :] = c_it
             dat_mat = np.random.multivariate_normal(m_it, c_it, size=n)
             Data[i, t, :, :] = dat_mat
 
     Masking = np.zeros((N, T))
-    Masking = np.reshape(np.random.binomial(1, p, (N*T)), (N, T))
+    Masking = np.reshape(np.random.binomial(1, p, (N * T)), (N, T))
 
     return Data, Masking, true_Mean, true_Cov

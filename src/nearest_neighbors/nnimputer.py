@@ -129,7 +129,7 @@ class FitMethod(ABC):
 
         Args:
             row (int): Row index
-            column (int): Column index  
+            column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
             imputer (NearestNeighborImputer): Imputer object

@@ -121,8 +121,6 @@ class FitMethod(ABC):
     @abstractmethod
     def fit(
         self,
-        row: int, 
-        column: int,
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,

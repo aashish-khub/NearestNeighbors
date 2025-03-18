@@ -6,6 +6,9 @@ import pandas as pd
 from typing import Any
 from datetime import timedelta
 import warnings
+import logging
+
+logger = logging.getLogger(__name__)
 
 params = {
     "freq": (str, "5min", "Frequency of step count samples"),
@@ -174,7 +177,7 @@ class HeartStepsDataLoader(NNDataLoader):
             jp_path = os.path.join(self.save_dir, "jbsteps.csv")
             sug_path = os.path.join(self.save_dir, "suggestions.csv")
             if not (os.path.exists(jp_path) and os.path.exists(sug_path)):
-                print("No cached data found. Retrieving from url...")
+                logger.info("No cached data found. Retrieving from url...")
                 jp_path = self.urls["jbsteps.csv"]
                 sug_path = self.urls["suggestions.csv"]
         else:

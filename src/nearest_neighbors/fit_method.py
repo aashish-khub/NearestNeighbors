@@ -36,8 +36,6 @@ class DirectOptimization(FitMethod):
         """Analytically optimizes the squared MMD error.
         
         Args:
-            row (int): target row index
-            column (int): target column index
             data_array (npt.NDArray): Data array
             mask_array (npt.NDArray): Mask array
             imputer (NearestNeighborImputer): Imputer
@@ -47,7 +45,7 @@ class DirectOptimization(FitMethod):
 
         """
         if self.kernel == "exponential":
-            sup_kern = 1 #TODO: need to change for general kernels
+            sup_kern = 1  # TODO: need to change for general kernels
 
         delta = self.delta
         eta_cand = self.eta_cand

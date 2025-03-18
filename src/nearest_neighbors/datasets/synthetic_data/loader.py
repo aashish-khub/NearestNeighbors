@@ -40,7 +40,6 @@ params = {
 }
 
 
-
 @register_dataset("synthetic_data", params)
 class SyntheticDataLoader(NNDataLoader):
     """Data from the Heartsteps V1 study formatted into a matrix or tensor.
@@ -125,7 +124,6 @@ class SyntheticDataLoader(NNDataLoader):
         )
         pass
 
-
     def _generate_simulated_data(self) -> None:
         """Generates the simulated data with no missing values"""
         # row and column latent factors:
@@ -206,9 +204,9 @@ class SyntheticDataLoader(NNDataLoader):
         gamma_1 = [2, 0.7, 1, 0.7]
         gamma_2 = [2, 0.2, 1, 0.2]
 
-        #TODO: make beta a parameter (currently hardcoded)
-        #first group adopts at the first 30% of the time period
-        #second group adopts at the first 70% of the time period
+        # TODO: make beta a parameter (currently hardcoded)
+        # first group adopts at the first 30% of the time period
+        # second group adopts at the first 70% of the time period
         beta = [0.3, 0.7]
 
         T1_lower = math.floor(T ** beta[0])
@@ -220,15 +218,17 @@ class SyntheticDataLoader(NNDataLoader):
                     (np.ones(T1_lower), np.zeros(T - T1_lower))
                 )
                 for t in range(T - T1_lower):
-                    pre_Masking[i, (t + T1_lower)] = np.random.binomial(  # each units' adoption time probability is affected by their neighbors
-                        1,
-                        self._expit(
-                            gamma_1[0]
-                            + (0.99**t) * gamma_1[1] * U[i - 1]
-                            + gamma_1[2] * U[i]
-                            + (0.99**t) * gamma_1[3] * U[i + 1]
-                        ),
-                        1,
+                    pre_Masking[i, (t + T1_lower)] = (
+                        np.random.binomial(  # each units' adoption time probability is affected by their neighbors
+                            1,
+                            self._expit(
+                                gamma_1[0]
+                                + (0.99**t) * gamma_1[1] * U[i - 1]
+                                + gamma_1[2] * U[i]
+                                + (0.99**t) * gamma_1[3] * U[i + 1]
+                            ),
+                            1,
+                        )
                     )
                 pre_A = pre_Masking[i, :]
                 if len([i for i in range(len(pre_A)) if pre_A[i] == 0]) == 0:
@@ -266,11 +266,11 @@ class SyntheticDataLoader(NNDataLoader):
 
         data_obs = self.data_noisy.copy()
         data_obs[missing_mask.astype(bool)] = np.nan
-        A = ~missing_mask.astype(bool)  # A = NOT M, i.e. A_ij = 1 if Y_ij is observed, 0 if missing
+        A = ~missing_mask.astype(
+            bool
+        )  # A = NOT M, i.e. A_ij = 1 if Y_ij is observed, 0 if missing
         self.data_obs = data_obs
         self.availability_mask = A
-
-
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
         """Returns the full state of this object as a dictionary"""
@@ -340,6 +340,7 @@ class SyntheticDataLoader(NNDataLoader):
         raise NotImplementedError(
             "Distributional setting not yet implemented for synthetic data"
         )
+
     # HELPER FUNCTIONS
     def _expit(self, x: np.ndarray) -> np.ndarray:
         """Helper function to apply the logistic sigmoid function to an array"""
@@ -365,4 +366,3 @@ class SyntheticDataLoader(NNDataLoader):
                 "non_lin must be one of '', 'expit', 'tanh', 'sin', 'cubic', or 'sinh'."
             )
         return Y
-    

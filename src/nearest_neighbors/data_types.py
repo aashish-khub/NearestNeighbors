@@ -30,7 +30,9 @@ class Scalar(DataType):
             Any: Average of the scalars
 
         """
-        return np.mean(object_list)
+        # Compute the mean using only the non-nan values.
+        # If all values are nan, return nan.
+        return np.nanmean(object_list)
 
 
 class DistributionKernelMMD(DataType):

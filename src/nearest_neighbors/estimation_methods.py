@@ -59,13 +59,24 @@ class RowRowEstimator(EstimationMethod):
 
         # Find the nearest neighbors indexes
         nearest_neighbors = np.where(row_distances <= distance_threshold)[0]
+        # Apply mask_array to data_array
+        masked_data_array = np.where(mask_array, data_array, np.nan)
 
         # If no neighbors found, return nan
         if len(nearest_neighbors) == 0:
-            return np.array(np.nan)
+            # return np.array(np.nan)
+            # NOTE: implement the base case described by Eq. 11 in
+            # "Counterfactual Inference for Sequential Experiments".
+            if mask_array[row, column]:
+                # return the observed outcome
+                return data_array[row, column]
+            else:
+                # return the average of all observed outcomes corresponding
+                # to treatment 1 at time t.
+                return np.array(np.nanmean(masked_data_array[:, column]))
 
         # Calculate the average of the nearest neighbors
-        nearest_neighbors_data = data_array[nearest_neighbors, column]
+        nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
 
         return data_type.average(nearest_neighbors_data)
 

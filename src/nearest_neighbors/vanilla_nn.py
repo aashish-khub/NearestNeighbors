@@ -1,4 +1,9 @@
-"""Implementation of vanilla nearest neighbor imputation."""
+"""Implementation of vanilla NN imputer.
+
+Details of the vanilla NN algorithm can be found in Sec. 2.3 of the following paper:
+    Dwivedi, R., Tian, K., Tomkins, S., Klasnja, P., Murphy, S., & Shah, D. (2022).
+    Counterfactual inference for sequential experiments. arXiv preprint arXiv:2202.06891.
+"""
 
 from .nnimputer import NearestNeighborImputer
 from .data_types import Scalar

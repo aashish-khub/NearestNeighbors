@@ -1,4 +1,9 @@
-"""A function to return the DRNN imputer."""
+"""A function to return the DRNN imputer.
+
+More details on the Doubly Robust Nearest Neighbor (DRNN) method can be found in Section 2.2.2 of the following paper:
+    Dwivedi, R., Tian, K., Tomkins, S., Klasnja, P., Murphy, S., & Shah, D. (2022).
+    Doubly robust nearest neighbors in factor models. arXiv preprint arXiv:2211.14297.
+"""
 
 from .nnimputer import NearestNeighborImputer
 from typing import Optional
@@ -12,6 +17,7 @@ def drnn(
     """Create a doubly robust nearest neighbor imputer.
 
     If distance_threshold_row and distance_threshold_col are not provided, they must be set by calling fit on the imputer.
+
 
     Args:
         distance_threshold_row (float): [Optional] Distance threshold for row-row nearest neighbors.

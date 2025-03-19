@@ -2,7 +2,7 @@
 
 import numpy.typing as npt
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Any, Union, Tuple
 
 
 class DataType(ABC):
@@ -124,7 +124,7 @@ class FitMethod(ABC):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
-    ) -> float:
+    ) -> Union[float, Tuple[float, float]]:
         """Find the best distance threshold for the given data.
 
         Args:

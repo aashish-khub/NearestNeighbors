@@ -98,15 +98,15 @@ class HeartStepsDataLoader(NNDataLoader):
         df_steps, df_suggestions = self._load_data(cached)
         data, _, mask = self._proc_dist_data(df_steps, df_suggestions)
         if agg == "mean":
-            data = data.mean(axis=2)
+            data = np.nanmean(data, axis=2)
         elif agg == "sum":
-            data = data.sum(axis=2)
+            data = np.nansum(data, axis=2)
         elif agg == "median":
-            data = np.median(data, axis=2)
+            data = np.nanmedian(data, axis=2)
         elif agg == "std":
-            data = np.std(data, axis=2)
+            data = np.nanstd(data, axis=2)
         elif agg == "variance":
-            data = np.var(data, axis=2)
+            data = np.nanvar(data, axis=2)
         else:
             raise ValueError(
                 "agg must be one of 'mean', 'sum', 'median', 'std', or 'variance'"
@@ -114,7 +114,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
         data = np.squeeze(data)
         # write data to output_dir
-        if self.save_processed != "":
+        if self.save_processed:
             np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
             np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
         # print("Done!")

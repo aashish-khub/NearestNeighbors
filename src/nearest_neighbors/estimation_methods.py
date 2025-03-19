@@ -168,11 +168,11 @@ class DREstimator(EstimationMethod):
                     data_array[row, j], data_array[i, j]
                 )
             row_distances[i] /= np.sum(overlap_columns)
-
+        row_distances[row] = np.inf  # Exclude the row itself
         # Find the row nearest neighbors indexes
-        row_nearest_neighbors = np.where(row_distances <= self.distance_threshold_row)[
-            0
-        ]
+        row_nearest_neighbors = np.nonzero(
+            row_distances <= self.distance_threshold_row
+        )[0]
 
         col_distances = np.zeros(n_cols)
         for i in range(n_cols):
@@ -191,34 +191,36 @@ class DREstimator(EstimationMethod):
                     data_array[j, column], data_array[j, i]
                 )
             col_distances[i] /= np.sum(overlap_rows)
-
+        col_distances[column] = np.inf
         # Find the col nearest neighbors indexes
-        col_nearest_neighbors = np.where(col_distances <= self.distance_threshold_col)[
-            0
-        ]
+        col_nearest_neighbors = np.nonzero(
+            col_distances <= self.distance_threshold_col
+        )[0]
 
         # Use doubly robust nearest neighbors to combine row and col
         y_itprime = data_array[row, col_nearest_neighbors]
         y_jt = data_array[row_nearest_neighbors, column]
-
         if len(y_itprime) == 0 and len(y_jt) == 0:
             return np.array(np.nan)
 
         # get intersecting entries
-        j_grid, tprime_grid = np.meshgrid(
+        j_inds, tprime_inds = np.meshgrid(
             row_nearest_neighbors, col_nearest_neighbors, indexing="ij"
         )
-        y_jtprime = data_array[j_grid, tprime_grid]
-        mask_jtprime = mask_array[j_grid, tprime_grid]
+        y_jtprime = data_array[j_inds, tprime_inds]
+        mask_jtprime = mask_array[j_inds, tprime_inds]
 
         intersec_inds = np.nonzero(mask_jtprime == 1)
 
-        y_itprime_inter = y_itprime[intersec_inds]
-        y_jt_inter = y_jt[intersec_inds]
+        y_itprime_inter = y_itprime[intersec_inds[1]]
+        y_jt_inter = y_jt[intersec_inds[0]]
         # note: defaults to rownn if no intersection -> should default to ts-nn instead?
         if len(y_itprime_inter) == 0 or len(y_jt_inter) == 0:
-            return data_type.average(y_jt) if len(y_jt) > 0 else np.average(y_itprime)
-
+            return np.array(
+                data_type.average(y_jt)
+                if len(y_jt) > 0
+                else data_type.average(y_itprime)
+            )
         sum_y = (
             y_itprime_inter[np.newaxis, :]
             + y_jt_inter[:, np.newaxis]

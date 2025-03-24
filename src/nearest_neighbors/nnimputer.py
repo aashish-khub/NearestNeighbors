@@ -2,7 +2,7 @@
 
 import numpy.typing as npt
 from abc import ABC, abstractmethod
-from typing import Optional, Any, Union, Tuple
+from typing import Any, Union, Tuple
 
 
 class DataType(ABC):
@@ -69,7 +69,7 @@ class NearestNeighborImputer:
         self,
         estimation_method: EstimationMethod,
         data_type: DataType,
-        distance_threshold: Optional[float] = None,
+        distance_threshold: float | None = None,
     ):
         """Initialize the imputer.
 

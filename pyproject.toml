@@ -33,6 +33,7 @@ dependencies = [
     "pre-commit",
     "ruff",
     "pytest",
+    "datasets"
 ]
 
 [project.urls]

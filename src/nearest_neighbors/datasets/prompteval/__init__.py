@@ -1,1 +1,1 @@
-from .loader import PromptEvalDataLoader # noqa: F401
+from .loader import PromptEvalDataLoader  # noqa: F401

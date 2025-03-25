@@ -31,9 +31,9 @@ def evaluate_imputation(
     # Block out the test cells
     for row, col in test_cells:
         if (
-            mask_array[row, col] == 0
-            or np.isnan(data_array[row, col])
-            or data_array[row, col] is None
+            (mask_array[row, col] == 0)
+            | (np.all(np.isnan(data_array[row, col]))) #TODO: review for distributions
+            | (data_array[row, col] is None)
         ):
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
@@ -41,8 +41,12 @@ def evaluate_imputation(
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
-
+        #print(imputed_value)
+        #print(true_value)
+        #print(f"Imputed value: {imputed_value}, True value: {true_value}")
         error += data_type.distance(imputed_value, true_value)
+        #print(f"Error: {error}")
+        #print(error)
 
     # Reset the mask
     for row, col in test_cells:
@@ -112,12 +116,12 @@ class LeaveBlockOutValidation(FitMethod):
         lower_bound, upper_bound = self.distance_threshold_range
         best_distance_threshold = fmin(
             fn=objective,
-            verbose=False,
+            verbose=True,
             space=hp.uniform("distance_threshold", lower_bound, upper_bound),
             algo=tpe.suggest,
             max_evals=self.n_trials,
         )
         if best_distance_threshold is None:
             return float("nan")
-
+        imputer.distance_threshold = best_distance_threshold["distance_threshold"]
         return best_distance_threshold["distance_threshold"]

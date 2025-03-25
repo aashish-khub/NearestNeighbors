@@ -43,7 +43,7 @@ class RowRowEstimator(EstimationMethod):
             # Get columns observed in both row i and row
             overlap_columns = np.logical_and(mask_array[row], mask_array[i])
 
-            if not np.any(overlap_columns):
+            if not np.any(overlap_columns) or mask_array[i, column] == 0:
                 row_distances[i] = np.inf
                 continue
 
@@ -61,7 +61,11 @@ class RowRowEstimator(EstimationMethod):
         # Find the nearest neighbors indexes
         nearest_neighbors = np.where(row_distances <= distance_threshold)[0]
         # Apply mask_array to data_array
-        masked_data_array = np.where(mask_array, data_array, np.nan)
+        temp_mask = np.nonzero(mask_array == 1)
+        masked_data_array = np.full(data_array.shape, np.nan)
+        masked_data_array[temp_mask] = data_array[temp_mask]
+       #masked_data_array[np.logical_not(temp_mask)] = np.nan 
+        #masked_data_array = np.where(mask_array, data_array, np.nan)
 
         # If no neighbors found, return nan
         if len(nearest_neighbors) == 0:
@@ -78,7 +82,7 @@ class RowRowEstimator(EstimationMethod):
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
-
+        #print(nearest_neighbors_data)
         return data_type.average(nearest_neighbors_data)
 
 

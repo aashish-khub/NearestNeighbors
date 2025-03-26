@@ -76,15 +76,15 @@ data, mask = get_heartsteps_data()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
 
-print("Using scalar data type")
+logger.debug("Using scalar data type")
 data_type = Scalar()
 
 if estimation_method == "dr":
-    print("Using doubly robust estimation")
+    logger.debug("Using doubly robust estimation")
     estimator = DREstimator()
     imputer = NearestNeighborImputer(estimator, data_type)
 elif estimation_method == "vanilla":
-    print("Using row-row estimation")
+    logger.debug("Using row-row estimation")
     imputer = row_row()
 else:
     raise ValueError(f"Estimation method {estimation_method} not supported")
@@ -105,7 +105,7 @@ block = list(zip(holdout_inds_rows, holdout_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
 
 if fit_method == "dr":
-    print("Using doubly robust fit method")
+    logger.debug("Using doubly robust fit method")
     # Fit the imputer using leave-block-out validation
     fitter = DRLeaveBlockOutValidation(
         block,
@@ -115,7 +115,7 @@ if fit_method == "dr":
         data_type=data_type,
     )
 elif fit_method == "lbo":
-    print("Using leave-block-out validation")
+    logger.debug("Using leave-block-out validation")
     fitter = LeaveBlockOutValidation(
         block,
         distance_threshold_range=(0, 4_000_000),
@@ -128,7 +128,7 @@ else:
 start_time = time()
 fitter.fit(data, mask, imputer)
 end_time = time()
-print(f"Time taken to fit imputer: {end_time - start_time} seconds")
+logger.info(f"Time taken to fit imputer: {end_time - start_time} seconds")
 
 # Impute missing values
 imputations = []
@@ -148,8 +148,8 @@ usvt_mask[test_inds_rows, test_inds_cols] = 0
 usvt_data[mask != 1] = np.nan
 usvt_imputed = usvt(usvt_data)
 usvt_errs = list(np.abs(usvt_imputed[test_inds_rows, test_inds_cols] - ground_truth))
-logging.debug(f"DR-NN mean absolute error: {np.mean(drnn_errs)}")
-logging.debug(f"USVT mean absolute error: {np.mean(usvt_errs)}")
+logger.debug(f"DR-NN mean absolute error: {np.mean(drnn_errs)}")
+logger.debug(f"USVT mean absolute error: {np.mean(usvt_errs)}")
 # Plot the error boxplot
 dr_nn_data = drnn_errs
 
@@ -187,5 +187,5 @@ os.makedirs(figures_dir, exist_ok=True)
 save_path = os.path.join(
     figures_dir, f"{estimation_method}_{fit_method}_nn_error_boxplot.pdf"
 )
-print(f"Saving plot to {save_path}...")
+logger.info(f"Saving plot to {save_path}...")
 plt.savefig(save_path, bbox_inches="tight")

@@ -196,7 +196,7 @@ class DRLeaveBlockOutValidation(FitMethod):
 
         best_params = fmin(
             fn=objective,
-            verbose=True,
+            verbose=False,
             space={
                 "distance_threshold_row": hp.uniform(
                     "distance_threshold_row", lower_bound_row, upper_bound_row

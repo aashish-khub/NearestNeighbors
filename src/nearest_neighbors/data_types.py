@@ -30,7 +30,9 @@ class Scalar(DataType):
             Any: Average of the scalars
 
         """
-        return np.mean(object_list)
+        # Compute the mean using only the non-nan values.
+        # If all values are nan, return nan.
+        return np.nanmean(object_list)
 
 
 class DistributionKernelMMD(DataType):
@@ -234,3 +236,31 @@ class DistributionWassersteinQuantile(DataType):
         """
         x = np.linspace(0, 1, 1000)
         return float(np.trapezoid((obj1(x) - obj2(x)) ** 2, x=x))
+
+    def average(self, object_list: npt.NDArray) -> npt.NDArray:
+        """Calculate the average of a list of quantile functions
+
+        Args:
+            object_list (npt.NDArray[Any]): List of quantile functions
+
+        Returns:
+            npt.NDArray: Average quantile function
+
+        """
+
+        def lin_comb_fn(quantiles: npt.NDArray) -> npt.NDArray:
+            """Average a bunch of quantile functions.
+
+            Args:
+                quantiles (npt.NDArray): Values between 0 and 1
+
+            Returns:
+                npt.NDArray: Quantile values
+
+            """
+            # Compute the quantile values for each function
+            quantile_values = np.stack([fn(quantiles) for fn in object_list])
+            lin_comb_values = np.sum(quantile_values, axis=0) / len(object_list)
+            return lin_comb_values
+
+        return np.array(lin_comb_fn, dtype=object)

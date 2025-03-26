@@ -67,6 +67,8 @@ class HeartStepsDataLoader(NNDataLoader):
         self.participants = participants
         self.max_study_day = max_study_day
         self.num_measurements = num_measurements
+        self.data = None
+        self.mask = None
 
     def download_data(self) -> None:
         """Download the data from the remote source through urls."""
@@ -96,15 +98,15 @@ class HeartStepsDataLoader(NNDataLoader):
         df_steps, df_suggestions = self._load_data(cached)
         data, _, mask = self._proc_dist_data(df_steps, df_suggestions)
         if agg == "mean":
-            data = data.mean(axis=2)
+            data = np.nanmean(data, axis=2)
         elif agg == "sum":
-            data = data.sum(axis=2)
+            data = np.nansum(data, axis=2)
         elif agg == "median":
-            data = np.median(data, axis=2)
+            data = np.nanmedian(data, axis=2)
         elif agg == "std":
-            data = np.std(data, axis=2)
+            data = np.nanstd(data, axis=2)
         elif agg == "variance":
-            data = np.var(data, axis=2)
+            data = np.nanvar(data, axis=2)
         else:
             raise ValueError(
                 "agg must be one of 'mean', 'sum', 'median', 'std', or 'variance'"
@@ -112,10 +114,12 @@ class HeartStepsDataLoader(NNDataLoader):
 
         data = np.squeeze(data)
         # write data to output_dir
-        if self.save_processed != "":
+        if self.save_processed:
             np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
             np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
         # print("Done!")
+        self.data = data
+        self.mask = mask
         return data, mask
 
     def process_data_distribution(
@@ -130,9 +134,32 @@ class HeartStepsDataLoader(NNDataLoader):
         """
         df_steps, df_suggestions = self._load_data(cached)
 
-        _, Data2d, Mask = self._proc_dist_data(df_steps, df_suggestions)
+        _, data2d, mask = self._proc_dist_data(df_steps, df_suggestions)
         # print("Done!")
-        return Data2d, Mask
+        self.data = data2d
+        self.mask = mask
+        return data2d, mask
+
+    def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
+        """Returns the full state as a dictionary. For HeartSteps, this includes the data, masking matrix, and the custom parameters (if include_metadata == True
+
+        If the data and mask are None, then the data has not been processed yet. Call process_data_scalar() or process_data_distribution() to process the data first.
+
+        Args:
+            include_metadata (bool): Whether to include metadata in the dictionary. Default: False. The metadata for HeartSteps is currently empty.
+
+        """
+        full_state = {
+            "data": self.data,
+            "mask": self.mask,
+            "custom_params": {
+                "freq": self.freq,
+                "participants": self.participants,
+                "max_study_day": self.max_study_day,
+                "num_measurements": self.num_measurements,
+            },
+        }
+        return full_state
 
     ## HELPER FUNCTIONS
     def _load_data(self, cached: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -406,19 +433,19 @@ class HeartStepsDataLoader(NNDataLoader):
         df_final = df_study_day.set_index(["user.index", "study_day", "new_slot"])
 
         # transform into 4d tensor + mask
-        Data, Mask = self._transform_dnn(
+        data, mask = self._transform_dnn(
             df_final,
             users=self.participants,
             max_study_day=self.max_study_day,
             num_measurements=self.num_measurements,
         )
-        N, T = Mask.shape
-        Data2d = np.empty([N, T], dtype=object)
+        N, T = mask.shape
+        data2d = np.empty([N, T], dtype=object)
 
         # to align with 4d structure
-        Data = Data[:, :, :, np.newaxis]
+        data = data[:, :, :, np.newaxis]
 
         for i in range(N):
             for j in range(T):
-                Data2d[i, j] = Data[i, j]
-        return Data, Data2d, Mask
+                data2d[i, j] = data[i, j]
+        return data, data2d, mask

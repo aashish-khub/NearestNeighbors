@@ -1,5 +1,5 @@
-from nearest_neighbors.dataloader_base import NNDataLoader
-from nearest_neighbors.dataloader_factory import register_dataset
+from nearest_neighbors.datasets.dataloader_base import NNDataLoader
+from nearest_neighbors.datasets.dataloader_factory import register_dataset
 import numpy as np
 from typing import Any
 

@@ -1,7 +1,7 @@
 from .nnimputer import EstimationMethod, DataType
 import numpy.typing as npt
 import numpy as np
-from typing import Optional
+from typing import Union, Tuple
 
 
 class RowRowEstimator(EstimationMethod):
@@ -16,7 +16,7 @@ class RowRowEstimator(EstimationMethod):
         column: int,
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
-        distance_threshold: float,
+        distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -94,7 +94,7 @@ class ColColEstimator(EstimationMethod):
         column: int,
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
-        distance_threshold: float,
+        distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -122,14 +122,14 @@ class ColColEstimator(EstimationMethod):
 class DREstimator(EstimationMethod):
     """Estimate the missing entry using doubly robust nearest neighbors."""
 
-    def __init__(
-        self,
-        distance_threshold_row: Optional[float] = None,
-        distance_threshold_col: Optional[float] = None,
-    ) -> None:
-        super().__init__()
-        self.distance_threshold_row = distance_threshold_row
-        self.distance_threshold_col = distance_threshold_col
+    # def __init__(
+    #     self,
+    #     distance_threshold_row: Optional[float] = None,
+    #     distance_threshold_col: Optional[float] = None,
+    # ) -> None:
+    #     super().__init__()
+    #     self.distance_threshold_row = distance_threshold_row
+    #     self.distance_threshold_col = distance_threshold_col
 
     def impute(
         self,
@@ -137,7 +137,7 @@ class DREstimator(EstimationMethod):
         column: int,
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
-        distance_threshold: float,
+        distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column using doubly robust method.
@@ -148,17 +148,25 @@ class DREstimator(EstimationMethod):
             column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
-            distance_threshold (float): UNUSED for DRNN -> see __init__ of DREstimator for proper specification of distance thresholds
+            distance_threshold (float or Tuple[float, float]): Distance threshold for nearest neighbors
+            or a tuple of (row_threshold, col_threshold) for row and column respectively.
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        if self.distance_threshold_row is None or self.distance_threshold_col is None:
-            raise ValueError(
-                "Distance thresholds for row and column must be set for DREstimator. Please call fit on the imputer first or provide the thresholds directly to the drnn method."
-            )
+        # if self.distance_threshold_row is None or self.distance_threshold_col is None:
+        #     raise ValueError(
+        #         "Distance thresholds for row and column must be set for DREstimator. Please call fit on the imputer first or provide the thresholds directly to the drnn method."
+        #     )
         data_shape = data_array.shape
         n_rows = data_shape[0]
         n_cols = data_shape[1]
+
+        if isinstance(distance_threshold, tuple):
+            distance_threshold_row = distance_threshold[0]
+            distance_threshold_col = distance_threshold[1]
+        else:
+            distance_threshold_row = distance_threshold
+            distance_threshold_col = distance_threshold
 
         row_distances = np.zeros(n_rows)
         for i in range(n_rows):
@@ -181,9 +189,7 @@ class DREstimator(EstimationMethod):
             row_distances[i] /= np.sum(overlap_columns)
         row_distances[row] = np.inf  # Exclude the row itself
         # Find the row nearest neighbors indexes
-        row_nearest_neighbors = np.nonzero(
-            row_distances <= self.distance_threshold_row
-        )[0]
+        row_nearest_neighbors = np.nonzero(row_distances <= distance_threshold_row)[0]
 
         col_distances = np.zeros(n_cols)
         for i in range(n_cols):
@@ -204,9 +210,7 @@ class DREstimator(EstimationMethod):
             col_distances[i] /= np.sum(overlap_rows)
         col_distances[column] = np.inf
         # Find the col nearest neighbors indexes
-        col_nearest_neighbors = np.nonzero(
-            col_distances <= self.distance_threshold_col
-        )[0]
+        col_nearest_neighbors = np.nonzero(col_distances <= distance_threshold_col)[0]
 
         # Use doubly robust nearest neighbors to combine row and col
         y_itprime = data_array[row, col_nearest_neighbors]

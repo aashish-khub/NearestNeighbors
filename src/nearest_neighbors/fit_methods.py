@@ -1,7 +1,9 @@
 from .nnimputer import FitMethod, DataType, NearestNeighborImputer
+from .estimation_methods import DREstimator
 import numpy.typing as npt
 import numpy as np
 from hyperopt import hp, fmin, tpe
+from typing import cast
 
 
 def evaluate_imputation(
@@ -121,3 +123,98 @@ class LeaveBlockOutValidation(FitMethod):
             return float("nan")
 
         return best_distance_threshold["distance_threshold"]
+
+
+class DRLeaveBlockOutValidation(FitMethod):
+    def __init__(
+        self,
+        block: list[tuple[int, int]],
+        distance_threshold_range_row: tuple[float, float],
+        distance_threshold_range_col: tuple[float, float],
+        n_trials: int,
+        data_type: DataType,
+    ):
+        """Initialize the block fit method.
+
+        Args:
+            block (list[tuple[int,int]]): List of cells as tuples of row and column indices
+            distance_threshold_range_row (tuple[float,float]): Range of row distance thresholds to test
+            distance_threshold_range_col (tuple[float,float]): Range of column distance thresholds to test
+            n_trials (int): Number of trials to run
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        self.block = block
+        self.distance_threshold_range_row = distance_threshold_range_row
+        self.distance_threshold_range_col = distance_threshold_range_col
+        self.n_trials = n_trials
+        self.data_type = data_type
+
+    def fit(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        imputer: NearestNeighborImputer,
+    ) -> tuple[float, float]:
+        """Find the best distance thresholds for the given data
+        by leaving out a block of cells and testing imputation against them.
+
+        Args:
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            imputer (NearestNeighborImputer): Imputer object
+
+        Returns:
+            tuple[float, float]: Best distance thresholds for rows and columns
+
+        """
+        if not isinstance(imputer.estimation_method, DREstimator):
+            raise ValueError(
+                "The imputer must use a DREstimator for DRLeaveBlockOutValidation."
+            )
+        imputer.estimation_method = cast(DREstimator, imputer.estimation_method)
+
+        def objective(params: dict[str, float]) -> float:
+            """Objective function for hyperopt.
+
+            Args:
+                params (dict[str, float]): Dictionary containing row and column distance thresholds
+
+            Returns:
+                float: Average imputation error
+
+            """
+            row_threshold = params["distance_threshold_row"]
+            col_threshold = params["distance_threshold_col"]
+            imputer.distance_threshold = (row_threshold, col_threshold)
+            return evaluate_imputation(
+                data_array, mask_array, imputer, self.block, self.data_type
+            )
+
+        lower_bound_row, upper_bound_row = self.distance_threshold_range_row
+        lower_bound_col, upper_bound_col = self.distance_threshold_range_col
+
+        best_params = fmin(
+            fn=objective,
+            verbose=False,
+            space={
+                "distance_threshold_row": hp.uniform(
+                    "distance_threshold_row", lower_bound_row, upper_bound_row
+                ),
+                "distance_threshold_col": hp.uniform(
+                    "distance_threshold_col", lower_bound_col, upper_bound_col
+                ),
+            },
+            algo=tpe.suggest,
+            max_evals=self.n_trials,
+        )
+
+        if best_params is None:
+            return float("nan"), float("nan")
+
+        imputer.distance_threshold = (
+            best_params["distance_threshold_row"],
+            best_params["distance_threshold_col"],
+        )
+
+        return imputer.distance_threshold

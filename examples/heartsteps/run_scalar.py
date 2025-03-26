@@ -1,14 +1,14 @@
-"""Run the doubly robust imputer on the heartsteps dataset using the last 8 participants and 25 timesteps as a test block.
+"""Script to run NN imputers + USVT baseline on the heartsteps dataset
+using the last 8 participants and 25 timesteps as a test block.
 
 Example usage (from root of repo):
 ```bash
-python examples/heartsteps/run_scalar.py -od OUTPUT_DIR
+python examples/heartsteps/run_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD
 ```
-
 """
 
 import numpy as np
-import tqdm
+from tqdm import tqdm
 import logging
 import matplotlib.pyplot as plt
 from baselines import usvt
@@ -16,13 +16,17 @@ from joblib import Memory
 from argparse import ArgumentParser
 from typing import Tuple
 import os
+from time import time
 
 from nearest_neighbors.data_types import Scalar
 from nearest_neighbors.estimation_methods import DREstimator
 from nearest_neighbors import NearestNeighborImputer
-from nearest_neighbors.fit_methods import DRLeaveBlockOutValidation
+from nearest_neighbors.fit_methods import (
+    DRLeaveBlockOutValidation,
+    LeaveBlockOutValidation,
+)
 from nearest_neighbors.datasets.dataloader_factory import NNData
-
+from nearest_neighbors.vanilla_nn import row_row
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,8 +36,28 @@ parser = ArgumentParser()
 parser.add_argument(
     "--output_dir", "-od", type=str, default="out", help="Output directory"
 )
+parser.add_argument(
+    "--estimation_method",
+    "-em",
+    type=str,
+    default="vanilla",
+    choices=["dr", "vanilla"],
+    help="Estimation method to use",
+)
+parser.add_argument(
+    "--fit_method",
+    "-fm",
+    type=str,
+    default="lbo",
+    choices=["dr", "lbo"],
+    help="Fit method to use",
+)
 args = parser.parse_args()
 output_dir = args.output_dir
+estimation_method = args.estimation_method
+fit_method = args.fit_method
+
+os.makedirs(output_dir, exist_ok=True)
 
 # Create a memory cache in a '.joblib_cache' directory
 memory = Memory(".joblib_cache", verbose=1)
@@ -48,15 +72,22 @@ def get_heartsteps_data() -> Tuple[np.ndarray, np.ndarray]:
 
 
 # Load the heartsteps dataset
-hs_dataloader = NNData.create("heartsteps")
-data, mask = hs_dataloader.process_data_scalar()
+data, mask = get_heartsteps_data()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
 
-# Create the imputer with doubly robust estimation
-estimator = DREstimator()
+print("Using scalar data type")
 data_type = Scalar()
-imputer = NearestNeighborImputer(estimator, data_type)
+
+if estimation_method == "dr":
+    print("Using doubly robust estimation")
+    estimator = DREstimator()
+    imputer = NearestNeighborImputer(estimator, data_type)
+elif estimation_method == "vanilla":
+    print("Using row-row estimation")
+    imputer = row_row()
+else:
+    raise ValueError(f"Estimation method {estimation_method} not supported")
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
@@ -73,19 +104,35 @@ holdout_inds_cols = list(inds_cols[full_mask_inds])
 block = list(zip(holdout_inds_rows, holdout_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
 
-# Fit the imputer using leave-block-out validation
-fit_method = DRLeaveBlockOutValidation(
-    block,
-    distance_threshold_range_row=(0, 4000000),
-    distance_threshold_range_col=(0, 4000000),
-    n_trials=200,
-    data_type=data_type,
-)
-fit_method.fit(data, mask, imputer)
+if fit_method == "dr":
+    print("Using doubly robust fit method")
+    # Fit the imputer using leave-block-out validation
+    fitter = DRLeaveBlockOutValidation(
+        block,
+        distance_threshold_range_row=(0, 4000000),
+        distance_threshold_range_col=(0, 4000000),
+        n_trials=200,
+        data_type=data_type,
+    )
+elif fit_method == "lbo":
+    print("Using leave-block-out validation")
+    fitter = LeaveBlockOutValidation(
+        block,
+        distance_threshold_range=(0, 4_000_000),
+        n_trials=200,
+        data_type=data_type,
+    )
+else:
+    raise ValueError(f"Fit method {fit_method} not supported")
+
+start_time = time()
+fitter.fit(data, mask, imputer)
+end_time = time()
+print(f"Time taken to fit imputer: {end_time - start_time} seconds")
 
 # Impute missing values
 imputations = []
-for row, col in tqdm.tqdm(test_block):
+for row, col in tqdm(test_block, desc="Imputing missing values"):
     imputed_value = imputer.impute(row, col, data, mask)
     imputations.append(imputed_value)
 
@@ -107,6 +154,8 @@ logging.debug(f"USVT mean absolute error: {np.mean(usvt_errs)}")
 dr_nn_data = drnn_errs
 
 data = [usvt_errs, dr_nn_data]
+
+# TODO (Albert): move plotting functionality to a separate script
 plt.figure()
 
 # Create boxplot
@@ -133,5 +182,10 @@ ax1.spines["left"].set_visible(False)
 ax1.grid(True, alpha=0.4)
 
 plt.xlabel(r"", fontsize=15)
-save_path = os.path.join(output_dir, "dr_nn_error_boxplot.pdf")
+figures_dir = os.path.join(output_dir, "figures")
+os.makedirs(figures_dir, exist_ok=True)
+save_path = os.path.join(
+    figures_dir, f"{estimation_method}_{fit_method}_nn_error_boxplot.pdf"
+)
+print(f"Saving plot to {save_path}...")
 plt.savefig(save_path, bbox_inches="tight")

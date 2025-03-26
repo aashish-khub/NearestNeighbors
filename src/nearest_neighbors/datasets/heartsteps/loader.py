@@ -1,3 +1,10 @@
+"""Dataset loader for the HeartSteps V1 dataset.
+
+Source: https://github.com/klasnja/HeartStepsV1
+License: CC-BY-4.0
+Reference: Klasnja, P., Smith, S., Seewald, N. J., Lee, A., Hall, K., Luers, B., Hekler, E. B., & Murphy, S. A. (2019). Efficacy of Contextually Tailored Suggestions for Physical Activity: A Micro-randomized Optimization Trial of HeartSteps. Annals of Behavioral Medicine, 53(6), 573–582. https://doi.org/10.1093/abm/kay067
+"""
+
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
 import os
@@ -6,6 +13,9 @@ import pandas as pd
 from typing import Any
 from datetime import timedelta
 import warnings
+import logging
+
+logger = logging.getLogger(__name__)
 
 params = {
     "freq": (str, "5min", "Frequency of step count samples"),
@@ -174,10 +184,13 @@ class HeartStepsDataLoader(NNDataLoader):
             jp_path = os.path.join(self.save_dir, "jbsteps.csv")
             sug_path = os.path.join(self.save_dir, "suggestions.csv")
             if not (os.path.exists(jp_path) and os.path.exists(sug_path)):
-                print("No cached data found. Retrieving from url...")
+                logger.info("No cached data found. Retrieving from url...")
                 jp_path = self.urls["jbsteps.csv"]
                 sug_path = self.urls["suggestions.csv"]
+            else:
+                logger.info("Retrieving data from cache...")
         else:
+            logger.info("Retrieving data from url...")
             jp_path = self.urls["jbsteps.csv"]
             sug_path = self.urls["suggestions.csv"]
 

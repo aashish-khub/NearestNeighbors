@@ -191,6 +191,7 @@ def test_multiple_neighbors_with_finite_thresholds() -> None:
         f"Expected {expected}, got {estimated_value}"
     )
 
+
 def test_find_one_neighbor() -> None:
     """Test imputation with a singular near-infinite neighbor but finite distance thresholds."""
     X = np.array([[1, 2, 30], [4, 5, 6], [7, 8, 9e99]], dtype=float)
@@ -204,6 +205,7 @@ def test_find_one_neighbor() -> None:
     assert np.isclose(estimated_value, expected), (
         f"Expected {expected}, got {estimated_value}"
     )
+
 
 def test_low_row_high_col_threshold() -> None:
     """Test imputation with a low row threshold and a high column threshold.

@@ -19,10 +19,11 @@ import os
 from time import time
 
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import DREstimator
+from nearest_neighbors.estimation_methods import DREstimator, TSEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
+    TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
@@ -41,7 +42,7 @@ parser.add_argument(
     "-em",
     type=str,
     default="vanilla",
-    choices=["dr", "vanilla"],
+    choices=["dr", "ts", "vanilla"],
     help="Estimation method to use",
 )
 parser.add_argument(
@@ -49,7 +50,7 @@ parser.add_argument(
     "-fm",
     type=str,
     default="lbo",
-    choices=["dr", "lbo"],
+    choices=["dr", "ts", "lbo"],
     help="Fit method to use",
 )
 args = parser.parse_args()
@@ -82,6 +83,10 @@ data_type = Scalar()
 if estimation_method == "dr":
     logger.debug("Using doubly robust estimation")
     estimator = DREstimator()
+    imputer = NearestNeighborImputer(estimator, data_type)
+elif estimation_method == "ts":
+    logger.debug("Using two-sided estimation")
+    estimator = TSEstimator()
     imputer = NearestNeighborImputer(estimator, data_type)
 elif estimation_method == "vanilla":
     logger.debug("Using row-row estimation")
@@ -122,6 +127,16 @@ elif fit_method == "lbo":
         n_trials=200,
         data_type=data_type,
     )
+elif fit_method == "ts":
+    logger.debug("Using two-sided fit method")
+    # Fit the imputer using leave-block-out validation
+    fitter = TSLeaveBlockOutValidation(
+        block,
+        distance_threshold_range_row=(0, 4_000_000),
+        distance_threshold_range_col=(0, 4_000_000),
+        n_trials=200,
+        data_type=data_type,
+    )
 else:
     raise ValueError(f"Fit method {fit_method} not supported")
 
@@ -139,7 +154,7 @@ for row, col in tqdm(test_block, desc="Imputing missing values"):
 ground_truth = data[test_inds_rows, test_inds_cols]
 imputations = np.array(imputations)
 
-drnn_errs = np.abs(imputations - ground_truth)
+est_errors = np.abs(imputations - ground_truth)
 
 # setup usvt imputation
 usvt_data = data.copy()
@@ -148,10 +163,11 @@ usvt_mask[test_inds_rows, test_inds_cols] = 0
 usvt_data[mask != 1] = np.nan
 usvt_imputed = usvt(usvt_data)
 usvt_errs = list(np.abs(usvt_imputed[test_inds_rows, test_inds_cols] - ground_truth))
-logger.debug(f"DR-NN mean absolute error: {np.mean(drnn_errs)}")
+label = f"Est: {estimation_method}, Fit: {fit_method}"
+logger.debug(f"{label} mean absolute error: {np.mean(est_errors)}")
 logger.debug(f"USVT mean absolute error: {np.mean(usvt_errs)}")
 # Plot the error boxplot
-dr_nn_data = drnn_errs
+dr_nn_data = est_errors
 
 data = [usvt_errs, dr_nn_data]
 
@@ -173,7 +189,7 @@ plt.ylim(0, None)
 
 # Add labels and title
 # plt.xticks([1, 2, 3, 4], ['USVT', 'User-NN', 'Time-NN', 'DR-NN'], fontsize=15)
-plt.xticks([1, 2], ["USVT", "DR-NN"], fontsize=15)
+plt.xticks([1, 2], ["USVT", label], fontsize=15)
 plt.ylabel(r"Absolute error", fontsize=15)
 ax1 = plt.gca()
 ax1.spines["top"].set_visible(False)

@@ -2,6 +2,10 @@ from .nnimputer import EstimationMethod, DataType
 import numpy.typing as npt
 import numpy as np
 from typing import Union, Tuple
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class RowRowEstimator(EstimationMethod):
@@ -339,6 +343,7 @@ class TSEstimator(EstimationMethod):
         neighborhood_submatrix = data_array[
             np.ix_(row_nearest_neighbors, col_nearest_neighbors)
         ]  # This is the submatrix of the cross-product of the row and column neighborhoods
+        mask_array = mask_array.astype(bool)  # for efficient indexing
         neighborhood_mask = mask_array[
             np.ix_(row_nearest_neighbors, col_nearest_neighbors)
         ]  # This is the mask of the cross-product of the row and column neighborhoods
@@ -346,13 +351,15 @@ class TSEstimator(EstimationMethod):
         values_for_estimation = neighborhood_submatrix[neighborhood_mask.astype(bool)]
         if values_for_estimation.size == 0:
             if mask_array[row, column]:
-                print(
-                    f"Warning: No valid neighbors found for ({row}, {column}). Returning observed value."
+                logger.log(
+                    logging.WARNING,
+                    f"Warning: No valid neighbors found for ({row}, {column}). Returning observed value.",
                 )
                 return data_array[row, column]
             else:
-                print(
-                    f"Warning: No valid neighbors found for ({row}, {column}). Returning np.nan."
+                logger.log(
+                    logging.WARNING,
+                    f"Warning: No valid neighbors found for ({row}, {column}). Returning np.nan.",
                 )
                 return np.array(np.nan)
         else:

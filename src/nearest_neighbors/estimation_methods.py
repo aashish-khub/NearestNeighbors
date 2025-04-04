@@ -2,6 +2,10 @@ from .nnimputer import EstimationMethod, DataType
 import numpy.typing as npt
 import numpy as np
 from typing import Union, Tuple
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class RowRowEstimator(EstimationMethod):
@@ -243,3 +247,121 @@ class DREstimator(EstimationMethod):
         )
         avg = data_type.average(sum_y)
         return avg
+
+
+class TSEstimator(EstimationMethod):
+    """Estimate the missing value using two-sided nearest neighbors.
+
+    This method first finds the row and column neighborhoods (based on a
+    distance computed over overlapping observed entries, excluding the target)
+    and then imputes the missing entry by averaging the observed values
+    over the cross-product of these neighborhoods.
+    """
+
+    def __str__(self):
+        return "TSEstimator"
+
+    def impute(
+        self,
+        row: int,
+        column: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        distance_threshold: Union[float, Tuple[float, float]],
+        data_type: DataType,
+    ) -> npt.NDArray:
+        r"""Impute the missing value at the given row and column using two-sided NN.
+
+        Args:
+            row (int): Target row index.
+            column (int): Target column index.
+            data_array (npt.NDArray): Data matrix.
+            mask_array (npt.NDArray): Boolean mask matrix (True if observed).
+            distance_threshold (float or Tuple[float, float]): Distance threshold(s) for row and column neighborhoods. This is our \vec eta = (\eta_row, \eta_col).
+            data_type (DataType): Provides methods for computing distances and averaging.
+
+        Returns:
+            npt.NDArray: Imputed value.
+
+        """
+        n_rows, n_cols = data_array.shape
+
+        if isinstance(distance_threshold, tuple):
+            eta_row, eta_col = distance_threshold
+        else:
+            eta_row = distance_threshold
+            eta_col = distance_threshold
+
+        row_distances = np.zeros(n_rows)
+        for i in range(n_rows):
+            # Get columns observed in both row i and row
+            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
+
+            if not np.any(overlap_columns):
+                row_distances[i] = np.inf
+                continue
+
+            # Calculate distance between rows
+            for j in range(n_cols):
+                if (
+                    not overlap_columns[j] or j == column
+                ):  # Skip missing values and the target column
+                    continue
+                row_distances[i] += data_type.distance(
+                    data_array[row, j], data_array[i, j]
+                )
+            row_distances[i] /= np.sum(overlap_columns)
+        row_distances[row] = np.inf  # Exclude the row itself
+
+        col_distances = np.zeros(n_cols)
+        for i in range(n_cols):
+            # Get rows observed in both column i and column
+            overlap_rows = np.logical_and(mask_array[:, column], mask_array[:, i])
+
+            if not np.any(overlap_rows):
+                col_distances[i] = np.inf
+                continue
+
+            # Calculate distance between columns
+            for j in range(n_rows):
+                if not overlap_rows[j] or j == row:
+                    continue
+                col_distances[i] += data_type.distance(
+                    data_array[j, column], data_array[j, i]
+                )
+            col_distances[i] /= np.sum(overlap_rows)
+        col_distances[column] = np.inf
+
+        # Establish the neighborhoods subject to the distance thresholds
+        row_nearest_neighbors = np.where(row_distances <= eta_row)[
+            0
+        ]  # This is the set N_row(i, j) = {i' | d^2(i, i') <= eta_row^2}
+        col_nearest_neighbors = np.where(col_distances <= eta_col)[
+            0
+        ]  # This is the set N_col(i, j) = {j' | d^2(j, j') <= eta_col^2}
+
+        neighborhood_submatrix = data_array[
+            np.ix_(row_nearest_neighbors, col_nearest_neighbors)
+        ]  # This is the submatrix of the cross-product of the row and column neighborhoods
+        mask_array = mask_array.astype(bool)  # for efficient indexing
+        neighborhood_mask = mask_array[
+            np.ix_(row_nearest_neighbors, col_nearest_neighbors)
+        ]  # This is the mask of the cross-product of the row and column neighborhoods
+
+        values_for_estimation = neighborhood_submatrix[neighborhood_mask.astype(bool)]
+        if values_for_estimation.size == 0:
+            if mask_array[row, column]:
+                logger.log(
+                    logging.WARNING,
+                    f"Warning: No valid neighbors found for ({row}, {column}). Returning observed value.",
+                )
+                return data_array[row, column]
+            else:
+                logger.log(
+                    logging.WARNING,
+                    f"Warning: No valid neighbors found for ({row}, {column}). Returning np.nan.",
+                )
+                return np.array(np.nan)
+        else:
+            theta_hat = data_type.average(values_for_estimation)
+            return theta_hat

@@ -1,5 +1,5 @@
 from .nnimputer import FitMethod, DataType, NearestNeighborImputer
-from .estimation_methods import DREstimator
+from .estimation_methods import DREstimator, TSEstimator
 import numpy.typing as npt
 import numpy as np
 from hyperopt import hp, fmin, tpe
@@ -125,7 +125,11 @@ class LeaveBlockOutValidation(FitMethod):
         return best_distance_threshold["distance_threshold"]
 
 
-class DRLeaveBlockOutValidation(FitMethod):
+class DualThresholdLeaveBlockOutValidation(FitMethod):
+    """An abstract base subclass for fit methods that leave out a block of cells and tune separate row and column thresholds."""
+
+    expected_estimator_type = type(None)
+
     def __init__(
         self,
         block: list[tuple[int, int]],
@@ -134,14 +138,14 @@ class DRLeaveBlockOutValidation(FitMethod):
         n_trials: int,
         data_type: DataType,
     ):
-        """Initialize the block fit method.
+        """Initialize the dual threshold block fit method.
 
         Args:
-            block (list[tuple[int,int]]): List of cells as tuples of row and column indices
-            distance_threshold_range_row (tuple[float,float]): Range of row distance thresholds to test
-            distance_threshold_range_col (tuple[float,float]): Range of column distance thresholds to test
-            n_trials (int): Number of trials to run
-            data_type (DataType): Data type to use (e.g. scalars, distributions)
+            block (list[tuple[int, int]]): List of cells as tuples of row and column indices.
+            distance_threshold_range_row (tuple[float, float]): Range of row distance thresholds to test.
+            distance_threshold_range_col (tuple[float, float]): Range of column distance thresholds to test.
+            n_trials (int): Number of trials to run.
+            data_type (DataType): Data type to use (e.g. scalars, distributions).
 
         """
         self.block = block
@@ -156,25 +160,19 @@ class DRLeaveBlockOutValidation(FitMethod):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
     ) -> tuple[float, float]:
-        """Find the best distance thresholds for the given data
-        by leaving out a block of cells and testing imputation against them.
+        """Find the best distance thresholds for rows and columns by leaving out a block of cells and testing imputation.
 
         Args:
-            data_array (npt.NDArray): Data matrix
-            mask_array (npt.NDArray): Mask matrix
-            imputer (NearestNeighborImputer): Imputer object
+            data_array (npt.NDArray): Data matrix.
+            mask_array (npt.NDArray): Mask matrix.
+            imputer (NearestNeighborImputer): Imputer object.
 
         Returns:
-            tuple[float, float]: Best distance thresholds for rows and columns
+            tuple[float, float]: Best distance thresholds for rows and columns.
 
         """
-        if not isinstance(imputer.estimation_method, DREstimator):
-            raise ValueError(
-                "The imputer must use a DREstimator for DRLeaveBlockOutValidation."
-            )
-        imputer.estimation_method = cast(DREstimator, imputer.estimation_method)
 
-        def objective(params: dict[str, float]) -> float:
+        def _objective(params: dict[str, float]) -> float:
             """Objective function for hyperopt.
 
             Args:
@@ -193,10 +191,8 @@ class DRLeaveBlockOutValidation(FitMethod):
 
         lower_bound_row, upper_bound_row = self.distance_threshold_range_row
         lower_bound_col, upper_bound_col = self.distance_threshold_range_col
-
         best_params = fmin(
-            fn=objective,
-            verbose=False,
+            fn=_objective,
             space={
                 "distance_threshold_row": hp.uniform(
                     "distance_threshold_row", lower_bound_row, upper_bound_row
@@ -218,3 +214,69 @@ class DRLeaveBlockOutValidation(FitMethod):
         )
 
         return imputer.distance_threshold
+
+
+class DRLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
+    """Fit method by leaving out a block of cells using separate thresholds for rows and columns with a DREstimator."""
+
+    expected_estimator_type = DREstimator
+
+    def fit(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        imputer: NearestNeighborImputer,
+    ) -> tuple[float, float]:
+        """Find the best distance thresholds for rows and columns using a DREstimator.
+
+        Args:
+            data_array (npt.NDArray): Data matrix.
+            mask_array (npt.NDArray): Mask matrix.
+            imputer (NearestNeighborImputer): Imputer object.
+
+        Returns:
+            tuple[float, float]: Best distance thresholds for rows and columns.
+
+        Raises:
+            ValueError: If the imputer does not use a DREstimator.
+
+        """
+        if not isinstance(imputer.estimation_method, DREstimator):
+            raise ValueError(
+                f"The imputer must use a DREstimator for {self.__class__.__name__}."
+            )
+        imputer.estimation_method = cast(DREstimator, imputer.estimation_method)
+        return super().fit(data_array, mask_array, imputer)
+
+
+class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
+    """Fit method by leaving out a block of cells using separate thresholds for rows and columns with a TSEstimator."""
+
+    expected_estimator_type = TSEstimator
+
+    def fit(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        imputer: NearestNeighborImputer,
+    ) -> tuple[float, float]:
+        """Find the best distance thresholds for rows and columns using a TSEstimator.
+
+        Args:
+            data_array (npt.NDArray): Data matrix.
+            mask_array (npt.NDArray): Mask matrix.
+            imputer (NearestNeighborImputer): Imputer object.
+
+        Returns:
+            tuple[float, float]: Best distance thresholds for rows and columns.
+
+        Raises:
+            ValueError: If the imputer does not use a TSEstimator.
+
+        """
+        if not isinstance(imputer.estimation_method, TSEstimator):
+            raise ValueError(
+                f"The imputer must use a TSEstimator for {self.__class__.__name__}."
+            )
+        imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
+        return super().fit(data_array, mask_array, imputer)

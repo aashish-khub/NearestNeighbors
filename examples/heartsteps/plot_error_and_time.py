@@ -1,8 +1,11 @@
 """Script to plot the MSE as a boxplot
 
+NOTE: imputation time is per imputation, fit time is for the entire fitting procedure
+TODO: change fit time to be a bar plot
+
 Example usage:
 ```bash
-python plot_error.py -od OUTPUT_DIR
+python plot_error_and_time.py -od OUTPUT_DIR
 ```
 """
 

@@ -99,7 +99,12 @@ if estimation_method == "usvt":
     usvt_data[mask != 1] = np.nan
     # impute missing values simultaneously
     usvt_imputed = usvt(usvt_data)
+    start_time = time()
     imputations = usvt_imputed[test_inds_rows, test_inds_cols]
+    elapsed_time = time() - start_time
+    # set the time to the average time per imputation
+    imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+    fit_times = [0] * len(test_block)
 else:
     if estimation_method == "dr":
         logger.debug("Using doubly robust estimation")
@@ -148,12 +153,16 @@ else:
     start_time = time()
     fitter.fit(data, mask, imputer)
     end_time = time()
-    logger.info(f"Time taken to fit imputer: {end_time - start_time} seconds")
+    fit_times = [end_time - start_time] * len(test_block)
 
     # Impute missing values
     imputations = []
+    imputation_times = []
     for row, col in tqdm(test_block, desc="Imputing missing values"):
+        start_time = time()
         imputed_value = imputer.impute(row, col, data, mask)
+        elapsed_time = time() - start_time
+        imputation_times.append(elapsed_time)
         imputations.append(imputed_value)
     imputations = np.array(imputations)
 
@@ -168,6 +177,8 @@ df = pd.DataFrame(
         "est_errors": est_errors,
         "row": test_inds_rows,
         "col": test_inds_cols,
+        "time_impute": imputation_times,
+        "time_fit": fit_times,
     }
 )
 logger.info(f"Saving est_errors to {save_path}...")

@@ -1,7 +1,7 @@
 """The following script demonstrates the usage of the PromptEval dataloader.
 
 The PromptEval dataset comes from https://huggingface.co/PromptEval. The data consists of performance (correctness) evaluations of 15 LLMs on
-57 tasks (like abstract algebra, professional law, etc.) using 100 different prompt templates. There are a variable number of questions asked to each LLM across tasks. 
+57 tasks (like abstract algebra, professional law, etc.) using 100 different prompt templates. There are a variable number of questions asked to each LLM across tasks.
 
 To run this script, ensure you're in the root directory of the package and run:
 ```
@@ -40,9 +40,7 @@ print(mask.shape)
 print("\nAvailability Mask (1 if observed, 0 if missing, 2 if unavailable):")
 print(mask)
 
-print(
-    "\n===== Loading PromptEval dataset with default params in scalar form ==="
-)
+print("\n===== Loading PromptEval dataset with default params in scalar form ===")
 data, mask = data_generator.process_data_scalar()
 
 print("\nData matrix shape:")

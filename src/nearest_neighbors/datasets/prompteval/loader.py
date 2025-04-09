@@ -17,7 +17,7 @@ class PromptEvalDataLoader(NNDataLoader):
     To initialize with default settings, use: NNData.create("prompteval").
 
     """
-    
+
     urls = {"prompteval": ""}
     all_tasks = [
         "abstract_algebra",
@@ -218,7 +218,7 @@ class PromptEvalDataLoader(NNDataLoader):
                 allow_pickle=True,
             )
         return self.data, self.mask
-    
+
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
         """Returns the full state of the data loader as a dictionary.
 
@@ -311,17 +311,15 @@ class PromptEvalDataLoader(NNDataLoader):
 
                         list_dfs.append(df_long)
                     else:
-                        #print(f"Data for key '{key}' is not a DataFrame")
-                        raise ValueError(
-                            f"Data for key '{key}' is not a DataFrame"
-                        )
+                        # print(f"Data for key '{key}' is not a DataFrame")
+                        raise ValueError(f"Data for key '{key}' is not a DataFrame")
                 else:
                     raise ValueError("Loaded dataset is not a DatasetDict")
             df_final = pd.concat(list_dfs, ignore_index=True)
             return df_final
-        except Exception as e:
-            #print(f"Error loading config '{config_name}': {e}")
-            #TODO: Caleb logging
+        except Exception as _:
+            # print(f"Error loading config '{config_name}': {e}")
+            # TODO: Caleb logging
             return None
 
     def _generate_mask_mcar(self, data: np.ndarray, p: float) -> np.ndarray:

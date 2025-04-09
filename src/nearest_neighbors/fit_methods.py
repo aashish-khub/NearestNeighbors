@@ -32,7 +32,7 @@ def evaluate_imputation(
     for row, col in test_cells:
         if (
             (mask_array[row, col] == 0)
-            | (np.all(np.isnan(data_array[row, col]))) #TODO: review for distributions
+            | (np.all(np.isnan(data_array[row, col])))  # TODO: review for distributions
             | (data_array[row, col] is None)
         ):
             raise ValueError("Validation cell is missing.")
@@ -41,12 +41,12 @@ def evaluate_imputation(
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
-        #print(imputed_value)
-        #print(true_value)
-        #print(f"Imputed value: {imputed_value}, True value: {true_value}")
+        # print(imputed_value)
+        # print(true_value)
+        # print(f"Imputed value: {imputed_value}, True value: {true_value}")
         error += data_type.distance(imputed_value, true_value)
-        #print(f"Error: {error}")
-        #print(error)
+        # print(f"Error: {error}")
+        # print(error)
 
     # Reset the mask
     for row, col in test_cells:

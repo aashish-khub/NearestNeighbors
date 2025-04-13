@@ -362,7 +362,7 @@ def softimpute(
                  If None, no normalization will be performed.
 
     """
-    data = check_array(data, force_all_finite=False)  # noqa: F401
+    data = check_array(data, force_all_finite=False)  # type: ignore
     data = data.copy()
     if normalizer is not None:
         data = _normalize(data, mask, min_value, max_value)

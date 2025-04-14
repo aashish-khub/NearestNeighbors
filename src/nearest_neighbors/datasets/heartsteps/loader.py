@@ -47,6 +47,7 @@ class HeartStepsDataLoader(NNDataLoader):
         participants: int = 37,
         max_study_day: int = 52,
         num_measurements: int = 12,
+        log_transform: bool = True,
         **kwargs: Any,
     ):
         """Initializes the HeartSteps data loader.
@@ -63,6 +64,7 @@ class HeartStepsDataLoader(NNDataLoader):
             num_measurements: Number of measurements taken after each decision point. Default: 12.
                 Note: it is recommended that you use no more than 1-2 hours of data after each decision point to avoid overlap with the next decision point.
                 This means that freq (in minutes) * num_measurements should be approximately 60.
+            log_transform: Whether to apply log transformation to the data. Default: True.
             kwargs: Additional keyword arguments.
 
         """
@@ -79,6 +81,7 @@ class HeartStepsDataLoader(NNDataLoader):
         self.num_measurements = num_measurements
         self.data = None
         self.mask = None
+        self.log_transform = log_transform
 
     def download_data(self) -> None:
         """Download the data from the remote source through urls."""
@@ -454,6 +457,8 @@ class HeartStepsDataLoader(NNDataLoader):
         )
         N, T = mask.shape
         data2d = np.empty([N, T], dtype=object)
+        if self.log_transform:
+            data = np.log(data + 1)
 
         # to align with 4d structure
         data = data[:, :, :, np.newaxis]

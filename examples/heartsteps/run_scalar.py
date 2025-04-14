@@ -1,5 +1,5 @@
 """Script to run NN imputers + USVT baseline on the heartsteps dataset
-using the last 8 participants and 25 timesteps as a test block.
+using 20% of the observed indices as a test block.
 
 Example usage (from root of repo):
 ```bash
@@ -66,6 +66,8 @@ def get_heartsteps_data() -> Tuple[np.ndarray, np.ndarray]:
     data, mask = hs_dataloader.process_data_scalar()
     return data, mask
 
+# Random generator, set seed to 42
+rng = np.random.default_rng(seed=42) # TODO: (Caleb) is there a better way to set the seed?
 
 # Load the heartsteps dataset
 data, mask = get_heartsteps_data()
@@ -78,17 +80,34 @@ data_type = Scalar()
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
 inds_cols = holdout_inds[1]
+range_inds = np.arange(len(inds_rows))
 
-full_mask_test_inds = np.nonzero((inds_rows > 21) & (inds_cols > 159))
-test_inds_rows = tuple(inds_rows[full_mask_test_inds])
-test_inds_cols = tuple(inds_cols[full_mask_test_inds])
+# randomly shuffle indices
+rng.shuffle(range_inds)
+# 20% of the indices will be used for testing
+test_size = int(0.2 * len(range_inds))
+test_inds = range_inds[:test_size]
+# 80% of the indices will be used for training
+train_inds = range_inds[test_size:]
+# get the rows and columns of the train indices
+train_inds_rows = list(inds_rows[train_inds])
+train_inds_cols = list(inds_cols[train_inds])
+# get the rows and columns of the test indices
+test_inds_rows = list(inds_rows[test_inds])
+test_inds_cols = list(inds_cols[test_inds])
 
-full_mask_inds = np.nonzero((inds_rows < 9) & (inds_cols < 25))
-holdout_inds_rows = list(inds_rows[full_mask_inds])
-holdout_inds_cols = list(inds_cols[full_mask_inds])
-
-block = list(zip(holdout_inds_rows, holdout_inds_cols))
+block = list(zip(train_inds_rows, train_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
+# full_mask_test_inds = np.nonzero((inds_rows > 21) & (inds_cols > 159))
+# test_inds_rows = tuple(inds_rows[full_mask_test_inds])
+# test_inds_cols = tuple(inds_cols[full_mask_test_inds])
+
+# full_mask_inds = np.nonzero((inds_rows < 9) & (inds_cols < 25))
+# holdout_inds_rows = list(inds_rows[full_mask_inds])
+# holdout_inds_cols = list(inds_cols[full_mask_inds])
+
+# block = list(zip(holdout_inds_rows, holdout_inds_cols))
+# test_block = list(zip(test_inds_rows, test_inds_cols))
 
 if estimation_method == "usvt":
     logger.debug("Using USVT estimation")

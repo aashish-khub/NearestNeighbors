@@ -14,8 +14,9 @@ import os
 import matplotlib.pyplot as plt
 from glob import glob
 import pandas as pd
-from utils import get_base_parser
 import logging
+
+from nearest_neighbors.utils.experiments import get_base_parser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,7 +35,12 @@ for file in files:
     df_list.append(df)
 df = pd.concat(df_list, ignore_index=True)
 # aggregate into list by estimation method and fit method
-df_grouped = df.groupby(["estimation_method", "fit_method"]).agg(list).reset_index()
+# NOTE: filter out NaN values when aggregating
+df_grouped = (
+    df.groupby(["estimation_method", "fit_method"])
+    .agg(lambda x: list([val for val in x if pd.notna(val)]))
+    .reset_index()
+)
 
 for col_name, alias in [
     ("est_errors", "Absolute error"),
@@ -46,8 +52,7 @@ for col_name, alias in [
     box = plt.boxplot(
         df_grouped[col_name], patch_artist=True, widths=0.6, showfliers=False
     )
-    # colors = ['red', 'green', 'orange', 'blue']
-    colors = ["red", "blue"]
+    colors = ["orange"] * len(df_grouped)
     for patch, color in zip(box["boxes"], colors):
         patch.set_facecolor(color)
     for median in box["medians"]:
@@ -64,7 +69,7 @@ for col_name, alias in [
     ax1.spines["right"].set_visible(False)
     ax1.spines["left"].set_visible(False)
     ax1.grid(True, alpha=0.4)
-    plt.xlabel(r"Estimation method", fontsize=15)
+    plt.xlabel("Estimation method", fontsize=15)
     save_path = os.path.join(figures_dir, f"{col_name}_boxplot.pdf")
     logger.info(f"Saving plot to {save_path}...")
     plt.savefig(save_path, bbox_inches="tight")

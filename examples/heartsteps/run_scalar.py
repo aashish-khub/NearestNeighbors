@@ -37,8 +37,8 @@ from nearest_neighbors.utils.experiments import get_base_parser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-# need to silence entrywise 
-logging.getLogger('hyperopt').setLevel(logging.WARNING)  # or logging.ERROR
+# need to silence entrywise
+logging.getLogger("hyperopt").setLevel(logging.WARNING)  # or logging.ERROR
 
 parser = get_base_parser()
 args = parser.parse_args()
@@ -68,8 +68,11 @@ def get_heartsteps_data() -> Tuple[np.ndarray, np.ndarray]:
     data, mask = hs_dataloader.process_data_scalar()
     return data, mask
 
+
 # Random generator, set seed to 42
-rng = np.random.default_rng(seed=42) # TODO: (Caleb) is there a better way to set the seed?
+rng = np.random.default_rng(
+    seed=42
+)  # TODO: (Caleb) is there a better way to set the seed?
 
 # Load the heartsteps dataset
 data, mask = get_heartsteps_data()

@@ -3,11 +3,11 @@ Supports evaluation on both the synthetic and heartsteps datasets using leave-bl
 
 Usage:
     Run ONE configuration:
-        python run_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD -ds DATASET
+        python run_all_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD -ds DATASET
     Run ALL configurations in parallel for ONE dataset:
-        python run_scalar.py -od OUTPUT_DIR --all -ds heartsteps
+        python run_all_scalar.py -od OUTPUT_DIR --all -ds heartsteps
     Run ALL configurations in parallel for ALL datasets:
-        python run_scalar.py -od OUTPUT_DIR --all
+        python run_all_scalar.py -od OUTPUT_DIR --all
 
 
 Generates boxplots comparing absolute imputation errors across methods.

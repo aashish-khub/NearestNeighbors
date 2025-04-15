@@ -4,8 +4,6 @@ import numpy as np
 from typing import Union, Tuple
 import logging
 
-from line_profiler import profile
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -136,7 +134,6 @@ class DREstimator(EstimationMethod):
     #     super().__init__()
     #     self.distance_threshold_row = distance_threshold_row
     #     self.distance_threshold_col = distance_threshold_col
-    @profile
     def impute(
         self,
         row: int,
@@ -286,7 +283,6 @@ class TSEstimator(EstimationMethod):
     def __str__(self):
         return "TSEstimator"
 
-    @profile
     def impute(
         self,
         row: int,

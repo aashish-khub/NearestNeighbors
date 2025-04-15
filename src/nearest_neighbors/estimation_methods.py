@@ -156,10 +156,6 @@ class DREstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        # if self.distance_threshold_row is None or self.distance_threshold_col is None:
-        #     raise ValueError(
-        #         "Distance thresholds for row and column must be set for DREstimator. Please call fit on the imputer first or provide the thresholds directly to the drnn method."
-        #     )
         data_shape = data_array.shape
         n_rows = data_shape[0]
         n_cols = data_shape[1]
@@ -215,6 +211,7 @@ class DREstimator(EstimationMethod):
         # Find the col nearest neighbors indexes
         col_nearest_neighbors = np.nonzero(col_distances <= distance_threshold_col)[0]
 
+        # neighbors can only be used if they are observed
         row_nearest_neighbors = row_nearest_neighbors[
             mask_array[row_nearest_neighbors, column] == 1
         ]
@@ -222,13 +219,9 @@ class DREstimator(EstimationMethod):
             mask_array[row, col_nearest_neighbors] == 1
         ]
 
-        # print("DRNN Num Row Neighbors: ", len(row_nearest_neighbors))
-        # print("DRNN Num Col Neighbors: ", len(col_nearest_neighbors))
         # Use doubly robust nearest neighbors to combine row and col
         y_itprime = data_array[row, col_nearest_neighbors]
-        # y_itprime = y_itprime[mask_array[row, col_nearest_neighbors] == 1]
         y_jt = data_array[row_nearest_neighbors, column]
-        # y_jt = y_jt[mask_array[row_nearest_neighbors, column] == 1]
         if len(y_itprime) == 0 and len(y_jt) == 0:
             return np.array(np.nan)
 
@@ -237,7 +230,6 @@ class DREstimator(EstimationMethod):
             row_nearest_neighbors, col_nearest_neighbors, indexing="ij"
         )
         y_jtprime = data_array[j_inds, tprime_inds]
-        # print("y_jtprime shape: ", y_jtprime.shape)
         mask_jtprime = mask_array[j_inds, tprime_inds]
 
         # nonzero gets all indices of the mask that are 1
@@ -245,11 +237,10 @@ class DREstimator(EstimationMethod):
 
         y_itprime_inter = y_itprime[
             intersec_inds[1]
-        ]  # this is a vector of column values for all intersecting triplets
+        ]  # this is a array of column values for all intersecting triplets
         y_jt_inter = y_jt[
             intersec_inds[0]
-        ]  # this is a vector of row values for all intersecting triplets
-        # print("Yjtprime intersec shape: " , y_jtprime[intersec_inds].shape)
+        ]  # this is a array of row values for all intersecting triplets
         # note: defaults to rownn if no intersection -> should default to ts-nn instead?
         if len(y_itprime_inter) == 0 or len(y_jt_inter) == 0:
             return np.array(
@@ -257,16 +248,7 @@ class DREstimator(EstimationMethod):
                 if len(y_jt) > 0
                 else data_type.average(y_itprime)
             )
-        # sum_y = (
-        #     y_itprime_inter[np.newaxis, :]
-        #     + y_jt_inter[:, np.newaxis]
-        #     - y_jtprime[intersec_inds]
-        # )
         sum_y = y_itprime_inter + y_jt_inter - y_jtprime[intersec_inds]
-
-        # print(len(sum_y))
-        # print("DRNN Type: ", type(sum_y))
-        # print("DRNN Shape: ", sum_y.shape)
         avg = data_type.average(sum_y)
         return avg
 
@@ -360,8 +342,6 @@ class TSEstimator(EstimationMethod):
         col_nearest_neighbors = np.where(col_distances <= eta_col)[
             0
         ]  # This is the set N_col(i, j) = {j' | d^2(j, j') <= eta_col^2}
-        # print("TSNN Num Row Neighbors: ", len(row_nearest_neighbors))
-        # print("TSNN Num Col Neighbors: ", len(col_nearest_neighbors))
         neighborhood_submatrix = data_array[
             np.ix_(row_nearest_neighbors, col_nearest_neighbors)
         ]  # This is the submatrix of the cross-product of the row and column neighborhoods
@@ -385,8 +365,5 @@ class TSEstimator(EstimationMethod):
                 )
                 return np.array(np.nan)
         else:
-            # print(len(values_for_estimation))
-            # print("TSNN Type: ", type(values_for_estimation))
-            # print("TSNN Shape: ", values_for_estimation.shape)
             theta_hat = data_type.average(values_for_estimation)
             return theta_hat

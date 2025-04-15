@@ -99,10 +99,7 @@ rng.shuffle(range_train_inds)
 # 20% of the training indices will be used for cv holdout
 cv_size = int(0.2 * len(train_inds))
 cv_inds = range_train_inds[:cv_size]
-# train_inds = range_train_inds[cv_size:]
 # get the rows and columns of the train indices
-# train_inds_rows = list(inds_rows[train_inds])
-# train_inds_cols = list(inds_cols[train_inds])
 
 cv_inds_rows = list(inds_rows[train_inds][cv_inds])
 cv_inds_cols = list(inds_cols[train_inds][cv_inds])
@@ -115,16 +112,6 @@ test_block = list(zip(test_inds_rows, test_inds_cols))
 
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
-# full_mask_test_inds = np.nonzero((inds_rows > 21) & (inds_cols > 159))
-# test_inds_rows = tuple(inds_rows[full_mask_test_inds])
-# test_inds_cols = tuple(inds_cols[full_mask_test_inds])
-
-# full_mask_inds = np.nonzero((inds_rows < 9) & (inds_cols < 25))
-# holdout_inds_rows = list(inds_rows[full_mask_inds])
-# holdout_inds_cols = list(inds_cols[full_mask_inds])
-
-# block = list(zip(holdout_inds_rows, holdout_inds_cols))
-# test_block = list(zip(test_inds_rows, test_inds_cols))
 
 if estimation_method == "usvt":
     logger.debug("Using USVT estimation")

@@ -50,7 +50,6 @@ def evaluate_imputation(
     for row, col in test_cells:
         mask_array[row, col] = 1
 
-    # return error / len(test_cells)
     return float(np.nanmean(err_dists))
 
 

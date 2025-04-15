@@ -252,7 +252,7 @@ def run_single_config(
     return label, nn_errors, usvt_errs
 
 
-def plot_all_errors(results: dict | tuple, output_dir: str, dataset: str, specified_method: str = "") -> None:
+def plot_all_errors(results: dict | tuple, output_dir: str, dataset: str) -> None:
     """Plot the imputation errors for all methods and datasets."""
     figures_dir = os.path.join(output_dir, "figures")
     os.makedirs(figures_dir, exist_ok=True)

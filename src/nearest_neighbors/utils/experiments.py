@@ -1,4 +1,4 @@
-"""Utility functions for the heartsteps scripts"""
+"""Utility functions for the experiment scripts"""
 
 from argparse import ArgumentParser
 
@@ -13,8 +13,8 @@ def get_base_parser() -> ArgumentParser:
         "--estimation_method",
         "-em",
         type=str,
-        default="vanilla",
-        choices=["dr", "ts", "vanilla", "usvt"],
+        default="row-row",
+        choices=["dr", "ts", "row-row", "col-col", "usvt"],
         help="Estimation method to use",
     )
     parser.add_argument(

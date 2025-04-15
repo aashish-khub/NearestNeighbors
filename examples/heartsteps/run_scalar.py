@@ -30,10 +30,10 @@ from nearest_neighbors.fit_methods import (
     LeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.vanilla_nn import row_row
+from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
 
-from utils import get_base_parser
+from nearest_neighbors.utils.experiments import get_base_parser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -152,9 +152,20 @@ else:
             n_trials=200,
             data_type=data_type,
         )
-    elif estimation_method == "vanilla":
-        logger.info("Using row-row estimation")
+    elif estimation_method == "row-row":
+        logger.debug("Using row-row estimation")
         imputer = row_row()
+
+        logger.debug("Using leave-block-out validation")
+        fitter = LeaveBlockOutValidation(
+            block,
+            distance_threshold_range=(0, 4_000_000),
+            n_trials=200,
+            data_type=data_type,
+        )
+    elif estimation_method == "col-col":
+        logger.debug("Using col-col estimation")
+        imputer = col_col()
 
         logger.debug("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(

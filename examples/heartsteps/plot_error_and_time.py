@@ -10,7 +10,7 @@ python plot_error_and_time.py -od OUTPUT_DIR
 """
 
 import os
-
+import numpy as np
 import matplotlib.pyplot as plt
 from glob import glob
 import pandas as pd
@@ -41,9 +41,11 @@ df_grouped = (
     .agg(lambda x: list([val for val in x if pd.notna(val)]))
     .reset_index()
 )
+# Take log of est_errors
+df_grouped["est_errors"] = df_grouped["est_errors"].apply(lambda x: np.log(x))
 
 for col_name, alias in [
-    ("est_errors", "Absolute error"),
+    ("est_errors", "$\\log(\\text{Absolute error})$"),
     ("time_impute", "Imputation time"),
     ("time_fit", "Fit time"),
 ]:
@@ -70,7 +72,7 @@ for col_name, alias in [
     ax1.spines["left"].set_visible(False)
     ax1.grid(True, alpha=0.4)
     plt.xlabel("Estimation method", fontsize=15)
-    save_path = os.path.join(figures_dir, f"{col_name}_boxplot.pdf")
+    save_path = os.path.join(figures_dir, f"heartsteps_{col_name}_boxplot.pdf")
     logger.info(f"Saving plot to {save_path}...")
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()

@@ -22,7 +22,7 @@ from baselines import usvt
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import DREstimator, TSEstimator
+from nearest_neighbors.estimation_methods import TSEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -31,12 +31,14 @@ from nearest_neighbors.fit_methods import (
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row
+from nearest_neighbors.dr_nn import dr_nn
 
 from utils import get_base_parser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+# need to silence entrywise 
+logging.getLogger('hyperopt').setLevel(logging.WARNING)  # or logging.ERROR
 
 parser = get_base_parser()
 args = parser.parse_args()
@@ -89,15 +91,27 @@ test_size = int(0.2 * len(range_inds))
 test_inds = range_inds[:test_size]
 # 80% of the indices will be used for training
 train_inds = range_inds[test_size:]
+range_train_inds = np.arange(len(train_inds))
+rng.shuffle(range_train_inds)
+# 20% of the training indices will be used for cv holdout
+cv_size = int(0.2 * len(train_inds))
+cv_inds = range_train_inds[:cv_size]
+# train_inds = range_train_inds[cv_size:]
 # get the rows and columns of the train indices
-train_inds_rows = list(inds_rows[train_inds])
-train_inds_cols = list(inds_cols[train_inds])
+# train_inds_rows = list(inds_rows[train_inds])
+# train_inds_cols = list(inds_cols[train_inds])
+
+cv_inds_rows = list(inds_rows[train_inds][cv_inds])
+cv_inds_cols = list(inds_cols[train_inds][cv_inds])
 # get the rows and columns of the test indices
 test_inds_rows = list(inds_rows[test_inds])
 test_inds_cols = list(inds_cols[test_inds])
 
-block = list(zip(train_inds_rows, train_inds_cols))
+block = list(zip(cv_inds_rows, cv_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
+
+mask_test = mask.copy()
+mask_test[test_inds_rows, test_inds_cols] = 0
 # full_mask_test_inds = np.nonzero((inds_rows > 21) & (inds_cols > 159))
 # test_inds_rows = tuple(inds_rows[full_mask_test_inds])
 # test_inds_cols = tuple(inds_cols[full_mask_test_inds])
@@ -115,20 +129,19 @@ if estimation_method == "usvt":
     usvt_data = data.copy()
     usvt_mask = mask.copy()
     usvt_mask[test_inds_rows, test_inds_cols] = 0
-    usvt_data[mask != 1] = np.nan
+    usvt_data[usvt_mask != 1] = np.nan
     # impute missing values simultaneously
-    usvt_imputed = usvt(usvt_data)
     start_time = time()
-    imputations = usvt_imputed[test_inds_rows, test_inds_cols]
+    usvt_imputed = usvt(usvt_data)
     elapsed_time = time() - start_time
+    imputations = usvt_imputed[test_inds_rows, test_inds_cols]
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
     fit_times = [0] * len(test_block)
 else:
     if estimation_method == "dr":
         logger.debug("Using doubly robust estimation")
-        estimator = DREstimator()
-        imputer = NearestNeighborImputer(estimator, data_type)
+        imputer = dr_nn()
 
         logger.debug("Using doubly robust fit method")
         # Fit the imputer using leave-block-out validation
@@ -140,7 +153,7 @@ else:
             data_type=data_type,
         )
     elif estimation_method == "vanilla":
-        logger.debug("Using row-row estimation")
+        logger.info("Using row-row estimation")
         imputer = row_row()
 
         logger.debug("Using leave-block-out validation")
@@ -151,11 +164,11 @@ else:
             data_type=data_type,
         )
     elif estimation_method == "ts":
-        logger.debug("Using two-sided estimation")
+        logger.info("Using two-sided estimation")
         estimator = TSEstimator()
         imputer = NearestNeighborImputer(estimator, data_type)
 
-        logger.debug("Using two-sided fit method")
+        logger.info("Using two-sided fit method")
         # Fit the imputer using leave-block-out validation
         fitter = TSLeaveBlockOutValidation(
             block,
@@ -170,7 +183,7 @@ else:
         )
 
     start_time = time()
-    fitter.fit(data, mask, imputer)
+    fitter.fit(data, mask_test, imputer)
     end_time = time()
     fit_times = [end_time - start_time] * len(test_block)
 
@@ -179,7 +192,7 @@ else:
     imputation_times = []
     for row, col in tqdm(test_block, desc="Imputing missing values"):
         start_time = time()
-        imputed_value = imputer.impute(row, col, data, mask)
+        imputed_value = imputer.impute(row, col, data, mask_test)
         elapsed_time = time() - start_time
         imputation_times.append(elapsed_time)
         imputations.append(imputed_value)

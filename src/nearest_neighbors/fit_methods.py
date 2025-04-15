@@ -39,18 +39,19 @@ def evaluate_imputation(
         ):
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
-
+    err_dists = []
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
-
-        error += data_type.distance(imputed_value, true_value)
+        error = data_type.distance(imputed_value, true_value)
+        err_dists.append(error)
 
     # Reset the mask
     for row, col in test_cells:
         mask_array[row, col] = 1
 
-    return error / len(test_cells)
+    # return error / len(test_cells)
+    return float(np.nanmean(err_dists))
 
 
 class LeaveBlockOutValidation(FitMethod):
@@ -203,6 +204,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             },
             algo=tpe.suggest,
             max_evals=self.n_trials,
+            verbose=False,
         )
 
         if best_params is None:

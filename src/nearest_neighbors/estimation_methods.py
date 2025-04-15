@@ -134,7 +134,6 @@ class DREstimator(EstimationMethod):
     #     super().__init__()
     #     self.distance_threshold_row = distance_threshold_row
     #     self.distance_threshold_col = distance_threshold_col
-
     def impute(
         self,
         row: int,
@@ -157,10 +156,6 @@ class DREstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        # if self.distance_threshold_row is None or self.distance_threshold_col is None:
-        #     raise ValueError(
-        #         "Distance thresholds for row and column must be set for DREstimator. Please call fit on the imputer first or provide the thresholds directly to the drnn method."
-        #     )
         data_shape = data_array.shape
         n_rows = data_shape[0]
         n_cols = data_shape[1]
@@ -216,6 +211,14 @@ class DREstimator(EstimationMethod):
         # Find the col nearest neighbors indexes
         col_nearest_neighbors = np.nonzero(col_distances <= distance_threshold_col)[0]
 
+        # neighbors can only be used if they are observed
+        row_nearest_neighbors = row_nearest_neighbors[
+            mask_array[row_nearest_neighbors, column] == 1
+        ]
+        col_nearest_neighbors = col_nearest_neighbors[
+            mask_array[row, col_nearest_neighbors] == 1
+        ]
+
         # Use doubly robust nearest neighbors to combine row and col
         y_itprime = data_array[row, col_nearest_neighbors]
         y_jt = data_array[row_nearest_neighbors, column]
@@ -229,10 +232,15 @@ class DREstimator(EstimationMethod):
         y_jtprime = data_array[j_inds, tprime_inds]
         mask_jtprime = mask_array[j_inds, tprime_inds]
 
+        # nonzero gets all indices of the mask that are 1
         intersec_inds = np.nonzero(mask_jtprime == 1)
 
-        y_itprime_inter = y_itprime[intersec_inds[1]]
-        y_jt_inter = y_jt[intersec_inds[0]]
+        y_itprime_inter = y_itprime[
+            intersec_inds[1]
+        ]  # this is a array of column values for all intersecting triplets
+        y_jt_inter = y_jt[
+            intersec_inds[0]
+        ]  # this is a array of row values for all intersecting triplets
         # note: defaults to rownn if no intersection -> should default to ts-nn instead?
         if len(y_itprime_inter) == 0 or len(y_jt_inter) == 0:
             return np.array(
@@ -240,11 +248,7 @@ class DREstimator(EstimationMethod):
                 if len(y_jt) > 0
                 else data_type.average(y_itprime)
             )
-        sum_y = (
-            y_itprime_inter[np.newaxis, :]
-            + y_jt_inter[:, np.newaxis]
-            - y_jtprime[intersec_inds]
-        )
+        sum_y = y_itprime_inter + y_jt_inter - y_jtprime[intersec_inds]
         avg = data_type.average(sum_y)
         return avg
 
@@ -331,7 +335,6 @@ class TSEstimator(EstimationMethod):
                 )
             col_distances[i] /= np.sum(overlap_rows)
         col_distances[column] = np.inf
-
         # Establish the neighborhoods subject to the distance thresholds
         row_nearest_neighbors = np.where(row_distances <= eta_row)[
             0
@@ -339,7 +342,6 @@ class TSEstimator(EstimationMethod):
         col_nearest_neighbors = np.where(col_distances <= eta_col)[
             0
         ]  # This is the set N_col(i, j) = {j' | d^2(j, j') <= eta_col^2}
-
         neighborhood_submatrix = data_array[
             np.ix_(row_nearest_neighbors, col_nearest_neighbors)
         ]  # This is the submatrix of the cross-product of the row and column neighborhoods

@@ -64,7 +64,7 @@ data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
 
-logger.debug("Using scalar data type")
+logger.info("Using scalar data type")
 data_type = Scalar()
 
 holdout_inds = np.nonzero(mask == 1)
@@ -99,7 +99,7 @@ mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
 if estimation_method == "usvt":
-    logger.debug("Using USVT estimation")
+    logger.info("Using USVT estimation")
     # setup usvt imputation
     usvt_data = data.copy()
     usvt_mask = mask.copy()
@@ -115,10 +115,10 @@ if estimation_method == "usvt":
     fit_times = [0] * len(test_block)
 else:
     if estimation_method == "dr":
-        logger.debug("Using doubly robust estimation")
+        logger.info("Using doubly robust estimation")
         imputer = dr_nn()
 
-        logger.debug("Using doubly robust fit method")
+        logger.info("Using doubly robust fit method")
         # Fit the imputer using leave-block-out validation
         fitter = DRLeaveBlockOutValidation(
             block,
@@ -128,10 +128,10 @@ else:
             data_type=data_type,
         )
     elif estimation_method == "row-row":
-        logger.debug("Using row-row estimation")
+        logger.info("Using row-row estimation")
         imputer = row_row()
 
-        logger.debug("Using leave-block-out validation")
+        logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
             distance_threshold_range=(0, 4_000_000),
@@ -139,10 +139,10 @@ else:
             data_type=data_type,
         )
     elif estimation_method == "col-col":
-        logger.debug("Using col-col estimation")
+        logger.info("Using col-col estimation")
         imputer = col_col()
 
-        logger.debug("Using leave-block-out validation")
+        logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
             distance_threshold_range=(0, 4_000_000),

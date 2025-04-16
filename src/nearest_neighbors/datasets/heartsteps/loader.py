@@ -7,13 +7,15 @@ Reference: Klasnja, P., Smith, S., Seewald, N. J., Lee, A., Hall, K., Luers, B.,
 
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
-import os
 import numpy as np
 import pandas as pd
 from typing import Any
 from datetime import timedelta
 import warnings
 import logging
+from joblib import Memory
+
+memory = Memory(".joblib_cache", verbose=2)
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +41,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
     def __init__(
         self,
-        download: bool = False,
-        save_dir: str = "./",
         agg: str = "mean",
-        save_processed: bool = False,
         freq: str = "5min",
         participants: int = 37,
         max_study_day: int = 52,
@@ -54,10 +53,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
         Args:
         ----
-            download: Whether to download the data locally. Default: False. If True, data is downloaded at save_dir
-            save_dir: Directory to download the data to or where it already exists. Also the directory where the processed data will be. Default: "./" (current directory).
             agg: Aggregation method to use to create scalar dataset. Default: "mean".
-            save_processed: Whether to save the processed data. Default: False.
             freq: Frequency of step count samples. Default: "5min".
             participants: Number of participants to include. Default: 37 (maximum).
             max_study_day: Maximum study day. Default: 52.
@@ -69,10 +65,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
         """
         super().__init__(
-            download=download,
-            save_dir=save_dir,
             agg=agg,
-            save_processed=save_processed,
             **kwargs,
         )
         self.freq = freq
@@ -83,18 +76,17 @@ class HeartStepsDataLoader(NNDataLoader):
         self.mask = None
         self.log_transform = log_transform
 
-    def download_data(self) -> None:
-        """Download the data from the remote source through urls."""
-        # print("Downloading HeartSteps V1 data...")
-        df_steps, df_suggestions = self._load_data()
-        df_steps.to_csv(os.path.join(self.save_dir, "jbsteps.csv"), index=False)
-        df_suggestions.to_csv(
-            os.path.join(self.save_dir, "suggestions.csv"), index=False
-        )
+    # NOTE: use joblib.Memory to cache the data instead of downloading the data
+    # def download_data(self) -> None:
+    #     """Download the data from the remote source through urls."""
+    #     # print("Downloading HeartSteps V1 data...")
+    #     df_steps, df_suggestions = self._load_data()
+    #     df_steps.to_csv(os.path.join(self.save_dir, "jbsteps.csv"), index=False)
+    #     df_suggestions.to_csv(
+    #         os.path.join(self.save_dir, "suggestions.csv"), index=False
+    #     )
 
-    def process_data_scalar(
-        self, cached: bool = False, agg: str = "mean"
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def process_data_scalar(self, agg: str = "mean") -> tuple[np.ndarray, np.ndarray]:
         """Process the data into scalar setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
 
         Args:
@@ -108,7 +100,7 @@ class HeartStepsDataLoader(NNDataLoader):
             mask: Mask for processed data
 
         """
-        df_steps, df_suggestions = self._load_data(cached)
+        df_steps, df_suggestions = self._load_data()
         data, _, mask = self._proc_dist_data(df_steps, df_suggestions)
         if agg == "mean":
             data = np.nanmean(data, axis=2)
@@ -126,18 +118,17 @@ class HeartStepsDataLoader(NNDataLoader):
             )
 
         data = np.squeeze(data)
-        # write data to output_dir
-        if self.save_processed:
-            np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
-            np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
+        # NOTE: use joblib.Memory to cache the data instead of saving the data
+        # # write data to output_dir
+        # if self.save_processed:
+        #     np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
+        #     np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
         # print("Done!")
         self.data = data
         self.mask = mask
         return data, mask
 
-    def process_data_distribution(
-        self, cached: bool = False
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into distribution setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
 
         Args:
@@ -145,7 +136,7 @@ class HeartStepsDataLoader(NNDataLoader):
             cached: Whether to use cached data. Default: False
 
         """
-        df_steps, df_suggestions = self._load_data(cached)
+        df_steps, df_suggestions = self._load_data()
 
         _, data2d, mask = self._proc_dist_data(df_steps, df_suggestions)
         # print("Done!")
@@ -175,7 +166,9 @@ class HeartStepsDataLoader(NNDataLoader):
         return full_state
 
     ## HELPER FUNCTIONS
-    def _load_data(self, cached: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
+    @classmethod
+    @memory.cache
+    def _load_data(cls) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Load the data from the remote source through urls
 
         Args:
@@ -183,26 +176,17 @@ class HeartStepsDataLoader(NNDataLoader):
             cached: Whether to use cached data. Default: False
 
         """
-        if cached:
-            jp_path = os.path.join(self.save_dir, "jbsteps.csv")
-            sug_path = os.path.join(self.save_dir, "suggestions.csv")
-            if not (os.path.exists(jp_path) and os.path.exists(sug_path)):
-                logger.info("No cached data found. Retrieving from url...")
-                jp_path = self.urls["jbsteps.csv"]
-                sug_path = self.urls["suggestions.csv"]
-            else:
-                logger.info("Retrieving data from cache...")
-        else:
-            logger.info("Retrieving data from url...")
-            jp_path = self.urls["jbsteps.csv"]
-            sug_path = self.urls["suggestions.csv"]
+        logger.info("Retrieving data from url...")
+        jp_path = cls.urls["jbsteps.csv"]
+        sug_path = cls.urls["suggestions.csv"]
 
         df_steps = pd.read_csv(jp_path, low_memory=False)
         df_suggestions = pd.read_csv(sug_path, low_memory=False)
         return df_steps, df_suggestions
 
+    @staticmethod
+    @memory.cache
     def _transform_dnn(
-        self,
         df: Any,
         users: int = 37,
         max_study_day: int = 52,
@@ -250,7 +234,8 @@ class HeartStepsDataLoader(NNDataLoader):
         final_A = final_A.reshape((users, max_study_day * day_dec))
         return final_M, final_A
 
-    def _get_mode(self, x: pd.Series) -> Any:
+    @staticmethod
+    def _get_mode(x: pd.Series) -> Any:
         if len(pd.Series.mode(x) > 1):
             return pd.Series.mode(x, dropna=False)[0]
         else:
@@ -273,12 +258,14 @@ class HeartStepsDataLoader(NNDataLoader):
         df_reind["steps"] = df_reind["steps"].fillna(0)
         return df_reind
 
-    def _take_range(self, df: Any, range: int) -> pd.DataFrame:
+    @staticmethod
+    def _take_range(df: Any, range: int) -> pd.DataFrame:
         idx = df.index.get_indexer_for(df[pd.notna(df["sugg.select.slot"])].index)
         ranges = [np.arange(i, min(i + range + 1, len(df))) for i in idx]
         return df.iloc[np.concatenate(ranges)]
 
-    def _create_slots(self, df: Any) -> pd.DataFrame:
+    @staticmethod
+    def _create_slots(df: Any) -> pd.DataFrame:
         most_rec_slot = 0.0
         for ind, row in df.iterrows():
             curr_slot = row["sugg.select.slot"]
@@ -298,7 +285,8 @@ class HeartStepsDataLoader(NNDataLoader):
                     most_rec_slot = curr_slot
         return df
 
-    def _study_day(self, df: Any) -> pd.DataFrame:
+    @staticmethod
+    def _study_day(df: Any) -> pd.DataFrame:
         most_rec_slot = 1.0
         curr_study_day = 1
         for ind, row in df.iterrows():
@@ -309,6 +297,25 @@ class HeartStepsDataLoader(NNDataLoader):
                 most_rec_slot = curr_slot
                 df.at[ind, "study_day"] = curr_study_day
         return df
+
+    @staticmethod
+    @memory.cache
+    def _group_steps(df: pd.DataFrame, freq: str) -> pd.DataFrame:
+        return df.groupby(
+            [
+                # TODO: (Caleb) resolve this Grouper pyright error - says no parameter named 'label' but pd.Grouper param list has 'label'.
+                # Main issue is that TimeGrouper (which has the param label) was deprecated but is still used under the hood
+                # so the param label is not explicitly exposed in the Grouper init definition but is still accepted/used.
+                pd.Grouper(freq=freq, level="steps.utime", label="right"),  # pyright: ignore
+                pd.Grouper(level="user.index"),
+            ],
+            sort=False,
+        ).agg(
+            {
+                "steps": "sum",
+                "study.day.nogap": lambda x: HeartStepsDataLoader._get_mode(x),
+            }
+        )
 
     def _proc_dist_data(
         self, df_steps: pd.DataFrame, df_suggestions: pd.DataFrame
@@ -348,20 +355,7 @@ class HeartStepsDataLoader(NNDataLoader):
         )
 
         # group the step data by five minute intervals
-        df_freq = (
-            df_steps.groupby(
-                [
-                    # TODO: (Caleb) resolve this Grouper pyright error - says no parameter named 'label' but pd.Grouper param list has 'label'.
-                    # Main issue is that TimeGrouper (which has the param label) was deprecated but is still used under the hood
-                    # so the param label is not explicitly exposed in the Grouper init definition but is still accepted/used.
-                    pd.Grouper(freq=self.freq, level="steps.utime", label="right"),  # pyright: ignore
-                    pd.Grouper(level="user.index"),
-                ],
-                sort=False,
-            )
-            .agg({"steps": "sum", "study.day.nogap": lambda x: self._get_mode(x)})
-            .reset_index()
-        )
+        df_freq = HeartStepsDataLoader._group_steps(df_steps, self.freq).reset_index()
 
         df_freq_ind = df_freq.set_index("steps.utime")
 
@@ -412,7 +406,9 @@ class HeartStepsDataLoader(NNDataLoader):
 
         for user_idx in unique_users:
             df_user = df_merged[df_merged["user.index"] == user_idx]
-            df_user_range = self._take_range(df_user, self.num_measurements)
+            df_user_range = HeartStepsDataLoader._take_range(
+                df_user, self.num_measurements
+            )
             result_dfs.append(df_user_range)
 
         df_merged_cut = pd.concat(result_dfs).reset_index(drop=True)
@@ -429,7 +425,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
         for user_idx in unique_users:
             df_user = df_merged_cut_nd[df_merged_cut_nd["user.index"] == user_idx]
-            user_slots = self._create_slots(df_user)
+            user_slots = HeartStepsDataLoader._create_slots(df_user)
             slot_results.append(user_slots)
 
         df_slot = pd.concat(slot_results)
@@ -440,7 +436,7 @@ class HeartStepsDataLoader(NNDataLoader):
 
         for user_idx in unique_users_slot:
             df_user = df_slot[df_slot["user.index"] == user_idx]
-            user_study_day = self._study_day(df_user)
+            user_study_day = HeartStepsDataLoader._study_day(df_user)
             study_day_results.append(user_study_day)
 
         df_study_day = pd.concat(study_day_results)
@@ -449,7 +445,7 @@ class HeartStepsDataLoader(NNDataLoader):
         df_final = df_study_day.set_index(["user.index", "study_day", "new_slot"])
 
         # transform into 4d tensor + mask
-        data, mask = self._transform_dnn(
+        data, mask = HeartStepsDataLoader._transform_dnn(
             df_final,
             users=self.participants,
             max_study_day=self.max_study_day,

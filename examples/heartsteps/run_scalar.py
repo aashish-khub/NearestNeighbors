@@ -11,8 +11,6 @@ python run_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD
 import numpy as np
 from tqdm import tqdm
 import logging
-from joblib import Memory
-from typing import Tuple
 import os
 from time import time
 import pandas as pd
@@ -35,7 +33,7 @@ from nearest_neighbors.dr_nn import dr_nn
 
 from nearest_neighbors.utils.experiments import get_base_parser
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 # need to silence entrywise
 logging.getLogger("hyperopt").setLevel(logging.WARNING)  # or logging.ERROR
@@ -57,25 +55,14 @@ if os.path.exists(save_path) and not args.force:
     logger.info(f"Results already exist at {save_path}. Use --force to overwrite.")
     exit()
 
-# Create a memory cache in a '.joblib_cache' directory
-memory = Memory(".joblib_cache", verbose=1)
-
-
-@memory.cache
-def get_heartsteps_data() -> Tuple[np.ndarray, np.ndarray]:
-    """Get the heartsteps dataset."""
-    hs_dataloader = NNData.create("heartsteps")
-    data, mask = hs_dataloader.process_data_scalar()
-    return data, mask
-
-
 # Random generator, set seed to 42
 rng = np.random.default_rng(
     seed=42
 )  # TODO: (Caleb) is there a better way to set the seed?
 
 # Load the heartsteps dataset
-data, mask = get_heartsteps_data()
+hs_dataloader = NNData.create("heartsteps")
+data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
 
@@ -214,5 +201,6 @@ df = pd.DataFrame(
         "time_fit": fit_times,
     }
 )
+print(df[["est_errors", "time_impute", "time_fit"]].describe())
 logger.info(f"Saving est_errors to {save_path}...")
 df.to_csv(save_path, index=False)

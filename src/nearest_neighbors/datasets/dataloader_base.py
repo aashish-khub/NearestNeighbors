@@ -31,12 +31,6 @@ class NNDataLoader(ABC):
             )
         self.agg = agg
 
-    # NOTE: use joblib.Memory to cache the data instead of downloading the data
-    # @abstractmethod
-    # def download_data(self) -> None:
-    #     """Downloads the data to self.save_dir."""
-    #     raise NotImplementedError
-
     @abstractmethod
     def process_data_scalar(self) -> tuple[np.ndarray, np.ndarray]:
         """Processes the data into scalar matrix setting. Returns a tuple of ndarrays representing 2d data matrix and mask.

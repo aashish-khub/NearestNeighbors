@@ -11,8 +11,6 @@ python run_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD
 import numpy as np
 from tqdm import tqdm
 import logging
-from joblib import Memory
-from typing import Tuple
 import os
 from time import time
 import pandas as pd
@@ -33,18 +31,18 @@ from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
 
-from nearest_neighbors.utils.experiments import get_base_parser
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-# need to silence entrywise
-logging.getLogger("hyperopt").setLevel(logging.WARNING)  # or logging.ERROR
+from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
+seed = args.seed
+log_level = args.log_level
+
+setup_logging(log_level)
+logger = logging.getLogger(__name__)
 
 os.makedirs(output_dir, exist_ok=True)
 results_dir = os.path.join(output_dir, "results")
@@ -57,29 +55,19 @@ if os.path.exists(save_path) and not args.force:
     logger.info(f"Results already exist at {save_path}. Use --force to overwrite.")
     exit()
 
-# Create a memory cache in a '.joblib_cache' directory
-memory = Memory(".joblib_cache", verbose=1)
-
-
-@memory.cache
-def get_heartsteps_data() -> Tuple[np.ndarray, np.ndarray]:
-    """Get the heartsteps dataset."""
-    hs_dataloader = NNData.create("heartsteps")
-    data, mask = hs_dataloader.process_data_scalar()
-    return data, mask
-
-
-# Random generator, set seed to 42
-rng = np.random.default_rng(
-    seed=42
-)  # TODO: (Caleb) is there a better way to set the seed?
+rng = np.random.default_rng(seed=seed)
 
 # Load the heartsteps dataset
-data, mask = get_heartsteps_data()
+# NOTE: the raw and processed data is cached in .joblib_cache
+start_time = time()
+hs_dataloader = NNData.create("heartsteps")
+data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
+elapsed_time = time() - start_time
+logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
-logger.debug("Using scalar data type")
+logger.info("Using scalar data type")
 data_type = Scalar()
 
 holdout_inds = np.nonzero(mask == 1)
@@ -114,7 +102,7 @@ mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
 if estimation_method == "usvt":
-    logger.debug("Using USVT estimation")
+    logger.info("Using USVT estimation")
     # setup usvt imputation
     usvt_data = data.copy()
     usvt_mask = mask.copy()
@@ -130,10 +118,10 @@ if estimation_method == "usvt":
     fit_times = [0] * len(test_block)
 else:
     if estimation_method == "dr":
-        logger.debug("Using doubly robust estimation")
+        logger.info("Using doubly robust estimation")
         imputer = dr_nn()
 
-        logger.debug("Using doubly robust fit method")
+        logger.info("Using doubly robust fit method")
         # Fit the imputer using leave-block-out validation
         fitter = DRLeaveBlockOutValidation(
             block,
@@ -143,10 +131,10 @@ else:
             data_type=data_type,
         )
     elif estimation_method == "row-row":
-        logger.debug("Using row-row estimation")
+        logger.info("Using row-row estimation")
         imputer = row_row()
 
-        logger.debug("Using leave-block-out validation")
+        logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
             distance_threshold_range=(0, 4_000_000),
@@ -154,10 +142,10 @@ else:
             data_type=data_type,
         )
     elif estimation_method == "col-col":
-        logger.debug("Using col-col estimation")
+        logger.info("Using col-col estimation")
         imputer = col_col()
 
-        logger.debug("Using leave-block-out validation")
+        logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
             distance_threshold_range=(0, 4_000_000),
@@ -214,5 +202,6 @@ df = pd.DataFrame(
         "time_fit": fit_times,
     }
 )
+print(df[["est_errors", "time_impute", "time_fit"]].describe())
 logger.info(f"Saving est_errors to {save_path}...")
 df.to_csv(save_path, index=False)

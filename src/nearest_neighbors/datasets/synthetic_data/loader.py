@@ -226,14 +226,12 @@ class SyntheticDataLoader(NNDataLoader):
 
     def process_data_scalar(
         self,
-        cached: bool = False,
         agg: str = "mean",  # TODO Caleb, is it safe to remove these args?
     ) -> tuple[np.ndarray, np.ndarray]:
         """Forces a simulation run, and processes synthetic data as scalar form.
 
         Args:
         ----
-            cached: Whether to use cached data. Default: False.
             agg: Aggregation method to use. Default: "mean".
 
         Returns:
@@ -249,9 +247,7 @@ class SyntheticDataLoader(NNDataLoader):
         availability_mask = state_dict["observed_entries"]
         return (observed_data, availability_mask)
 
-    def process_data_distribution(
-        self, cached: bool = False
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
         """Method not yet implemented for synthetic data"""
         # TODO Caleb, Kyuesong: is this even well-defined for synthetic data?
         raise NotImplementedError(

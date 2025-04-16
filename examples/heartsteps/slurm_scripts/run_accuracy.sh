@@ -4,7 +4,15 @@
 # ./run_accuracy.sh OUTPUT_DIR
 
 OUTPUT_DIR=$1
-for em in usvt row-row col-col dr ts;
+
+METHODS=(
+    "usvt"
+    "row-row"
+    "col-col"
+    "dr"
+    "ts"
+)
+for em in ${METHODS[@]};
 do
-    python run_scalar.py -od $OUTPUT_DIR -em $em
+    python run_scalar.py -od $OUTPUT_DIR -em $em --force
 done

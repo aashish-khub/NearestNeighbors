@@ -4,7 +4,6 @@ import numpy as np
 from typing import Union, Tuple
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

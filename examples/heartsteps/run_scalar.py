@@ -31,18 +31,18 @@ from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
 
-from nearest_neighbors.utils.experiments import get_base_parser
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-# need to silence entrywise
-logging.getLogger("hyperopt").setLevel(logging.WARNING)  # or logging.ERROR
+from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
+seed = args.seed
+log_level = args.log_level
+
+setup_logging(log_level)
+logger = logging.getLogger(__name__)
 
 os.makedirs(output_dir, exist_ok=True)
 results_dir = os.path.join(output_dir, "results")
@@ -55,12 +55,10 @@ if os.path.exists(save_path) and not args.force:
     logger.info(f"Results already exist at {save_path}. Use --force to overwrite.")
     exit()
 
-# Random generator, set seed to 42
-rng = np.random.default_rng(
-    seed=42
-)  # TODO: (Caleb) is there a better way to set the seed?
+rng = np.random.default_rng(seed=seed)
 
 # Load the heartsteps dataset
+# NOTE: the raw and processed data is cached in .joblib_cache
 hs_dataloader = NNData.create("heartsteps")
 data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps

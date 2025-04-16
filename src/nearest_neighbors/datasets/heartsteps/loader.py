@@ -2,7 +2,11 @@
 
 Source: https://github.com/klasnja/HeartStepsV1
 License: CC-BY-4.0
-Reference: Klasnja, P., Smith, S., Seewald, N. J., Lee, A., Hall, K., Luers, B., Hekler, E. B., & Murphy, S. A. (2019). Efficacy of Contextually Tailored Suggestions for Physical Activity: A Micro-randomized Optimization Trial of HeartSteps. Annals of Behavioral Medicine, 53(6), 573–582. https://doi.org/10.1093/abm/kay067
+Paper Reference:
+    Klasnja, P., Smith, S., Seewald, N. J., Lee, A., Hall, K., Luers, B., Hekler, E. B., & Murphy, S. A. (2019).
+    Efficacy of Contextually Tailored Suggestions for Physical Activity: A Micro-randomized Optimization Trial of HeartSteps.
+    Annals of Behavioral Medicine, 53(6), 573–582.
+    https://doi.org/10.1093/abm/kay067
 """
 
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader

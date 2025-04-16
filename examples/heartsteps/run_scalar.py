@@ -59,10 +59,13 @@ rng = np.random.default_rng(seed=seed)
 
 # Load the heartsteps dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
+start_time = time()
 hs_dataloader = NNData.create("heartsteps")
 data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
+elapsed_time = time() - start_time
+logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 logger.info("Using scalar data type")
 data_type = Scalar()

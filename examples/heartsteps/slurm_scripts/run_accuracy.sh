@@ -7,10 +7,10 @@ OUTPUT_DIR=$1
 
 METHODS=(
     "usvt"
-    # "row-row"
-    # "col-col"
-    # "dr"
-    # "ts"
+    "row-row"
+    "col-col"
+    "dr"
+    "ts"
 )
 for em in ${METHODS[@]};
 do

@@ -76,16 +76,6 @@ class HeartStepsDataLoader(NNDataLoader):
         self.mask = None
         self.log_transform = log_transform
 
-    # NOTE: use joblib.Memory to cache the data instead of downloading the data
-    # def download_data(self) -> None:
-    #     """Download the data from the remote source through urls."""
-    #     # print("Downloading HeartSteps V1 data...")
-    #     df_steps, df_suggestions = self._load_data()
-    #     df_steps.to_csv(os.path.join(self.save_dir, "jbsteps.csv"), index=False)
-    #     df_suggestions.to_csv(
-    #         os.path.join(self.save_dir, "suggestions.csv"), index=False
-    #     )
-
     def process_data_scalar(self, agg: str = "mean") -> tuple[np.ndarray, np.ndarray]:
         """Process the data into scalar setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
 
@@ -118,12 +108,6 @@ class HeartStepsDataLoader(NNDataLoader):
             )
 
         data = np.squeeze(data)
-        # NOTE: use joblib.Memory to cache the data instead of saving the data
-        # # write data to output_dir
-        # if self.save_processed:
-        #     np.save(os.path.join(self.save_dir, "data.npy"), data, allow_pickle=True)
-        #     np.save(os.path.join(self.save_dir, "mask.npy"), mask, allow_pickle=True)
-        # print("Done!")
         self.data = data
         self.mask = mask
         return data, mask
@@ -139,7 +123,6 @@ class HeartStepsDataLoader(NNDataLoader):
         df_steps, df_suggestions = self._load_data()
 
         _, data2d, mask = self._proc_dist_data(df_steps, df_suggestions)
-        # print("Done!")
         self.data = data2d
         self.mask = mask
         return data2d, mask
@@ -321,7 +304,7 @@ class HeartStepsDataLoader(NNDataLoader):
         self, df_steps: pd.DataFrame, df_suggestions: pd.DataFrame
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Process the data into distribution setting."""
-        # print("Processing HeartSteps V1...")
+        logger.debug("Processing HeartSteps V1...")
         # get relevant cols and reformatting
         df_steps = pd.DataFrame(
             df_steps[["user.index", "steps.utime", "steps", "study.day.nogap"]]

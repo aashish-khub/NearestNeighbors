@@ -85,7 +85,6 @@ class HeartStepsDataLoader(NNDataLoader):
 
         Args:
         ----
-            cached: Whether to use cached data. Default: False
             agg: Aggregation method to use. Default: "mean". Options: "mean", "sum", "median", "std", "variance"
 
         Returns:
@@ -119,9 +118,9 @@ class HeartStepsDataLoader(NNDataLoader):
     def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into distribution setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
 
-        Args:
-        ----
-            cached: Whether to use cached data. Default: False
+        Returns:
+            data: 4d processed data tensor of floats
+            mask: Mask for processed data
 
         """
         df_steps, df_suggestions = self._load_data()
@@ -158,9 +157,9 @@ class HeartStepsDataLoader(NNDataLoader):
     def _load_data(cls) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Load the data from the remote source through urls
 
-        Args:
-        ----
-            cached: Whether to use cached data. Default: False
+        Returns:
+            df_steps: pd.DataFrame
+            df_suggestions: pd.DataFrame
 
         """
         logger.info("Retrieving data from url...")

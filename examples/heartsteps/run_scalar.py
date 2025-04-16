@@ -116,6 +116,7 @@ if estimation_method == "usvt":
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
     fit_times = [0] * len(test_block)
+    success_list = [True] * len(test_block)
 else:
     if estimation_method == "dr":
         logger.info("Using doubly robust estimation")
@@ -179,12 +180,14 @@ else:
     # Impute missing values
     imputations = []
     imputation_times = []
+    success_list = []
     for row, col in tqdm(test_block, desc="Imputing missing values"):
         start_time = time()
-        imputed_value = imputer.impute(row, col, data, mask_test)
+        imputed_value, success = imputer.impute(row, col, data, mask_test)
         elapsed_time = time() - start_time
         imputation_times.append(elapsed_time)
         imputations.append(imputed_value)
+        success_list.append(success)
     imputations = np.array(imputations)
 
 ground_truth = data[test_inds_rows, test_inds_cols]
@@ -200,8 +203,9 @@ df = pd.DataFrame(
         "col": test_inds_cols,
         "time_impute": imputation_times,
         "time_fit": fit_times,
+        "success": success_list,
     }
 )
-print(df[["est_errors", "time_impute", "time_fit"]].describe())
+print(df[["est_errors", "time_impute", "time_fit", "success"]].describe())
 logger.info(f"Saving est_errors to {save_path}...")
 df.to_csv(save_path, index=False)

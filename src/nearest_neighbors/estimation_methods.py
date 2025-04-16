@@ -21,7 +21,7 @@ class RowRowEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
-    ) -> npt.NDArray:
+    ) -> Tuple[npt.NDArray, bool]:
         """Impute the missing value at the given row and column.
 
         Args:
@@ -33,7 +33,7 @@ class RowRowEstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         Returns:
-            npt.NDArray: Imputed value
+            Tuple[npt.NDArray, bool]: Imputed value and whether the entry had enough neighbors to impute
 
         """
         data_shape = data_array.shape
@@ -72,17 +72,21 @@ class RowRowEstimator(EstimationMethod):
             # NOTE: implement the base case described by Eq. 11 in
             # "Counterfactual Inference for Sequential Experiments".
             if mask_array[row, column]:
-                # return the observed outcome
-                return data_array[row, column]
+                logger.warning(
+                    f"Warning: No valid neighbors found for ({row}, {column}). Returning observed value.",
+                )
+                return data_array[row, column], False
             else:
-                # return the average of all observed outcomes corresponding
-                # to treatment 1 at time t.
-                return np.array(np.nanmean(masked_data_array[:, column]))
+                logger.warning(
+                    f"Warning: No valid neighbors found for ({row}, {column}). "
+                    "Returning mean of observed values in the same column.",
+                )
+                return np.array(np.nanmean(masked_data_array[:, column])), False
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
 
-        return data_type.average(nearest_neighbors_data)
+        return data_type.average(nearest_neighbors_data), True
 
 
 class ColColEstimator(EstimationMethod):
@@ -99,7 +103,7 @@ class ColColEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
-    ) -> npt.NDArray:
+    ) -> Tuple[npt.NDArray, bool]:
         """Impute the missing value at the given row and column.
 
         Args:
@@ -141,7 +145,7 @@ class DREstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
-    ) -> npt.NDArray:
+    ) -> Tuple[npt.NDArray, bool]:
         """Impute the missing value at the given row and column using doubly robust method.
 
         Args:
@@ -222,7 +226,7 @@ class DREstimator(EstimationMethod):
         y_itprime = data_array[row, col_nearest_neighbors]
         y_jt = data_array[row_nearest_neighbors, column]
         if len(y_itprime) == 0 and len(y_jt) == 0:
-            return np.array(np.nan)
+            return np.array(np.nan), False
 
         # get intersecting entries
         j_inds, tprime_inds = np.meshgrid(
@@ -246,10 +250,10 @@ class DREstimator(EstimationMethod):
                 data_type.average(y_jt)
                 if len(y_jt) > 0
                 else data_type.average(y_itprime)
-            )
+            ), False
         sum_y = y_itprime_inter + y_jt_inter - y_jtprime[intersec_inds]
         avg = data_type.average(sum_y)
-        return avg
+        return avg, True
 
 
 class TSEstimator(EstimationMethod):
@@ -272,7 +276,7 @@ class TSEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
-    ) -> npt.NDArray:
+    ) -> Tuple[npt.NDArray, bool]:
         r"""Impute the missing value at the given row and column using two-sided NN.
 
         Args:
@@ -352,17 +356,15 @@ class TSEstimator(EstimationMethod):
         values_for_estimation = neighborhood_submatrix[neighborhood_mask.astype(bool)]
         if values_for_estimation.size == 0:
             if mask_array[row, column]:
-                logger.log(
-                    logging.WARNING,
+                logger.warning(
                     f"Warning: No valid neighbors found for ({row}, {column}). Returning observed value.",
                 )
-                return data_array[row, column]
+                return data_array[row, column], False
             else:
-                logger.log(
-                    logging.WARNING,
+                logger.warning(
                     f"Warning: No valid neighbors found for ({row}, {column}). Returning np.nan.",
                 )
-                return np.array(np.nan)
+                return np.array(np.nan), False
         else:
             theta_hat = data_type.average(values_for_estimation)
-            return theta_hat
+            return theta_hat, True

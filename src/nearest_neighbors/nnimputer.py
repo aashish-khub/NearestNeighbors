@@ -44,7 +44,7 @@ class EstimationMethod(ABC):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
-    ) -> npt.NDArray:
+    ) -> Tuple[npt.NDArray, bool]:
         """Impute the missing value at the given row and column.
 
         Args:
@@ -57,6 +57,7 @@ class EstimationMethod(ABC):
 
         Returns:
             npt.NDArray: Imputed value
+            bool: Whether the entry had enough neighbors to impute
 
         """
         pass
@@ -88,7 +89,7 @@ class NearestNeighborImputer:
 
     def impute(
         self, row: int, column: int, data_array: npt.NDArray, mask_array: npt.NDArray
-    ) -> npt.NDArray:
+    ) -> Tuple[npt.NDArray, bool]:
         """Impute the missing value at the given row and column.
 
         Args:
@@ -101,7 +102,7 @@ class NearestNeighborImputer:
             ValueError: If distance threshold is not set
 
         Returns:
-            npt.NDArray: Imputed value
+            Tuple[npt.NDArray, bool]: Imputed value and whether the entry had enough neighbors to impute
 
         """
         if self.distance_threshold is None:

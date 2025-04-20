@@ -14,6 +14,7 @@ import logging
 import os
 from time import time
 import pandas as pd
+from hyperopt import Trials
 
 # import baseline methods
 from baselines import usvt
@@ -125,8 +126,8 @@ else:
         # Fit the imputer using leave-block-out validation
         fitter = DRLeaveBlockOutValidation(
             block,
-            distance_threshold_range_row=(0, 4000000),
-            distance_threshold_range_col=(0, 4000000),
+            distance_threshold_range_row=(0, 50),
+            distance_threshold_range_col=(0, 50),
             n_trials=200,
             data_type=data_type,
         )
@@ -137,7 +138,7 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            distance_threshold_range=(0, 4_000_000),
+            distance_threshold_range=(0, 50),
             n_trials=200,
             data_type=data_type,
         )
@@ -148,7 +149,7 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            distance_threshold_range=(0, 4_000_000),
+            distance_threshold_range=(0, 50),
             n_trials=200,
             data_type=data_type,
         )
@@ -161,8 +162,8 @@ else:
         # Fit the imputer using leave-block-out validation
         fitter = TSLeaveBlockOutValidation(
             block,
-            distance_threshold_range_row=(0, 4_000_000),
-            distance_threshold_range_col=(0, 4_000_000),
+            distance_threshold_range_row=(0, 50),
+            distance_threshold_range_col=(0, 50),
             n_trials=200,
             data_type=data_type,
         )
@@ -172,9 +173,33 @@ else:
         )
 
     start_time = time()
-    fitter.fit(data, mask_test, imputer)
+    trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
     end_time = time()
     fit_times = [end_time - start_time] * len(test_block)
+
+    # CODE FOR EXTRACTING TRIAL METADATA
+    if not isinstance(trials, float) and not isinstance(trials, int) and isinstance(trials[1], Trials):
+        trials = trials[1]
+        trial_data = []
+        for trial in trials.trials:
+            row = {}
+            # get param vals
+            params = trial['misc']['vals']
+            for param_name, param_values in params.items():
+                if param_values:
+                    row[param_name] = float(param_values[0])
+            
+            row['loss'] = float(trial['result']['loss'])
+            trial_data.append(row)
+
+        df_trials = pd.DataFrame(trial_data)
+        trials_save_path = os.path.join(
+        results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
+        )
+        logger.info(f"Saving trials data to {trials_save_path}...")
+        df_trials.to_csv(trials_save_path, index=False)
+
+        
 
     # Impute missing values
     imputations = []

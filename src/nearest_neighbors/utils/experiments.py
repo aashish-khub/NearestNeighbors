@@ -4,7 +4,6 @@ from argparse import ArgumentParser
 import logging
 
 
-
 def get_base_parser() -> ArgumentParser:
     """Get the base CLI parser for the heartsteps scripts"""
     parser = ArgumentParser()

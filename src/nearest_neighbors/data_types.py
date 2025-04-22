@@ -33,18 +33,6 @@ class Scalar(DataType):
         # Compute the mean using only the non-nan values.
         # If all values are nan, return nan.
         return np.nanmean(object_list)
-    
-    def sum(self, object_list: npt.NDArray[Any]) -> Any:
-        """Calculate the sum of a list of scalars.
-
-        Args:
-            object_list (list[Any]): List of scalars
-
-        Returns:
-            Any: Sum of the scalars
-
-        """
-        return np.nansum(object_list)
 
 
 class DistributionKernelMMD(DataType):

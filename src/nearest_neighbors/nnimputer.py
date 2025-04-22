@@ -140,5 +140,3 @@ class FitMethod(ABC):
 
         """
         pass
-
-

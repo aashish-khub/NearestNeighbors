@@ -40,6 +40,7 @@ def evaluate_imputation(
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
     for row, col in test_cells:
+        print("about to call impute from fit_methods for row: ", row, "and column: ", col)
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
         error += data_type.distance(imputed_value, true_value)

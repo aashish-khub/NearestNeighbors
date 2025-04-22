@@ -1,8 +1,9 @@
-"""Base class for all nearest neighbors algorithms."""
+"""Base classes for nearest neighbors algorithms."""
 
+import numpy as np
 import numpy.typing as npt
 from abc import ABC, abstractmethod
-from typing import Any, Union, Tuple
+from typing import Any, Union, Tuple, Optional
 
 
 class DataType(ABC):
@@ -137,3 +138,5 @@ class FitMethod(ABC):
 
         """
         pass
+
+

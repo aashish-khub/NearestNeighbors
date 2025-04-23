@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 class RowRowEstimator(EstimationMethod):
     """Estimate the missing value using row-row nearest neighbors."""
 
+    def __init__(self):
+        self.row_distances = dict()
+
     def __str__(self):
         return "RowRowEstimator"
 
@@ -36,33 +39,10 @@ class RowRowEstimator(EstimationMethod):
             npt.NDArray: Imputed value
 
         """
-        data_shape = data_array.shape
-        n_rows = data_shape[0]
-        n_cols = data_shape[1]
-
         # Calculate distances between rows
-        row_distances = np.zeros(n_rows)
-        for i in range(n_rows):
-            # Get columns observed in both row i and row
-            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
-
-            if not np.any(overlap_columns):
-                row_distances[i] = np.inf
-                continue
-
-            # Calculate distance between rows
-            for j in range(n_cols):
-                if (
-                    not overlap_columns[j] or j == column
-                ):  # Skip missing values and the target column
-                    continue
-                row_distances[i] += data_type.distance(
-                    data_array[row, j], data_array[i, j]
-                )
-            row_distances[i] /= np.sum(overlap_columns)
-
+        self._calculate_distances(row, column, data_array, mask_array, data_type)
         # Find the nearest neighbors indexes
-        nearest_neighbors = np.where(row_distances <= distance_threshold)[0]
+        nearest_neighbors = np.where(self.row_distances[row] <= distance_threshold)[0]
         # Apply mask_array to data_array
         masked_data_array = np.where(mask_array, data_array, np.nan)
 
@@ -84,9 +64,60 @@ class RowRowEstimator(EstimationMethod):
 
         return data_type.average(nearest_neighbors_data)
 
+    def _calculate_distances(
+        self,
+        row: int,
+        col: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        data_type: DataType,
+    ) -> None:
+        """Sets the distances for the imputer.
+        Sets the distances as a class attribute, so returns nothing.
+
+        Args:
+            row (int): Row index
+            col (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        data_shape = data_array.shape
+        n_rows = data_shape[0]
+        n_cols = data_shape[1]
+
+        if row in self.row_distances:
+            return
+
+        # Calculate distances between rows
+        row_dists = np.zeros(n_rows)
+        for i in range(n_rows):
+            # Get columns observed in both row i and row
+            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
+
+            if not np.any(overlap_columns):
+                row_dists[i] = np.inf
+                continue
+
+            # Calculate distance between rows
+            for j in range(n_cols):
+                if (
+                    not overlap_columns[j] or j == col
+                ):  # Skip missing values and the target column
+                    continue
+                row_dists[i] += data_type.distance(data_array[row, j], data_array[i, j])
+            row_dists[i] /= np.sum(overlap_columns)
+        self.row_distances[row] = row_dists
+
 
 class ColColEstimator(EstimationMethod):
     """Estimate the missing value using column-column nearest neighbors."""
+
+    def __init__(self):
+        self.estimator = RowRowEstimator()
+        # use the same logic as RowRowEstimator but transposed
+        # save the distances
 
     def __str__(self):
         return "ColColEstimator"
@@ -117,22 +148,40 @@ class ColColEstimator(EstimationMethod):
         data_transposed = np.swapaxes(data_array, 0, 1)
         mask_transposed = np.swapaxes(mask_array, 0, 1)
 
-        return RowRowEstimator().impute(
+        return self.estimator.impute(
             column, row, data_transposed, mask_transposed, distance_threshold, data_type
         )
+
+    def _calculate_distances(
+        self,
+        row: int,
+        col: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        data_type: DataType,
+    ) -> None:
+        """Sets the distances for the imputer.
+        Sets the distances as a class attribute, so returns nothing.
+
+        Args:
+            row (int): Row index
+            col (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        # We use the RowRow Estimator to calculate the distances
+        pass
 
 
 class DREstimator(EstimationMethod):
     """Estimate the missing entry using doubly robust nearest neighbors."""
 
-    # def __init__(
-    #     self,
-    #     distance_threshold_row: Optional[float] = None,
-    #     distance_threshold_col: Optional[float] = None,
-    # ) -> None:
-    #     super().__init__()
-    #     self.distance_threshold_row = distance_threshold_row
-    #     self.distance_threshold_col = distance_threshold_col
+    def __init__(self):
+        self.row_distances = dict()
+        self.col_distances = dict()
+
     def impute(
         self,
         row: int,
@@ -155,10 +204,6 @@ class DREstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        data_shape = data_array.shape
-        n_rows = data_shape[0]
-        n_cols = data_shape[1]
-
         if isinstance(distance_threshold, tuple):
             distance_threshold_row = distance_threshold[0]
             distance_threshold_col = distance_threshold[1]
@@ -166,49 +211,16 @@ class DREstimator(EstimationMethod):
             distance_threshold_row = distance_threshold
             distance_threshold_col = distance_threshold
 
-        row_distances = np.zeros(n_rows)
-        for i in range(n_rows):
-            # Get columns observed in both row i and row
-            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
-
-            if not np.any(overlap_columns):
-                row_distances[i] = np.inf
-                continue
-
-            # Calculate distance between rows
-            for j in range(n_cols):
-                if (
-                    not overlap_columns[j] or j == column
-                ):  # Skip missing values and the target column
-                    continue
-                row_distances[i] += data_type.distance(
-                    data_array[row, j], data_array[i, j]
-                )
-            row_distances[i] /= np.sum(overlap_columns)
-        row_distances[row] = np.inf  # Exclude the row itself
+        self._calculate_distances(row, column, data_array, mask_array, data_type)
         # Find the row nearest neighbors indexes
-        row_nearest_neighbors = np.nonzero(row_distances <= distance_threshold_row)[0]
+        row_nearest_neighbors = np.nonzero(
+            self.row_distances[row] <= distance_threshold_row
+        )[0]
 
-        col_distances = np.zeros(n_cols)
-        for i in range(n_cols):
-            # Get rows observed in both column i and column
-            overlap_rows = np.logical_and(mask_array[:, column], mask_array[:, i])
-
-            if not np.any(overlap_rows):
-                col_distances[i] = np.inf
-                continue
-
-            # Calculate distance between columns
-            for j in range(n_rows):
-                if not overlap_rows[j] or j == row:
-                    continue
-                col_distances[i] += data_type.distance(
-                    data_array[j, column], data_array[j, i]
-                )
-            col_distances[i] /= np.sum(overlap_rows)
-        col_distances[column] = np.inf
         # Find the col nearest neighbors indexes
-        col_nearest_neighbors = np.nonzero(col_distances <= distance_threshold_col)[0]
+        col_nearest_neighbors = np.nonzero(
+            self.col_distances[column] <= distance_threshold_col
+        )[0]
 
         # neighbors can only be used if they are observed
         row_nearest_neighbors = row_nearest_neighbors[
@@ -251,6 +263,73 @@ class DREstimator(EstimationMethod):
         avg = data_type.average(sum_y)
         return avg
 
+    def _calculate_distances(
+        self,
+        row: int,
+        col: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        data_type: DataType,
+    ) -> None:
+        """Sets the distances for the imputer.
+        Sets the distances as a class attribute, so returns nothing.
+
+        Args:
+            row (int): Row index
+            col (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        data_shape = data_array.shape
+        n_rows = data_shape[0]
+        n_cols = data_shape[1]
+
+        if row not in self.row_distances:
+            row_dists = np.zeros(n_rows)
+            for i in range(n_rows):
+                # Get columns observed in both row i and row
+                overlap_columns = np.logical_and(mask_array[row], mask_array[i])
+
+                if not np.any(overlap_columns):
+                    row_dists[i] = np.inf
+                    continue
+
+                # Calculate distance between rows
+                for j in range(n_cols):
+                    if (
+                        not overlap_columns[j] or j == col
+                    ):  # Skip missing values and the target column
+                        continue
+                    row_dists[i] += data_type.distance(
+                        data_array[row, j], data_array[i, j]
+                    )
+                row_dists[i] /= np.sum(overlap_columns)
+            self.row_distances[row] = row_dists
+            # self.row_distances[row][row] = np.inf  # Exclude the row itself
+
+        if col not in self.col_distances:
+            col_dists = np.zeros(n_cols)
+            for i in range(n_cols):
+                # Get rows observed in both column i and column
+                overlap_rows = np.logical_and(mask_array[:, col], mask_array[:, i])
+
+                if not np.any(overlap_rows):
+                    col_dists[i] = np.inf
+                    continue
+
+                # Calculate distance between columns
+                for j in range(n_rows):
+                    if not overlap_rows[j] or j == row:
+                        continue
+                    col_dists[i] += data_type.distance(
+                        data_array[j, col], data_array[j, i]
+                    )
+                col_dists[i] /= np.sum(overlap_rows)
+            self.col_distances[col] = col_dists
+            # self.col_distances[col][col] = np.inf
+
 
 class TSEstimator(EstimationMethod):
     """Estimate the missing value using two-sided nearest neighbors.
@@ -260,6 +339,10 @@ class TSEstimator(EstimationMethod):
     and then imputes the missing entry by averaging the observed values
     over the cross-product of these neighborhoods.
     """
+
+    def __init__(self):
+        self.row_distances = dict()
+        self.col_distances = dict()
 
     def __str__(self):
         return "TSEstimator"
@@ -287,58 +370,18 @@ class TSEstimator(EstimationMethod):
             npt.NDArray: Imputed value.
 
         """
-        n_rows, n_cols = data_array.shape
-
         if isinstance(distance_threshold, tuple):
             eta_row, eta_col = distance_threshold
         else:
             eta_row = distance_threshold
             eta_col = distance_threshold
 
-        row_distances = np.zeros(n_rows)
-        for i in range(n_rows):
-            # Get columns observed in both row i and row
-            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
-
-            if not np.any(overlap_columns):
-                row_distances[i] = np.inf
-                continue
-
-            # Calculate distance between rows
-            for j in range(n_cols):
-                if (
-                    not overlap_columns[j] or j == column
-                ):  # Skip missing values and the target column
-                    continue
-                row_distances[i] += data_type.distance(
-                    data_array[row, j], data_array[i, j]
-                )
-            row_distances[i] /= np.sum(overlap_columns)
-        row_distances[row] = np.inf  # Exclude the row itself
-
-        col_distances = np.zeros(n_cols)
-        for i in range(n_cols):
-            # Get rows observed in both column i and column
-            overlap_rows = np.logical_and(mask_array[:, column], mask_array[:, i])
-
-            if not np.any(overlap_rows):
-                col_distances[i] = np.inf
-                continue
-
-            # Calculate distance between columns
-            for j in range(n_rows):
-                if not overlap_rows[j] or j == row:
-                    continue
-                col_distances[i] += data_type.distance(
-                    data_array[j, column], data_array[j, i]
-                )
-            col_distances[i] /= np.sum(overlap_rows)
-        col_distances[column] = np.inf
+        self._calculate_distances(row, column, data_array, mask_array, data_type)
         # Establish the neighborhoods subject to the distance thresholds
-        row_nearest_neighbors = np.where(row_distances <= eta_row)[
+        row_nearest_neighbors = np.where(self.row_distances[row] <= eta_row)[
             0
         ]  # This is the set N_row(i, j) = {i' | d^2(i, i') <= eta_row^2}
-        col_nearest_neighbors = np.where(col_distances <= eta_col)[
+        col_nearest_neighbors = np.where(self.col_distances[column] <= eta_col)[
             0
         ]  # This is the set N_col(i, j) = {j' | d^2(j, j') <= eta_col^2}
         neighborhood_submatrix = data_array[
@@ -366,3 +409,68 @@ class TSEstimator(EstimationMethod):
         else:
             theta_hat = data_type.average(values_for_estimation)
             return theta_hat
+
+    def _calculate_distances(
+        self,
+        row: int,
+        col: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        data_type: DataType,
+    ) -> None:
+        """Sets the distances for the imputer.
+        Sets the distances as a class attribute, so returns nothing.
+
+        Args:
+            row (int): Row index
+            col (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        n_rows, n_cols = data_array.shape
+
+        if row not in self.row_distances:
+            row_dists = np.zeros(n_rows)
+            for i in range(n_rows):
+                # Get columns observed in both row i and row
+                overlap_columns = np.logical_and(mask_array[row], mask_array[i])
+
+                if not np.any(overlap_columns):
+                    row_dists[i] = np.inf
+                    continue
+
+                # Calculate distance between rows
+                for j in range(n_cols):
+                    if (
+                        not overlap_columns[j] or j == col
+                    ):  # Skip missing values and the target column
+                        continue
+                    row_dists[i] += data_type.distance(
+                        data_array[row, j], data_array[i, j]
+                    )
+                row_dists[i] /= np.sum(overlap_columns)
+            row_dists[row] = np.inf  # Exclude the row itself
+            self.row_distances[row] = row_dists
+
+        if col not in self.col_distances:
+            col_dists = np.zeros(n_cols)
+            for i in range(n_cols):
+                # Get rows observed in both column i and column
+                overlap_rows = np.logical_and(mask_array[:, col], mask_array[:, i])
+
+                if not np.any(overlap_rows):
+                    col_dists[i] = np.inf
+                    continue
+
+                # Calculate distance between columns
+                for j in range(n_rows):
+                    if not overlap_rows[j] or j == row:
+                        continue
+                    col_dists[i] += data_type.distance(
+                        data_array[j, col], data_array[j, i]
+                    )
+                col_dists[i] /= np.sum(overlap_rows)
+            col_dists[col] = np.inf
+            self.col_distances[col] = col_dists

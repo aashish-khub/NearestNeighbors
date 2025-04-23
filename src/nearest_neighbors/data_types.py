@@ -237,16 +237,22 @@ class DistributionWassersteinQuantile(DataType):
         x = np.linspace(0, 1, 1000)
         return float(np.trapezoid((obj1(x) - obj2(x)) ** 2, x=x))
 
-    def average(self, object_list: npt.NDArray) -> npt.NDArray:
+    def average(self, object_list: npt.NDArray) -> Callable:
         """Calculate the average of a list of quantile functions
 
         Args:
             object_list (npt.NDArray[Any]): List of quantile functions
 
         Returns:
-            npt.NDArray: Average quantile function
+            Callable: Average quantile function
 
         """
+        # filter out float values
+        object_list = np.array(
+            [fn for fn in object_list if not isinstance(fn, float)], dtype=object
+        )
+        if len(object_list) == 0:
+            return lambda x: x * 0
 
         def lin_comb_fn(quantiles: npt.NDArray) -> npt.NDArray:
             """Average a bunch of quantile functions.
@@ -263,4 +269,4 @@ class DistributionWassersteinQuantile(DataType):
             lin_comb_values = np.sum(quantile_values, axis=0) / len(object_list)
             return lin_comb_values
 
-        return np.array(lin_comb_fn, dtype=object)
+        return lin_comb_fn

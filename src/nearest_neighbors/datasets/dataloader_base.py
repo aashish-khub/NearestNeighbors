@@ -12,7 +12,7 @@ class NNDataLoader(ABC):
 
     def __init__(
         self,
-        agg: str = "mean",
+        agg: str = "mean",  # TODO: make this optional (e.g., for MovieLens and Prop 99)
         save_processed: bool = False,
         **kwargs: Any,
     ):

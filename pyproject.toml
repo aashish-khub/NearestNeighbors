@@ -35,8 +35,7 @@ dependencies = [
     "pytest",
     "joblib",
     "wrds",
-    "requests",
-    "wrds",
+    "requests"
 ]
 
 [project.urls]

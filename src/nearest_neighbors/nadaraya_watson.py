@@ -114,29 +114,20 @@ class NadarayaWatsonEstimator(EstimationMethod):
             case _:
                 raise ValueError(f"{self.kernel=} is not supported")
 
-        assert K.shape == (n_rows,)
-        K = K.reshape(-1, 1)
+        # assert K.shape == (n_rows,)
 
-        K_sum = K.sum(axis=0)
-        K_sum_nan = np.where(K_sum == 0, np.nan, K_sum)
-        # Apply mask_array to data_array
-        masked_data_array = np.where(mask_array, data_array, np.nan)
-        # set y to be the column-th column of masked_data_array
-        y = masked_data_array[:, column]
-        assert y.shape == (n_rows,)
-        pred = y @ K / K_sum_nan
+        y = data_array[:, column]  # shape: (n_rows,)
+        # Only consider the rows where mask_array is True
+        numerator = np.nansum(mask_array[:, column] * y * K)
+        # Only consider the rows where mask_array is True
+        denominator = np.nansum(
+            mask_array[:, column] * np.where(np.isnan(y), np.nan, K)
+        )
+        if denominator == 0:
+            pred = 0
+        elif np.isnan(denominator):
+            pred = np.nan
+        else:
+            pred = numerator / denominator
 
-        # get index of nan in K along axis=0
-        nan_idx = np.argwhere(np.isnan(K))
-        for i, j in nan_idx:
-            # NOTE: for singular kernels, anytime the row-th object is one of the
-            # objects in the training set (indicated by nan values of K),
-            # we set the corresponding entry of pred to the actual value of y
-            #  at the row-th object
-            pred[j] = y[i]
-        # if an entry of K_sum is zero, set the corresponding entry of pred to zero
-        pred = np.where(K_sum == 0, 0, pred)
-
-        # NOTE: pred is a scalar, so we need to return a scalar
-        (pred,) = pred
-        return pred
+        return np.array(pred)

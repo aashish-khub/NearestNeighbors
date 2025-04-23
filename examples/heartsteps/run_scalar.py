@@ -20,7 +20,7 @@ from baselines import usvt
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import TSEstimator
+from nearest_neighbors.estimation_methods import TSEstimator, NadarayaWatsonEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -163,6 +163,18 @@ else:
             block,
             distance_threshold_range_row=(0, 4_000_000),
             distance_threshold_range_col=(0, 4_000_000),
+            n_trials=200,
+            data_type=data_type,
+        )
+    elif estimation_method == "nadaraya":
+        logger.info("Using Nadaraya-Watson estimation")
+        estimator = NadarayaWatsonEstimator(kernel="gaussian")
+        imputer = NearestNeighborImputer(estimator, data_type)
+
+        logger.info("Using leave-block-out validation")
+        fitter = LeaveBlockOutValidation(
+            block,
+            distance_threshold_range=(0, 4_000_000),
             n_trials=200,
             data_type=data_type,
         )

@@ -15,7 +15,7 @@ def get_base_parser() -> ArgumentParser:
         "-em",
         type=str,
         default="row-row",
-        choices=["dr", "ts", "row-row", "col-col", "usvt"],
+        choices=["dr", "ts", "row-row", "col-col", "usvt", "nadaraya"],
         help="Estimation method to use",
     )
     parser.add_argument(
@@ -23,7 +23,7 @@ def get_base_parser() -> ArgumentParser:
         "-fm",
         type=str,
         default="lbo",
-        choices=["dr", "ts", "lbo", "usvt"],
+        choices=["dr", "ts", "lbo", "usvt", "nadaraya"],
         help="Fit method to use",
     )
     parser.add_argument(

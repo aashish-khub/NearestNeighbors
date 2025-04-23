@@ -1,4 +1,14 @@
 from .nnimputer import EstimationMethod, DataType
+from .nadaraya_watson import NadarayaWatsonEstimator
+
+__all__ = [
+    "RowRowEstimator",
+    "ColColEstimator",
+    "DREstimator",
+    "TSEstimator",
+    "NadarayaWatsonEstimator",
+]
+
 import numpy.typing as npt
 import numpy as np
 from typing import Union, Tuple

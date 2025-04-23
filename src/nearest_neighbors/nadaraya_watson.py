@@ -29,11 +29,11 @@ class NadarayaWatsonEstimator(EstimationMethod):
             ValueError: If the kernel is not valid.
 
         """
+        self.kernel = kernel
         if self.kernel not in self.valid_kernels:
             raise ValueError(
                 f"{self.kernel=} is not a valid kernel. Currently supported kernels are {', '.join(self.valid_kernels)}"
             )
-        self.kernel = kernel
 
         super().__init__()
 
@@ -119,8 +119,10 @@ class NadarayaWatsonEstimator(EstimationMethod):
 
         K_sum = K.sum(axis=0)
         K_sum_nan = np.where(K_sum == 0, np.nan, K_sum)
-        # set y to be the column-th column of data_array
-        y = data_array[:, column]
+        # Apply mask_array to data_array
+        masked_data_array = np.where(mask_array, data_array, np.nan)
+        # set y to be the column-th column of masked_data_array
+        y = masked_data_array[:, column]
         assert y.shape == (n_rows,)
         pred = y @ K / K_sum_nan
 
@@ -135,4 +137,6 @@ class NadarayaWatsonEstimator(EstimationMethod):
         # if an entry of K_sum is zero, set the corresponding entry of pred to zero
         pred = np.where(K_sum == 0, 0, pred)
 
+        # NOTE: pred is a scalar, so we need to return a scalar
+        (pred,) = pred
         return pred

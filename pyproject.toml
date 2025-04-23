@@ -36,6 +36,7 @@ dependencies = [
     "joblib",
     "wrds",
     "requests",
+    "wrds",
 ]
 
 [project.urls]

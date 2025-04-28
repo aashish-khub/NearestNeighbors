@@ -7,10 +7,9 @@ More details on the Doubly Robust Nearest Neighbor (DRNN) method can be found in
 
 from .nnimputer import NearestNeighborImputer
 from typing import Optional
-import numpy as np
 
 
-def drnn(
+def dr_nn(
     distance_threshold_row: Optional[float] = None,
     distance_threshold_col: Optional[float] = None,
 ) -> NearestNeighborImputer:
@@ -30,7 +29,11 @@ def drnn(
     from .estimation_methods import DREstimator
     from .data_types import Scalar
 
-    estimator = DREstimator(distance_threshold_row, distance_threshold_col)
+    estimator = DREstimator()
     data_type = Scalar()
     # note that the default value of distance_threshold is np.inf -> distance threshold is unused for DRNN
-    return NearestNeighborImputer(estimator, data_type, np.inf)
+    if distance_threshold_row is None or distance_threshold_col is None:
+        distance_threshold = None
+    else:
+        distance_threshold = (distance_threshold_row, distance_threshold_col)
+    return NearestNeighborImputer(estimator, data_type, distance_threshold)

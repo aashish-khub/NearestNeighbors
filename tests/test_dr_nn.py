@@ -1,5 +1,5 @@
 import numpy as np
-from nearest_neighbors.drnn import drnn
+from nearest_neighbors.dr_nn import dr_nn
 import pytest
 
 ROWS = 10
@@ -8,7 +8,7 @@ COLS = 10
 
 def test_drnn_all0() -> None:
     """Test the drnn imputer with all values 0."""
-    imputer = drnn(distance_threshold_row=1, distance_threshold_col=1)
+    imputer = dr_nn(distance_threshold_row=1, distance_threshold_col=1)
     data = np.zeros([ROWS, COLS])
     mask = np.ones([ROWS, COLS], dtype=bool)
 
@@ -25,7 +25,7 @@ def test_drnn_all0() -> None:
 
 def test_drnn_all1() -> None:
     """Test the drnn imputer with all values 1."""
-    imputer = drnn(distance_threshold_row=1, distance_threshold_col=1)
+    imputer = dr_nn(distance_threshold_row=1, distance_threshold_col=1)
     data = np.ones([ROWS, COLS])
     mask = np.ones([ROWS, COLS], dtype=bool)
 
@@ -42,7 +42,7 @@ def test_drnn_all1() -> None:
 
 def test_drnn_avg1() -> None:
     """Test the drnn imputer with single doubly robust estimate to average over."""
-    imputer = drnn(distance_threshold_row=1, distance_threshold_col=1)
+    imputer = dr_nn(distance_threshold_row=1, distance_threshold_col=1)
     data = np.array([[np.nan, 1, 4.0], [1, 1, 3.0], [1, 5, 2]])
 
     mask = np.array(
@@ -67,7 +67,7 @@ def test_drnn_avg1() -> None:
 
 def test_drnn_avg2() -> None:
     """Test the drnn imputer with multiple doubly robust estimates to average over."""
-    imputer = drnn(distance_threshold_row=0.5, distance_threshold_col=0.5)
+    imputer = dr_nn(distance_threshold_row=0.5, distance_threshold_col=0.5)
     data = np.array([[0, 1, 0, 1], [1, 1, 0, 1], [0, 0, 1, 0], [1, 1, 0, 1]])
     # neighbors are row 1, row 3, col 1, col 3. So estimate is:
     # ((1 + 1 - 1) + (1 + 1 - 1) + (1 + 1 - 1) + (1 + 1 - 1)) / 4 = 1

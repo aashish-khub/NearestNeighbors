@@ -10,6 +10,7 @@ TODO (Albert): Implement additional kernel functions (e.g., Epanechnikov)
 
 from .utils.kernels import gaussian, laplace, singular_box, box
 from .nnimputer import EstimationMethod, DataType
+from typing import Union, Tuple
 
 import numpy.typing as npt
 import numpy as np
@@ -45,7 +46,7 @@ class NadarayaWatsonEstimator(EstimationMethod):
         column: int,
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
-        distance_threshold: float,
+        distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -71,6 +72,11 @@ class NadarayaWatsonEstimator(EstimationMethod):
             The imputed value.
 
         """
+        if isinstance(distance_threshold, tuple):
+            raise ValueError(
+                "The Nadaraya-Watson estimator only accepts a single distance threshold."
+            )
+
         data_shape = data_array.shape
         n_rows = data_shape[0]
         n_cols = data_shape[1]

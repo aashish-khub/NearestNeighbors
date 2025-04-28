@@ -162,3 +162,12 @@ cython_debug/
 #.idea/
 .DS_Store
 .vscode/
+
+# Joblib cache
+.joblib_cache/
+
+# output
+out/
+
+**/data/
+*.pkl

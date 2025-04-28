@@ -10,12 +10,12 @@ https://github.com/iskandr/fancyimpute/blob/master/fancyimpute/soft_impute.py
 """
 
 import numpy as np
-from typing import Optional
+from typing import Optional, Tuple
 from sklearn.utils import check_array
 from sklearn.utils.extmath import randomized_svd
 
 
-def _residual(data: np.ndarray) -> np.ndarray:
+def _residual(data: np.ndarray) -> int:
     """Computes the residual of the data matrix.
 
     Args:
@@ -42,7 +42,7 @@ def _residual(data: np.ndarray) -> np.ndarray:
         + np.sum(np.log(row_vars) ** 2)
         + np.sum(np.log(col_vars) ** 2)
     )
-    return total
+    return total[0]
 
 
 def _est_means(
@@ -176,7 +176,7 @@ def _normalize(
     max_value: Optional[float] = None,
     max_iters: int = 100,
     tolerance: float = 0.001,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Normalizes (center + scales) the data matrix by rows, cols, or rows and cols. The normalization is not done in place.
 
     Args:
@@ -202,12 +202,12 @@ def _normalize(
     """
     data = data.copy()
     data = np.clip(data, min_value, max_value)
-    data[mask == 1] = np.nan
+    #data[mask != 1] = np.nan
     data_rowmajor = np.asarray(data, order="C")
     data_colmajor = np.asarray(data, order="F")
 
     obs_rowmajor = ~np.isnan(data_rowmajor)
-    obs_colmajor = ~np.isnan(data_colmajor)
+    obs_colmajor = np.asarray(obs_rowmajor, order="F")
     n_empty_rows = (np.sum(obs_rowmajor, axis=1) == 0).sum()
     n_empty_cols = (np.sum(obs_colmajor, axis=0) == 0).sum()
     if n_empty_rows > 0:
@@ -221,11 +221,12 @@ def _normalize(
     # first, iteratively approxiate the row and col means and stds
     # init row means to 0 with unit variance, col means are obvs estimate
     row_means = np.zeros(data.shape[0])
-    col_means = np.nanmean(data_rowmajor, axis=0)
+    col_means = np.nanmean(data, axis=0)
     row_stds = np.ones(data.shape[0])
-    col_stds = np.nanstd(data_rowmajor, axis=0)
+    col_stds = np.nanstd(data, axis=0)
+    col_stds[col_stds==0] = 1.0
 
-    last_residual = _residual(data_rowmajor)
+    last_residual = _residual(data)
     for _ in range(max_iters):
         if last_residual == 0:
             break
@@ -238,13 +239,46 @@ def _normalize(
         X_normed = _rescale(data_centered, row_stds, col_stds)
         new_residual = _residual(X_normed)
         delta_resid = last_residual - new_residual
-        if delta_resid / last_residual < tolerance:
+        if (delta_resid / last_residual) < tolerance:
             break
         last_residual = new_residual
 
     data_norm = _center(data, row_means, col_means)
     data_norm = _rescale(data_norm, row_stds, col_stds)
-    return data_norm
+    return data_norm, row_means, col_means, row_stds, col_stds
+
+def _unnormalize(
+    data: np.ndarray,
+    row_means: np.ndarray,
+    col_means: np.ndarray,
+    row_stds: np.ndarray,
+    col_stds: np.ndarray,
+    min_value: Optional[float] = None,
+    max_value: Optional[float] = None,
+) -> np.ndarray:
+    """Reverses the normalization of the data matrix
+
+    Args:
+    ----
+    data : np.ndarray
+        The input data matrix.
+    row_means : np.ndarray
+        The row means of the data matrix.
+    col_means : np.ndarray
+        The column means of the data matrix.
+    col_stds : np.ndarray
+        The column standard deviations of the data matrix.
+    row_stds : np.ndarray
+        The row standard deviations of the data matrix.
+    min_value : Optional[float]
+        The minimum value to clip the data matrix to. By default, no clipping is done.
+    max_value : Optional[float]
+        The maximum value to clip the data matrix to. By default, no clipping is done.
+
+    """
+    data = _rescale(data, 1.0 / row_stds, 1.0 / col_stds)
+    data = _center(data, -row_means, -col_means)
+    return np.clip(data, min_value, max_value)
 
 
 def _max_singular_value(data: np.ndarray) -> float:
@@ -339,7 +373,7 @@ def softimpute(
     init_fill_method: str = "zero",
     min_value: Optional[float] = None,
     max_value: Optional[float] = None,
-    normalizer: Optional[str] = None,
+    normalizer: Optional[str] = "rowcol",
 ) -> np.ndarray:
     """SoftImpute algorithm for matrix completion.
 
@@ -364,10 +398,12 @@ def softimpute(
     """
     data = check_array(data, force_all_finite=False)  # type: ignore
     data = data.copy()
+    data[mask != 1] = np.nan
+    row_means, col_means, row_stds, col_stds = np.zeros(data.shape[0]), np.zeros(data.shape[1]), np.ones(data.shape[0]), np.ones(data.shape[1])
     if normalizer is not None:
-        data = _normalize(data, mask, min_value, max_value)
+        data, row_means, col_means, row_stds, col_stds = _normalize(data, mask, min_value, max_value)
     if init_fill_method == "zero":
-        data = np.where(mask != 1, data, 0)
+        data = np.where(mask == 1, data, 0)
     else:
         raise ValueError(
             f"Unsupported init fill method: {init_fill_method}. Supported methods are: zero."
@@ -386,8 +422,13 @@ def softimpute(
         )
         data_recon = np.clip(data_recon, min_value, max_value)
         converged = _converged(data_filled, mask, data_recon, convergence_threshold)
+        data_filled[mask == 0] = data_recon[mask == 0]
         if converged:
             break
-        data_filled[mask == 0] = data_recon[mask == 0]
+    
 
+    if normalizer is not None:
+        data_filled = _unnormalize(
+            data_filled, row_means, col_means, row_stds, col_stds, min_value, max_value
+        )
     return data_filled

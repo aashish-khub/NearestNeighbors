@@ -2,6 +2,7 @@ from .nnimputer import DataType
 import numpy.typing as npt
 from typing import Any, Callable
 import numpy as np
+import warnings
 
 
 class Scalar(DataType):
@@ -32,7 +33,9 @@ class Scalar(DataType):
         """
         # Compute the mean using only the non-nan values.
         # If all values are nan, return nan.
-        return np.nanmean(object_list)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            return np.nanmean(object_list)
 
 
 class DistributionKernelMMD(DataType):

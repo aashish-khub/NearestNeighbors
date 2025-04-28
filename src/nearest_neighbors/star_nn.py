@@ -43,7 +43,7 @@ class StarNNEstimator:
         mean_distance = np.mean(row_distances_copy[0, :])
         dist_diff = row_distances_copy[0, :] - mean_distance
         
-        weights = (1/n_observed) - dist_diff/(8 * noise_variance *np.log(1/delta))
+        weights = (1/n_observed) - dist_diff/(8 * noise_variance * np.log(1/delta))
         
         sorted_weights = np.sort(weights)[::-1]
         weight_sum = 0
@@ -165,6 +165,8 @@ class star_nn:
             ) -> None:
         
         n_rows, n_cols = data_array.shape
+        
+        self.delta = 0.5/np.sqrt(n_rows)
         
         if self.row_distances is None:
             self.set_row_distances(data_array, mask_array)

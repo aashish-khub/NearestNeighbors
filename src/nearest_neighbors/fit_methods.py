@@ -1,7 +1,6 @@
 from .nnimputer import FitMethod, DataType, NearestNeighborImputer
 from .estimation_methods import DREstimator, TSEstimator
 import numpy.typing as npt
-import numpy as np
 from hyperopt import hp, fmin, tpe, Trials
 from typing import cast, Union
 

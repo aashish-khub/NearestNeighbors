@@ -178,28 +178,30 @@ else:
     fit_times = [end_time - start_time] * len(test_block)
 
     # CODE FOR EXTRACTING TRIAL METADATA
-    if not isinstance(trials, float) and not isinstance(trials, int) and isinstance(trials[1], Trials):
+    if (
+        not isinstance(trials, float)
+        and not isinstance(trials, int)
+        and isinstance(trials[1], Trials)
+    ):
         trials = trials[1]
         trial_data = []
         for trial in trials.trials:
             row = {}
             # get param vals
-            params = trial['misc']['vals']
+            params = trial["misc"]["vals"]
             for param_name, param_values in params.items():
                 if param_values:
                     row[param_name] = float(param_values[0])
-            
-            row['loss'] = float(trial['result']['loss'])
+
+            row["loss"] = float(trial["result"]["loss"])
             trial_data.append(row)
 
         df_trials = pd.DataFrame(trial_data)
         trials_save_path = os.path.join(
-        results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
+            results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
         )
         logger.info(f"Saving trials data to {trials_save_path}...")
         df_trials.to_csv(trials_save_path, index=False)
-
-        
 
     # Impute missing values
     imputations = []

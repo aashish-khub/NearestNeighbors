@@ -62,6 +62,28 @@ class EstimationMethod(ABC):
         """
         pass
 
+    @abstractmethod
+    def _calculate_distances(
+        self,
+        row: int,
+        col: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        data_type: DataType,
+    ) -> None:
+        """Sets the distances for the imputer.
+        Sets the distances as a class attribute, so returns nothing.
+
+        Args:
+            row (int): Row index
+            col (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        pass
+
 
 class NearestNeighborImputer:
     """Nearest neighbor composed of different kinds of methods."""

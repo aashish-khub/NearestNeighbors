@@ -32,11 +32,7 @@ def evaluate_imputation(
     error = 0
     # Block out the test cells
     for row, col in test_cells:
-        if (
-            mask_array[row, col] == 0
-            or np.isnan(data_array[row, col])
-            or data_array[row, col] is None
-        ):
+        if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
     for row, col in test_cells:
@@ -81,6 +77,7 @@ class LeaveBlockOutValidation(FitMethod):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
         ret_trials: bool = False,
+        verbose: bool = False,
     ) -> Union[float, tuple[float, Trials]]:
         """Find the best distance threshold for the given data
         by leaving out a block of cells and testing imputation against them.
@@ -90,9 +87,10 @@ class LeaveBlockOutValidation(FitMethod):
             mask_array (npt.NDArray): Mask matrix
             imputer (NearestNeighborImputer): Imputer object
             ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
+            verbose (bool, optional): Whether to print the progress. Defaults to False.
 
         Returns:
-            float: Best distance threshold
+            float: Best distance threshold or (float, Trials): Best distance threshold and trials object if ret_trials is True.
 
         """
 
@@ -115,7 +113,7 @@ class LeaveBlockOutValidation(FitMethod):
         trials = Trials()
         best_distance_threshold = fmin(
             fn=objective,
-            verbose=False,
+            verbose=verbose,
             space=hp.uniform("distance_threshold", lower_bound, upper_bound),
             algo=tpe.suggest,
             max_evals=self.n_trials,

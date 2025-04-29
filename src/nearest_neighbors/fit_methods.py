@@ -1,8 +1,8 @@
 from .nnimputer import FitMethod, DataType, NearestNeighborImputer
-from .estimation_methods import DREstimator, TSEstimator
+from .estimation_methods import DREstimator, TSEstimator, AutoEstimator
 import numpy.typing as npt
 from hyperopt import hp, fmin, tpe, Trials
-from typing import cast, Union
+from typing import cast, Union, Any
 
 
 def evaluate_imputation(
@@ -11,6 +11,7 @@ def evaluate_imputation(
     imputer: NearestNeighborImputer,
     test_cells: list[tuple[int, int]],
     data_type: DataType,
+    **kwargs: Any,
 ) -> float:
     """Evaluate the imputer on a set.
 
@@ -20,6 +21,7 @@ def evaluate_imputation(
         imputer (NearestNeighborImputer): Imputer object
         test_cells (list[tuple[int,int]]): List of cells as tuples of row and column indices
         data_type (DataType): Data type to use (e.g. scalars, distributions)
+        **kwargs (Any): Additional keyword args
 
     Raises:
         ValueError: If a validation cell is missing
@@ -292,3 +294,109 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
         return super().fit(data_array, mask_array, imputer, ret_trials)
+
+
+class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
+    """Fit method by leaving out a block of cells using separate thresholds for rows and columns with a AutoEstimator."""
+
+    expected_estimator_type = AutoEstimator
+
+    def __init__(
+        self,
+        block: list[tuple[int, int]],
+        distance_threshold_range_row: tuple[float, float],
+        distance_threshold_range_col: tuple[float, float],
+        gamma_range: tuple[float, float],
+        n_trials: int,
+        data_type: DataType,
+    ):
+        self.gamma_range = gamma_range
+        super().__init__(
+            block,
+            distance_threshold_range_row,
+            distance_threshold_range_col,
+            n_trials,
+            data_type,
+        )
+
+    def fit(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        imputer: NearestNeighborImputer,
+        ret_trials: bool = False,
+    ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
+        """Find the best distance thresholds for rows and columns by leaving out a block of cells and testing imputation.
+
+        Args:
+            data_array (npt.NDArray): Data matrix.
+            mask_array (npt.NDArray): Mask matrix.
+            imputer (NearestNeighborImputer): Imputer object.
+            ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
+
+        Returns:
+            tuple[float, float]: Best distance thresholds for rows and columns.
+
+        """
+        if not isinstance(imputer.estimation_method, AutoEstimator):
+            raise ValueError(
+                f"The imputer must use a AutoEstimator for {self.__class__.__name__}."
+            )
+        imputer.estimation_method = cast(AutoEstimator, imputer.estimation_method)
+
+        def _objective(params: dict[str, float]) -> float:
+            """Objective function for hyperopt.
+
+            Args:
+                params (dict[str, float]): Dictionary containing row and column distance thresholds
+
+            Returns:
+                float: Average imputation error
+
+            """
+            row_threshold = params["distance_threshold_row"]
+            col_threshold = params["distance_threshold_col"]
+            gamma = params["gamma"]
+            imputer.distance_threshold = (row_threshold, col_threshold)
+            if not isinstance(imputer.estimation_method, AutoEstimator):
+                raise ValueError(
+                    f"The imputer must use a AutoEstimator for {self.__class__.__name__}."
+                )
+            imputer.estimation_method.gamma = gamma
+            return evaluate_imputation(
+                data_array, mask_array, imputer, self.block, self.data_type
+            )
+
+        lower_bound_row, upper_bound_row = self.distance_threshold_range_row
+        lower_bound_col, upper_bound_col = self.distance_threshold_range_col
+        lower_bound_gamma, upper_bound_gamma = self.gamma_range
+        trials = Trials()
+        best_params = fmin(
+            fn=_objective,
+            space={
+                "distance_threshold_row": hp.uniform(
+                    "distance_threshold_row", lower_bound_row, upper_bound_row
+                ),
+                "distance_threshold_col": hp.uniform(
+                    "distance_threshold_col", lower_bound_col, upper_bound_col
+                ),
+                "gamma": hp.uniform("gamma", lower_bound_gamma, upper_bound_gamma),
+            },
+            algo=tpe.suggest,
+            max_evals=self.n_trials,
+            verbose=False,
+            trials=trials,
+        )
+
+        if best_params is None:
+            return float("nan"), float("nan")
+
+        imputer.distance_threshold = (
+            best_params["distance_threshold_row"],
+            best_params["distance_threshold_col"],
+        )
+        imputer.estimation_method.gamma = best_params["gamma"]
+
+        if ret_trials:
+            return imputer.distance_threshold, trials
+        return imputer.distance_threshold

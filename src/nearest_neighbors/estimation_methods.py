@@ -1,7 +1,7 @@
 from .nnimputer import EstimationMethod, DataType
 import numpy.typing as npt
 import numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple, Any
 import logging
 import warnings
 
@@ -25,6 +25,7 @@ class RowRowEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
 
@@ -35,6 +36,7 @@ class RowRowEstimator(EstimationMethod):
             mask_array (npt.NDArray): Mask matrix
             distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            **kwargs (Any): Additional keyword arguments
 
         Returns:
             npt.NDArray: Imputed value
@@ -139,6 +141,7 @@ class ColColEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
 
@@ -149,6 +152,7 @@ class ColColEstimator(EstimationMethod):
             mask_array (npt.NDArray): Mask matrix
             distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            **kwargs (Any): Additional keyword arguments
 
         Returns:
             npt.NDArray: Imputed value
@@ -199,6 +203,7 @@ class DREstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column using doubly robust method.
 
@@ -211,6 +216,7 @@ class DREstimator(EstimationMethod):
             distance_threshold (float or Tuple[float, float]): Distance threshold for nearest neighbors
             or a tuple of (row_threshold, col_threshold) for row and column respectively.
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            **kwargs (Any): Additional keyword arguments
 
         """
         if isinstance(distance_threshold, tuple):
@@ -381,6 +387,7 @@ class TSEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        **kwargs: Any,
     ) -> npt.NDArray:
         r"""Impute the missing value at the given row and column using two-sided NN.
 
@@ -391,6 +398,7 @@ class TSEstimator(EstimationMethod):
             mask_array (npt.NDArray): Boolean mask matrix (True if observed).
             distance_threshold (float or Tuple[float, float]): Distance threshold(s) for row and column neighborhoods. This is our \vec eta = (\eta_row, \eta_col).
             data_type (DataType): Provides methods for computing distances and averaging.
+            **kwargs (Any): Additional keyword arguments
 
         Returns:
             npt.NDArray: Imputed value.
@@ -563,3 +571,185 @@ class TSEstimator(EstimationMethod):
         #         col_dists[i] /= np.sum(overlap_rows)
         #     col_dists[col] = np.inf
         #     self.col_distances[col] = col_dists
+
+
+class AutoEstimator(EstimationMethod):
+    """Estimate the missing entry using "Auto-NN" idea (Kyuseong Choi)."""
+
+    def __init__(self):
+        self.row_distances = dict()
+        self.col_distances = dict()
+        self.gamma = 1.0
+
+    def impute(
+        self,
+        row: int,
+        column: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        distance_threshold: Union[float, Tuple[float, float]],
+        data_type: DataType,
+        **kwargs: Any,
+    ) -> npt.NDArray:
+        """Impute the missing value at the given row and column using doubly robust method.
+
+        Args:
+        ----
+            row (int): Row index
+            column (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            distance_threshold (float or Tuple[float, float]): Distance threshold for nearest neighbors
+            or a tuple of (row_threshold, col_threshold) for row and column respectively.
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+            **kwargs (Any): Additional keyword arguments
+
+        """
+        if self.gamma is None or "gamma" not in kwargs:
+            raise TypeError(
+                "AutoEstimator.impute() missing 1 required keyword-only argument: 'gamma'"
+            )
+        gamma = self.gamma if self.gamma else kwargs.pop("gamma")
+
+        if isinstance(distance_threshold, tuple):
+            distance_threshold_row = distance_threshold[0]
+            distance_threshold_col = distance_threshold[1]
+        else:
+            distance_threshold_row = distance_threshold
+            distance_threshold_col = distance_threshold
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            self._calculate_distances(row, column, data_array, mask_array, data_type)
+            all_dists = np.copy(self.row_distances[row])
+            # Exclude the target column
+            all_dists[:, column] = np.nan
+            row_dists = np.nanmean(all_dists, axis=1)
+            if not mask_array[row, column]:
+                row_dists[row] = np.inf  # Exclude the target row
+            # Exclude the target row
+            all_dists = np.copy(self.col_distances[column])
+            all_dists[row, :] = np.nan
+            col_dists = np.nanmean(all_dists, axis=0)
+            if not mask_array[row, column]:
+                col_dists[column] = np.inf  # Exclude the target col
+
+        # Find the row nearest neighbors indexes
+        row_nearest_neighbors = np.nonzero(row_dists <= distance_threshold_row)[0]
+
+        # Find the col nearest neighbors indexes
+        col_nearest_neighbors = np.nonzero(col_dists <= distance_threshold_col)[0]
+
+        # neighbors can only be used if they are observed
+        row_nearest_neighbors = row_nearest_neighbors[
+            mask_array[row_nearest_neighbors, column] == 1
+        ]
+        col_nearest_neighbors = col_nearest_neighbors[
+            mask_array[row, col_nearest_neighbors] == 1
+        ]
+
+        y_itprime = data_array[row, col_nearest_neighbors]
+        y_jt = data_array[row_nearest_neighbors, column]
+        if len(y_itprime) == 0 and len(y_jt) == 0:
+            return np.array(np.nan)
+
+        # get intersecting entries
+        j_inds, tprime_inds = np.meshgrid(
+            row_nearest_neighbors, col_nearest_neighbors, indexing="ij"
+        )
+        y_jtprime = data_array[j_inds, tprime_inds]
+        mask_jtprime = mask_array[j_inds, tprime_inds]
+
+        # nonzero gets all indices of the mask that are 1
+        intersec_inds = np.nonzero(mask_jtprime == 1)
+
+        y_itprime_inter = y_itprime[
+            intersec_inds[1]
+        ]  # this is a array of column values for all intersecting triplets
+        y_jt_inter = y_jt[
+            intersec_inds[0]
+        ]  # this is a array of row values for all intersecting triplets
+        # note: defaults to rownn if no intersection -> should default to ts-nn instead?
+        if len(y_itprime_inter) == 0 or len(y_jt_inter) == 0:
+            return np.array(
+                data_type.average(y_jt)
+                if len(y_jt) > 0
+                else data_type.average(y_itprime)
+            )
+        # TODO: (Caleb) adjust gamma param to account for differing values for row, col, etc.
+        sum_y = y_itprime_inter + y_jt_inter - gamma * y_jtprime[intersec_inds]
+        avg = data_type.average(sum_y)
+        return avg
+
+    def _calculate_distances(
+        self,
+        row: int,
+        col: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        data_type: DataType,
+    ) -> None:
+        """Sets the distances for the imputer.
+        Sets the distances as a class attribute, so returns nothing.
+
+        Args:
+            row (int): Row index
+            col (int): Column index
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        """
+        data_shape = data_array.shape
+        n_rows = data_shape[0]
+        n_cols = data_shape[1]
+
+        if row not in self.row_distances:
+            # Calculate distances between rows
+            row_dists = np.zeros((n_rows, n_cols))
+
+            for i in range(n_rows):
+                # Get columns observed in both row i and row
+                overlap_columns = np.logical_and(mask_array[row], mask_array[i])
+
+                if not np.any(overlap_columns):
+                    row_dists[i, :] = np.nan
+                    continue
+
+                # Calculate distance between rows
+                for j in range(n_cols):
+                    if not overlap_columns[
+                        j
+                    ]:  # Skip missing values and the target column
+                        row_dists[i, j] = np.nan
+                    else:
+                        row_dists[i, j] = data_type.distance(
+                            data_array[row, j], data_array[i, j]
+                        )
+            self.row_distances[row] = row_dists
+            # self.row_distances[row][row] = np.inf  # Exclude the row itself
+
+        if col not in self.col_distances:
+            # Calculate distances between columns
+            col_dists = np.zeros((n_rows, n_cols))
+
+            for j in range(n_cols):
+                # Get rows observed in both row i and row
+                overlap_columns = np.logical_and(mask_array[:, col], mask_array[:, j])
+
+                if not np.any(overlap_columns):
+                    col_dists[:, j] = np.nan
+                    continue
+
+                # Calculate distance between columns
+                for i in range(n_rows):
+                    if not overlap_columns[
+                        i
+                    ]:  # Skip missing values and the target column
+                        col_dists[i, j] = np.nan
+                    else:
+                        col_dists[i, j] = data_type.distance(
+                            data_array[i, col], data_array[i, j]
+                        )
+            self.col_distances[col] = col_dists
+            # self.col_distances[col][col] = np.inf

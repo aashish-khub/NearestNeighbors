@@ -126,7 +126,12 @@ class FitMethod(ABC):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
         ret_trials: bool = False,
-    ) -> Union[float, Tuple[float, float], Tuple[float, Trials], Tuple[Tuple[float, float], Trials]]:
+    ) -> Union[
+        float,
+        Tuple[float, float],
+        Tuple[float, Trials],
+        Tuple[Tuple[float, float], Trials],
+    ]:
         """Find the best distance threshold for the given data.
 
         Args:

@@ -43,7 +43,6 @@ def evaluate_imputation(
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
         error += data_type.distance(imputed_value, true_value)
-        
 
     # Reset the mask
     for row, col in test_cells:

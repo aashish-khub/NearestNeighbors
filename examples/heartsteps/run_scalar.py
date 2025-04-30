@@ -21,7 +21,7 @@ from baselines import usvt
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import TSEstimator
+from nearest_neighbors.estimation_methods import StarNNEstimator, TSEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -164,6 +164,20 @@ else:
             block,
             distance_threshold_range_row=(0, 50),
             distance_threshold_range_col=(0, 50),
+            n_trials=200,
+            data_type=data_type,
+        )
+    elif estimation_method == "star":
+        logger.info("Using star estimation")
+        estimator = StarNNEstimator()
+        imputer = NearestNeighborImputer(estimator, data_type)
+
+        logger.info("Using StarNN fit method")
+        # Fit the imputer using leave-block-out validation
+        fitter = TSLeaveBlockOutValidation(
+            block,
+            distance_threshold_range_row=(0, 10),
+            distance_threshold_range_col=(0, 10),
             n_trials=200,
             data_type=data_type,
         )

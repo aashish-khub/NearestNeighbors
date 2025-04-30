@@ -406,8 +406,7 @@ class TSEstimator(EstimationMethod):
     """
 
     def __init__(self):
-        self.row_distances = dict()
-        self.col_distances = dict()
+        self.estimator = DREstimator()
 
     def __str__(self):
         return "TSEstimator"
@@ -444,14 +443,14 @@ class TSEstimator(EstimationMethod):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             self._calculate_distances(row, column, data_array, mask_array, data_type)
-            all_dists = np.copy(self.row_distances[row])
+            all_dists = np.copy(self.estimator.row_distances[row])
             # Exclude the target column
             all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
             if not mask_array[row, column]:
                 row_dists[row] = np.inf  # Exclude the target row
             # Exclude the target row
-            all_dists = np.copy(self.col_distances[column])
+            all_dists = np.copy(self.estimator.col_distances[column])
             all_dists[row, :] = np.nan
             col_dists = np.nanmean(all_dists, axis=0)
             if not mask_array[row, column]:
@@ -509,79 +508,6 @@ class TSEstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        data_shape = data_array.shape
-        n_rows = data_shape[0]
-        n_cols = data_shape[1]
-
-        if row not in self.row_distances:
-            # Calculate distances between rows
-            row_dists = np.zeros((n_rows, n_cols))
-
-            # Scalar optimization with vectorized operations instead of loops
-            if isinstance(data_type, Scalar):
-                # Determine overlap columns for any pairwise rows
-                overlap_columns_mask = np.logical_and(
-                    np.tile(mask_array[row], (n_rows, 1)), mask_array
-                )
-                row_big_matrix = np.tile(data_array[row], (n_rows, 1))
-                row_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
-                # We need the row dists as a float matrix to use np.nanmean
-                row_dists[~overlap_columns_mask] = np.nan
-            else:
-                for i in range(n_rows):
-                    # Get columns observed in both row i and row
-                    overlap_columns = np.logical_and(mask_array[row], mask_array[i])
-
-                    if not np.any(overlap_columns):
-                        row_dists[i, :] = np.nan
-                        continue
-
-                    # Calculate distance between rows
-                    for j in range(n_cols):
-                        if not overlap_columns[
-                            j
-                        ]:  # Skip missing values and the target column
-                            row_dists[i, j] = np.nan
-                        else:
-                            row_dists[i, j] = data_type.distance(
-                                data_array[row, j], data_array[i, j]
-                            )
-            self.row_distances[row] = row_dists
-
-        if col not in self.col_distances:
-            # Calculate distances between columns
-            col_dists = np.zeros((n_rows, n_cols))
-
-            # Scalar optimization with vectorized operations instead of loops
-            if isinstance(data_type, Scalar):
-                # Determine overlap columns for any pairwise rows
-                overlap_columns_mask = np.logical_and(
-                    np.tile(mask_array[:, col].reshape(-1, 1), (1, n_cols)), mask_array
-                )
-                row_big_matrix = np.tile(data_array[:, col].reshape(-1, 1), (1, n_cols))
-                col_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
-                # We need the col dists as a float matrix to use np.nanmean
-                col_dists[~overlap_columns_mask] = np.nan
-
-            else:
-                for j in range(n_cols):
-                    # Get rows observed in both row i and row
-                    overlap_columns = np.logical_and(
-                        mask_array[:, col], mask_array[:, j]
-                    )
-
-                    if not np.any(overlap_columns):
-                        col_dists[:, j] = np.nan
-                        continue
-
-                    # Calculate distance between columns
-                    for i in range(n_rows):
-                        if not overlap_columns[
-                            i
-                        ]:  # Skip missing values and the target column
-                            col_dists[i, j] = np.nan
-                        else:
-                            col_dists[i, j] = data_type.distance(
-                                data_array[i, col], data_array[i, j]
-                            )
-            self.col_distances[col] = col_dists
+        self.estimator._calculate_distances(row, col, data_array, mask_array, data_type)
+        # We use the DREstimator class to calculate the distances
+        # because it is the same as the two-sided estimator

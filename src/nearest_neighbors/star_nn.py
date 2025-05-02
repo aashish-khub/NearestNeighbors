@@ -180,8 +180,7 @@ class star_nn:
         
         n_rows, n_cols = data_array.shape
         
-        self.delta = 0.5/np.sqrt(n_rows)
-        # self.delta = np.exp(-0.25)
+        self.delta = 1/np.sqrt(n_rows)
         if self.row_distances is None:
             self.set_row_distances(data_array, mask_array)
         if self.noise_variance is None:

@@ -60,202 +60,125 @@ rng = np.random.default_rng(seed=seed)
 
 # Load the simulated data dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
-k = 2  # Number of repetitions for each size
-# m_size = np.repeat([2**4, 2**5, 2**6], k)
-
+k = 4  # Number of repetitions for each size
 m_size = np.repeat([2**4, 2**5, 2**6, 2**7], k)
-sizes_data = []
-train_times = []
-for i, size in zip(np.arange(len(m_size)), m_size):
-    logger.info(f"Simulating data with size {size}x{size}")
-    # Simulate data
-    # NOTE: the raw and processed data is cached in .joblib_cache
-    start_time = time()
-    sim_dataloader = NNData.create("synthetic_data", num_rows=size, num_cols=size, seed= 3*i, miss_prob=0.3, snr = 3,
-                                   latent_factor_combination_model="additive", rho = 1)
-    data, mask = sim_dataloader.process_data_scalar()
-    data_state = sim_dataloader.get_full_state_as_dict(include_metadata=True)
-    true_noise_variance = data_state["generation_metadata"]["stddev_noise"]**2
-    data_true = data_state["full_data_true"]
-    elapsed_time = time() - start_time
-    logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
+# m_size = np.repeat([2**4, 2**5, 2**6, 2**7, 2**8, 2**9], k)
 
-    empirical_noise_variance = np.var(data[mask == 1] - data_true[mask == 1])
-    logger.info("Using scalar data type")
-    data_type = Scalar()
-    
-    holdout_inds = np.nonzero(mask == 1)
-    inds_rows = holdout_inds[0]
-    inds_cols = holdout_inds[1]
-    range_inds = np.arange(len(inds_rows))
 
-    # randomly shuffle indices
-    rng.shuffle(range_inds)
-    # 20% of the indices will be used for testing
-    test_size = int(0.2 * len(range_inds))
-    test_inds = range_inds[:test_size]
-    # 80% of the indices will be used for training
-    train_inds = range_inds[test_size:]
-    range_train_inds = np.arange(len(train_inds))
-    rng.shuffle(range_train_inds)
-    # 20% of the training indices will be used for cv holdout
-    cv_size = int(0.2 * len(train_inds))
-    cv_inds = range_train_inds[:cv_size]
-    # get the rows and columns of the train indices
 
-    cv_inds_rows = list(inds_rows[train_inds][cv_inds])
-    cv_inds_cols = list(inds_cols[train_inds][cv_inds])
-    # get the rows and columns of the test indices
-    test_inds_rows = list(inds_rows[test_inds])
-    test_inds_cols = list(inds_cols[test_inds])
-
-    block = list(zip(cv_inds_rows, cv_inds_cols))
-    test_block = list(zip(test_inds_rows, test_inds_cols))
-    mask_test_star_nn = np.zeros_like(mask)
-    for i, j in test_block:
-        mask_test_star_nn[i, j] = 1
-
-    mask_test = mask.copy()
-    mask_test[test_inds_rows, test_inds_cols] = 0
-    
-    m_avg = np.average(mask)
-    m_test_avg = np.average(mask_test)
-    m_star_nn_avg = np.average(mask_test_star_nn)
-    
-    
-    logger.info("Using USVT estimation")
-    usvt_data = data.copy()
-    usvt_mask = mask.copy()
-    usvt_mask[test_inds_rows, test_inds_cols] = 0
-    usvt_data[usvt_mask != 1] = np.nan
-    # impute missing values simultaneously
-    start_time = time()
-    usvt_imputed = usvt(usvt_data)
-    elapsed_time = time() - start_time
-    imputations = usvt_imputed[test_inds_rows, test_inds_cols]
-    # set the time to the average time per imputation
-    imputation_times = [elapsed_time / len(test_block)] * len(test_block)
-    fit_times = [0] * len(test_block)
-    
-    ground_truth = data_true[test_inds_rows, test_inds_cols]
-    est_errors = np.abs(imputations - ground_truth)
-    logger.info(f"Mean absolute error: {np.mean(est_errors)}")
-
-    df_size = pd.DataFrame(
-        data={
-            "estimation_method": "usvt",
-            "est_errors": est_errors,
-            "row": test_inds_rows,
-            "col": test_inds_cols,
-            "time_impute": imputation_times,
-            "time_fit": fit_times,
-            "size": size,
-            **data_state["generation_metadata"]
-        }
-    )
-    sizes_data.append(df_size)
-    
-    
-    logger.info("Using Star NN imputation")
-    imputer = star_nn()
-    
-    
-    print(f"Empirical noise variance: {empirical_noise_variance}")
-    print(f"True noise variance: {true_noise_variance}")
-    
-    # imputer.set_noise_variance(empirical_noise_variance)
-    
-    # Fit the imputer
-    start_time = time()
-    imputed_train_data = imputer.fit(data, mask_test)
-    end_time = time()
-    fit_time = end_time - start_time
-    logger.info(f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {imputer.noise_variance}")
-    
-    # imputer.set_noise_variance(empirical_noise_variance)
-    # Impute missing values
-    imputations = []
-    imputation_times = []
-    for row, col in tqdm(test_block, desc="Imputing missing values"):
+def StarVsRowRowVsUsvt(m_size):
+    """
+    Compare the performance of StarNN and RowRow on simulated data
+    """
+    sizes_data = []
+    train_times = []
+    for i, size in zip(np.arange(len(m_size)), m_size):
+        logger.info(f"Simulating data with size {size}x{size}")
+        # Simulate data
+        # NOTE: the raw and processed data is cached in .joblib_cache
         start_time = time()
-        imputed_value = imputer.impute(row, col, data, mask_test)
+        sim_dataloader = NNData.create("synthetic_data", num_rows=size, num_cols=size, seed= 3*i, miss_prob=0.4, snr = 4,
+                                    latent_factor_combination_model="multiplicative", rho = 1)
+        data, mask = sim_dataloader.process_data_scalar()
+        data_state = sim_dataloader.get_full_state_as_dict(include_metadata=True)
+        true_noise_variance = data_state["generation_metadata"]["stddev_noise"]**2
+        data_true = data_state["full_data_true"]
         elapsed_time = time() - start_time
-        imputation_times.append(elapsed_time)
-        imputations.append(imputed_value)
-    imputations = np.array(imputations)
+        logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
-    ground_truth = data_true[test_inds_rows, test_inds_cols]
-    est_errors = np.abs(imputations - ground_truth)
-    logger.info(f"Mean absolute error: {np.mean(est_errors)}")
+        empirical_noise_variance = np.var(data[mask == 1] - data_true[mask == 1])
+        logger.info("Using scalar data type")
+        data_type = Scalar()
+        
+        holdout_inds = np.nonzero(mask == 1)
+        inds_rows = holdout_inds[0]
+        inds_cols = holdout_inds[1]
+        range_inds = np.arange(len(inds_rows))
 
-    df_size = pd.DataFrame(
-        data={
-            "estimation_method": "star_nn",
-            "est_errors": est_errors,
-            "row": test_inds_rows,
-            "col": test_inds_cols,
-            "time_impute": imputation_times,
-            "time_fit": [fit_time] * len(test_block),
-            "size": size,
-            **data_state["generation_metadata"]
-        }
-    )
-    sizes_data.append(df_size)
-    
-    train_time = pd.DataFrame(
-      data = {
-          "estimation_method": "star_nn",
-          "time_fit": fit_time,
-          "size": size**2,
-          "empirical_noise_variance": np.var(data[mask == 1] - data_true[mask == 1]),
-          "estimated_noise_variance": imputer.noise_variance
-      },
-      index=[0]  # Add an index with a single row
-    )
-    train_times.append(train_time)
-    
-    
-    logger.info("Using row-row estimation")
-    imputer = row_row()
+        # randomly shuffle indices
+        rng.shuffle(range_inds)
+        # 20% of the indices will be used for testing
+        test_size = int(0.2 * len(range_inds))
+        test_inds = range_inds[:test_size]
+        # 80% of the indices will be used for training
+        train_inds = range_inds[test_size:]
+        range_train_inds = np.arange(len(train_inds))
+        rng.shuffle(range_train_inds)
+        # 20% of the training indices will be used for cv holdout
+        cv_size = int(0.2 * len(train_inds))
+        cv_inds = range_train_inds[:cv_size]
+        # get the rows and columns of the train indices
 
-    logger.info("Using leave-block-out validation")
-    fitter = LeaveBlockOutValidation(
-        block,
-        distance_threshold_range=(0, 50),
-        n_trials=200,
-        data_type=data_type,
-    )
+        cv_inds_rows = list(inds_rows[train_inds][cv_inds])
+        cv_inds_cols = list(inds_cols[train_inds][cv_inds])
+        # get the rows and columns of the test indices
+        test_inds_rows = list(inds_rows[test_inds])
+        test_inds_cols = list(inds_cols[test_inds])
 
-    start_time = time()
-    trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
-    end_time = time()
-    fit_times = [end_time - start_time] * len(test_block)
-    fit_time = end_time - start_time
+        block = list(zip(cv_inds_rows, cv_inds_cols))
+        test_block = list(zip(test_inds_rows, test_inds_cols))
+        mask_test_star_nn = np.zeros_like(mask)
+        for i, j in test_block:
+            mask_test_star_nn[i, j] = 1
 
-    # CODE FOR EXTRACTING TRIAL METADATA
-    if not isinstance(trials, float) and not isinstance(trials, int) and isinstance(trials[1], Trials):
-        trials = trials[1]
-        trial_data = []
-        for trial in trials.trials:
-            row = {}
-            # get param vals
-            params = trial['misc']['vals']
-            for param_name, param_values in params.items():
-                if param_values:
-                    row[param_name] = float(param_values[0])
-            
-            row['loss'] = float(trial['result']['loss'])
-            trial_data.append(row)
+        mask_test = mask.copy()
+        mask_test[test_inds_rows, test_inds_cols] = 0
+        
+        m_avg = np.average(mask)
+        m_test_avg = np.average(mask_test)
+        m_star_nn_avg = np.average(mask_test_star_nn)
+        
+        
+        logger.info("Using USVT estimation")
+        usvt_data = data.copy()
+        usvt_mask = mask.copy()
+        usvt_mask[test_inds_rows, test_inds_cols] = 0
+        usvt_data[usvt_mask != 1] = np.nan
+        # impute missing values simultaneously
+        start_time = time()
+        usvt_imputed = usvt(usvt_data)
+        elapsed_time = time() - start_time
+        imputations = usvt_imputed[test_inds_rows, test_inds_cols]
+        # set the time to the average time per imputation
+        imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+        fit_times = [0] * len(test_block)
+        
+        ground_truth = data_true[test_inds_rows, test_inds_cols]
+        est_errors = np.abs(imputations - ground_truth)
+        logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 
-        df_trials = pd.DataFrame(trial_data)
-        trials_save_path = os.path.join(
-        results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
+        df_size = pd.DataFrame(
+            data={
+                "estimation_method": "usvt",
+                "est_errors": est_errors,
+                "row": test_inds_rows,
+                "col": test_inds_cols,
+                "time_impute": imputation_times,
+                "time_fit": fit_times,
+                "size": size,
+                **data_state["generation_metadata"]
+            }
         )
-        logger.info(f"Saving trials data to {trials_save_path}...")
-        df_trials.to_csv(trials_save_path, index=False)
-
-            
-
+        sizes_data.append(df_size)
+        
+        
+        logger.info("Using Star NN imputation")
+        imputer = star_nn()
+        
+        
+        print(f"Empirical noise variance: {empirical_noise_variance}")
+        print(f"True noise variance: {true_noise_variance}")
+        
+        # imputer.set_noise_variance(empirical_noise_variance)
+        
+        # Fit the imputer
+        start_time = time()
+        imputed_train_data = imputer.fit(data, mask_test)
+        end_time = time()
+        fit_time = end_time - start_time
+        logger.info(f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {imputer.noise_variance}")
+        
+        # imputer.set_noise_variance(empirical_noise_variance)
         # Impute missing values
         imputations = []
         imputation_times = []
@@ -267,40 +190,291 @@ for i, size in zip(np.arange(len(m_size)), m_size):
             imputations.append(imputed_value)
         imputations = np.array(imputations)
 
-    train_time = pd.DataFrame(
-      data = {
-          "estimation_method": "row_row",
-          "time_fit": fit_time,
-          "size": size**2,
-          "empirical_noise_variance": np.var(data[mask == 1] - data_true[mask == 1]),
-          "estimated_noise_variance": np.var(imputations - ground_truth)
-      },
-      index=[0]  # Add an index with a single row
-    )
-    train_times.append(train_time)
-    
-    ground_truth = data_true[test_inds_rows, test_inds_cols]
-    est_errors = np.abs(imputations - data_true[test_inds_rows, test_inds_cols])
-    logger.info(f"Mean absolute error: {np.mean(est_errors)}")
+        ground_truth = data_true[test_inds_rows, test_inds_cols]
+        est_errors = np.abs(imputations - ground_truth)
+        logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 
-    df_size = pd.DataFrame(
-        data={
+        df_size = pd.DataFrame(
+            data={
+                "estimation_method": "star_nn",
+                "est_errors": est_errors,
+                "row": test_inds_rows,
+                "col": test_inds_cols,
+                "time_impute": imputation_times,
+                "time_fit": [fit_time] * len(test_block),
+                "size": size,
+                **data_state["generation_metadata"]
+            }
+        )
+        sizes_data.append(df_size)
+        
+        train_time = pd.DataFrame(
+        data = {
+            "estimation_method": "star_nn",
+            "time_fit": fit_time,
+            "size": size**2,
+            "empirical_noise_variance": np.var(data[mask == 1] - data_true[mask == 1]),
+            "estimated_noise_variance": imputer.noise_variance
+        },
+        index=[0]  # Add an index with a single row
+        )
+        train_times.append(train_time)
+        
+        
+        logger.info("Using row-row estimation")
+        imputer = row_row()
+
+        logger.info("Using leave-block-out validation")
+        fitter = LeaveBlockOutValidation(
+            block,
+            distance_threshold_range=(0, 50),
+            n_trials=200,
+            data_type=data_type,
+        )
+
+        start_time = time()
+        trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
+        end_time = time()
+        fit_times = [end_time - start_time] * len(test_block)
+        fit_time = end_time - start_time
+
+        # CODE FOR EXTRACTING TRIAL METADATA
+        if not isinstance(trials, float) and not isinstance(trials, int) and isinstance(trials[1], Trials):
+            trials = trials[1]
+            trial_data = []
+            for trial in trials.trials:
+                row = {}
+                # get param vals
+                params = trial['misc']['vals']
+                for param_name, param_values in params.items():
+                    if param_values:
+                        row[param_name] = float(param_values[0])
+                
+                row['loss'] = float(trial['result']['loss'])
+                trial_data.append(row)
+
+            df_trials = pd.DataFrame(trial_data)
+            trials_save_path = os.path.join(
+            results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
+            )
+            logger.info(f"Saving trials data to {trials_save_path}...")
+            df_trials.to_csv(trials_save_path, index=False)
+
+                
+
+            # Impute missing values
+            imputations = []
+            imputation_times = []
+            for row, col in tqdm(test_block, desc="Imputing missing values"):
+                start_time = time()
+                imputed_value = imputer.impute(row, col, data, mask_test)
+                elapsed_time = time() - start_time
+                imputation_times.append(elapsed_time)
+                imputations.append(imputed_value)
+            imputations = np.array(imputations)
+
+        train_time = pd.DataFrame(
+        data = {
             "estimation_method": "row_row",
-            "est_errors": est_errors,
-            "row": test_inds_rows,
-            "col": test_inds_cols,
-            "time_impute": imputation_times,
-            "time_fit": fit_times,
-            "size": size,
-            **data_state["generation_metadata"]
-        }
-    )
-    sizes_data.append(df_size)
-    #print(df[["est_errors", "time_impute", "time_fit"]].describe())
-df = pd.concat(sizes_data, ignore_index=True)
-logger.info(f"Saving est_errors to {save_path}...")    
-df.to_csv(save_path, index=False)
+            "time_fit": fit_time,
+            "size": size**2,
+            "empirical_noise_variance": np.var(data[mask == 1] - data_true[mask == 1]),
+            "estimated_noise_variance": np.var(imputations - ground_truth)
+        },
+        index=[0]  # Add an index with a single row
+        )
+        train_times.append(train_time)
+        
+        ground_truth = data_true[test_inds_rows, test_inds_cols]
+        est_errors = np.abs(imputations - data_true[test_inds_rows, test_inds_cols])
+        logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 
-train_times_df = pd.concat(train_times, ignore_index=True)
-logger.info(f"Saving train_times to {train_times_path}...")
-train_times_df.to_csv(train_times_path, index=False)
+        df_size = pd.DataFrame(
+            data={
+                "estimation_method": "row_row",
+                "est_errors": est_errors,
+                "row": test_inds_rows,
+                "col": test_inds_cols,
+                "time_impute": imputation_times,
+                "time_fit": fit_times,
+                "size": size,
+                **data_state["generation_metadata"]
+            }
+        )
+        sizes_data.append(df_size)
+        #print(df[["est_errors", "time_impute", "time_fit"]].describe())
+    df = pd.concat(sizes_data, ignore_index=True)
+    logger.info(f"Saving est_errors to {save_path}...")    
+    df.to_csv(save_path, index=False)
+
+    train_times_df = pd.concat(train_times, ignore_index=True)
+    logger.info(f"Saving train_times to {train_times_path}...")
+    train_times_df.to_csv(train_times_path, index=False)
+
+def StarVsUsvt(m_size):
+    """
+    Compare the performance of StarNN and RowRow on simulated data
+    """
+    sizes_data = []
+    train_times = []
+    for i, size in zip(np.arange(len(m_size)), m_size):
+        logger.info(f"Simulating data with size {size}x{size}")
+        # Simulate data
+        # NOTE: the raw and processed data is cached in .joblib_cache
+        start_time = time()
+        sim_dataloader = NNData.create("synthetic_data", num_rows=size, num_cols=size, seed= 3*i, miss_prob=0.2, snr = 3,
+                                    latent_factor_combination_model="multiplicative", rho = 1)
+        data, mask = sim_dataloader.process_data_scalar()
+        data_state = sim_dataloader.get_full_state_as_dict(include_metadata=True)
+        true_noise_variance = data_state["generation_metadata"]["stddev_noise"]**2
+        data_true = data_state["full_data_true"]
+        elapsed_time = time() - start_time
+        logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
+
+        empirical_noise_variance = np.var(data[mask == 1] - data_true[mask == 1])
+        logger.info("Using scalar data type")
+        data_type = Scalar()
+        
+        holdout_inds = np.nonzero(mask == 1)
+        inds_rows = holdout_inds[0]
+        inds_cols = holdout_inds[1]
+        range_inds = np.arange(len(inds_rows))
+
+        # randomly shuffle indices
+        rng.shuffle(range_inds)
+        # 20% of the indices will be used for testing
+        test_size = int(0.2 * len(range_inds))
+        test_inds = range_inds[:test_size]
+        # 80% of the indices will be used for training
+        train_inds = range_inds[test_size:]
+        range_train_inds = np.arange(len(train_inds))
+        rng.shuffle(range_train_inds)
+        # 20% of the training indices will be used for cv holdout
+        cv_size = int(0.2 * len(train_inds))
+        cv_inds = range_train_inds[:cv_size]
+        # get the rows and columns of the train indices
+
+        cv_inds_rows = list(inds_rows[train_inds][cv_inds])
+        cv_inds_cols = list(inds_cols[train_inds][cv_inds])
+        # get the rows and columns of the test indices
+        test_inds_rows = list(inds_rows[test_inds])
+        test_inds_cols = list(inds_cols[test_inds])
+
+        block = list(zip(cv_inds_rows, cv_inds_cols))
+        test_block = list(zip(test_inds_rows, test_inds_cols))
+        mask_test_star_nn = np.zeros_like(mask)
+        for i, j in test_block:
+            mask_test_star_nn[i, j] = 1
+
+        mask_test = mask.copy()
+        mask_test[test_inds_rows, test_inds_cols] = 0
+        
+        m_avg = np.average(mask)
+        m_test_avg = np.average(mask_test)
+        m_star_nn_avg = np.average(mask_test_star_nn)
+        
+        
+        logger.info("Using USVT estimation")
+        usvt_data = data.copy()
+        usvt_mask = mask.copy()
+        usvt_mask[test_inds_rows, test_inds_cols] = 0
+        usvt_data[usvt_mask != 1] = np.nan
+        # impute missing values simultaneously
+        start_time = time()
+        usvt_imputed = usvt(usvt_data)
+        elapsed_time = time() - start_time
+        imputations = usvt_imputed[test_inds_rows, test_inds_cols]
+        # set the time to the average time per imputation
+        imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+        fit_times = [0] * len(test_block)
+        
+        ground_truth = data_true[test_inds_rows, test_inds_cols]
+        est_errors = np.abs(imputations - ground_truth)
+        logger.info(f"Mean absolute error: {np.mean(est_errors)}")
+
+        df_size = pd.DataFrame(
+            data={
+                "estimation_method": "usvt",
+                "est_errors": est_errors,
+                "row": test_inds_rows,
+                "col": test_inds_cols,
+                "time_impute": imputation_times,
+                "time_fit": fit_times,
+                "size": size,
+                **data_state["generation_metadata"]
+            }
+        )
+        sizes_data.append(df_size)
+        
+        
+        logger.info("Using Star NN imputation")
+        imputer = star_nn()
+        
+        
+        print(f"Empirical noise variance: {empirical_noise_variance}")
+        print(f"True noise variance: {true_noise_variance}")
+        
+        # imputer.set_noise_variance(empirical_noise_variance)
+        
+        # Fit the imputer
+        start_time = time()
+        imputed_train_data = imputer.fit(data, mask_test)
+        end_time = time()
+        fit_time = end_time - start_time
+        logger.info(f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {imputer.noise_variance}")
+        
+        # imputer.set_noise_variance(empirical_noise_variance)
+        # Impute missing values
+        imputations = []
+        imputation_times = []
+        for row, col in tqdm(test_block, desc="Imputing missing values"):
+            start_time = time()
+            imputed_value = imputer.impute(row, col, data, mask_test)
+            elapsed_time = time() - start_time
+            imputation_times.append(elapsed_time)
+            imputations.append(imputed_value)
+        imputations = np.array(imputations)
+
+        ground_truth = data_true[test_inds_rows, test_inds_cols]
+        est_errors = np.abs(imputations - ground_truth)
+        logger.info(f"Mean absolute error: {np.mean(est_errors)}")
+
+        df_size = pd.DataFrame(
+            data={
+                "estimation_method": "star_nn",
+                "est_errors": est_errors,
+                "row": test_inds_rows,
+                "col": test_inds_cols,
+                "time_impute": imputation_times,
+                "time_fit": [fit_time] * len(test_block),
+                "size": size,
+                **data_state["generation_metadata"]
+            }
+        )
+        sizes_data.append(df_size)
+        
+        train_time = pd.DataFrame(
+        data = {
+            "estimation_method": "star_nn",
+            "time_fit": fit_time,
+            "size": size**2,
+            "empirical_noise_variance": np.var(data[mask == 1] - data_true[mask == 1]),
+            "estimated_noise_variance": imputer.noise_variance
+        },
+        index=[0]  # Add an index with a single row
+        )
+        train_times.append(train_time)
+        
+        
+    df = pd.concat(sizes_data, ignore_index=True)
+    logger.info(f"Saving est_errors to {save_path}...")    
+    df.to_csv(save_path, index=False)
+
+    train_times_df = pd.concat(train_times, ignore_index=True)
+    logger.info(f"Saving train_times to {train_times_path}...")
+    train_times_df.to_csv(train_times_path, index=False)
+
+
+StarVsRowRowVsUsvt(m_size)
+
+# StarVsUsvt(m_size)

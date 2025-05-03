@@ -11,6 +11,7 @@ def evaluate_imputation(
     imputer: NearestNeighborImputer,
     test_cells: list[tuple[int, int]],
     data_type: DataType,
+    allow_self_neighbor: bool = False,
     **kwargs: Any,
 ) -> float:
     """Evaluate the imputer on a set.
@@ -21,6 +22,7 @@ def evaluate_imputation(
         imputer (NearestNeighborImputer): Imputer object
         test_cells (list[tuple[int,int]]): List of cells as tuples of row and column indices
         data_type (DataType): Data type to use (e.g. scalars, distributions)
+        allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
         **kwargs (Any): Additional keyword args
 
     Raises:
@@ -37,7 +39,7 @@ def evaluate_imputation(
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
     for row, col in test_cells:
-        imputed_value = imputer.impute(row, col, data_array, mask_array)
+        imputed_value = imputer.impute(row, col, data_array, mask_array, allow_self_neighbor=allow_self_neighbor)
         true_value = data_array[row, col]
         error += data_type.distance(imputed_value, true_value)
 
@@ -57,6 +59,7 @@ class LeaveBlockOutValidation(FitMethod):
         distance_threshold_range: tuple[float, float],
         n_trials: int,
         data_type: DataType,
+        allow_self_neighbor: bool = False,
     ):
         """Initialize the block fit method.
 
@@ -65,12 +68,14 @@ class LeaveBlockOutValidation(FitMethod):
             distance_threshold_range (tuple[float,float]): Range of distance thresholds to test
             n_trials (int): Number of trials to run
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
 
         """
         self.block = block
         self.distance_threshold_range = distance_threshold_range
         self.n_trials = n_trials
         self.data_type = data_type
+        self.allow_self_neighbor = allow_self_neighbor
 
     def fit(
         self,
@@ -107,7 +112,7 @@ class LeaveBlockOutValidation(FitMethod):
             """
             imputer.distance_threshold = distance_threshold
             return evaluate_imputation(
-                data_array, mask_array, imputer, self.block, self.data_type
+                data_array, mask_array, imputer, self.block, self.data_type, self.allow_self_neighbor
             )
 
         lower_bound, upper_bound = self.distance_threshold_range
@@ -141,6 +146,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
         distance_threshold_range_col: tuple[float, float],
         n_trials: int,
         data_type: DataType,
+        allow_self_neighbor: bool = False,
     ):
         """Initialize the dual threshold block fit method.
 
@@ -150,6 +156,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             distance_threshold_range_col (tuple[float, float]): Range of column distance thresholds to test.
             n_trials (int): Number of trials to run.
             data_type (DataType): Data type to use (e.g. scalars, distributions).
+            allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
 
         """
         self.block = block
@@ -157,6 +164,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
         self.distance_threshold_range_col = distance_threshold_range_col
         self.n_trials = n_trials
         self.data_type = data_type
+        self.allow_self_neighbor = allow_self_neighbor
 
     def fit(
         self,
@@ -192,7 +200,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             col_threshold = params["distance_threshold_col"]
             imputer.distance_threshold = (row_threshold, col_threshold)
             return evaluate_imputation(
-                data_array, mask_array, imputer, self.block, self.data_type
+                data_array, mask_array, imputer, self.block, self.data_type, self.allow_self_neighbor
             )
 
         lower_bound_row, upper_bound_row = self.distance_threshold_range_row
@@ -309,7 +317,20 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         gamma_range: tuple[float, float],
         n_trials: int,
         data_type: DataType,
+        allow_self_neighbor: bool = False,
     ):
+        """Initialize the dual threshold block fit method with AutoEstimator.
+
+        Args:
+            block (list[tuple[int, int]]): List of cells as tuples of row and column indices.
+            distance_threshold_range_row (tuple[float, float]): Range of row distance thresholds to test.
+            distance_threshold_range_col (tuple[float, float]): Range of column distance thresholds to test.
+            gamma_range (tuple[float, float]): Range of gamma values to test.
+            n_trials (int): Number of trials to run.
+            data_type (DataType): Data type to use (e.g. scalars, distributions).
+            allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
+
+        """
         self.gamma_range = gamma_range
         super().__init__(
             block,
@@ -318,6 +339,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             n_trials,
             data_type,
         )
+        self.allow_self_neighbor = allow_self_neighbor
 
     def fit(
         self,
@@ -364,7 +386,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 )
             imputer.estimation_method.gamma = gamma
             return evaluate_imputation(
-                data_array, mask_array, imputer, self.block, self.data_type
+                data_array, mask_array, imputer, self.block, self.data_type, self.allow_self_neighbor
             )
 
         lower_bound_row, upper_bound_row = self.distance_threshold_range_row
@@ -396,6 +418,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             best_params["distance_threshold_col"],
         )
         imputer.estimation_method.gamma = best_params["gamma"]
+        #print(imputer.estimation_method.gamma)
 
         if ret_trials:
             return imputer.distance_threshold, trials

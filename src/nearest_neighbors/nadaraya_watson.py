@@ -48,6 +48,7 @@ class NadarayaWatsonEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
         **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -66,6 +67,8 @@ class NadarayaWatsonEstimator(EstimationMethod):
             The distance threshold.
         data_type : DataType
             The data type.
+        allow_self_neighbor : bool, optional
+            Whether to allow the entry itself as a neighbor, by default False
         **kwargs : Any
             Additional keyword arguments
 

@@ -25,6 +25,7 @@ class RowRowEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
         **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -36,6 +37,7 @@ class RowRowEstimator(EstimationMethod):
             mask_array (npt.NDArray): Mask matrix
             distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
             **kwargs (Any): Additional keyword arguments
 
         Returns:
@@ -48,7 +50,8 @@ class RowRowEstimator(EstimationMethod):
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
             # Exclude the target column
-            all_dists[:, column] = np.nan
+            if not allow_self_neighbor:
+                all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
 
             # Find the nearest neighbors indexes
@@ -71,7 +74,6 @@ class RowRowEstimator(EstimationMethod):
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
-
         return data_type.average(nearest_neighbors_data)
 
     def _calculate_distances(
@@ -141,6 +143,7 @@ class ColColEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
         **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
@@ -152,6 +155,7 @@ class ColColEstimator(EstimationMethod):
             mask_array (npt.NDArray): Mask matrix
             distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
             **kwargs (Any): Additional keyword arguments
 
         Returns:
@@ -162,7 +166,7 @@ class ColColEstimator(EstimationMethod):
         mask_transposed = np.swapaxes(mask_array, 0, 1)
 
         return self.estimator.impute(
-            column, row, data_transposed, mask_transposed, distance_threshold, data_type
+            column, row, data_transposed, mask_transposed, distance_threshold, data_type, allow_self_neighbor
         )
 
     def _calculate_distances(
@@ -203,6 +207,7 @@ class DREstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
         **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column using doubly robust method.
@@ -216,6 +221,7 @@ class DREstimator(EstimationMethod):
             distance_threshold (float or Tuple[float, float]): Distance threshold for nearest neighbors
             or a tuple of (row_threshold, col_threshold) for row and column respectively.
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
             **kwargs (Any): Additional keyword arguments
 
         """
@@ -231,15 +237,17 @@ class DREstimator(EstimationMethod):
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
             # Exclude the target column
-            all_dists[:, column] = np.nan
+            if not allow_self_neighbor:
+                all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
-            if not mask_array[row, column]:
+            if not mask_array[row, column] and not allow_self_neighbor:
                 row_dists[row] = np.inf  # Exclude the target row
             # Exclude the target row
             all_dists = np.copy(self.col_distances[column])
-            all_dists[row, :] = np.nan
+            if not allow_self_neighbor:
+                all_dists[row, :] = np.nan
             col_dists = np.nanmean(all_dists, axis=0)
-            if not mask_array[row, column]:
+            if not mask_array[row, column] and not allow_self_neighbor:
                 col_dists[column] = np.inf  # Exclude the target col
 
         # Find the row nearest neighbors indexes
@@ -259,6 +267,7 @@ class DREstimator(EstimationMethod):
         # Use doubly robust nearest neighbors to combine row and col
         y_itprime = data_array[row, col_nearest_neighbors]
         y_jt = data_array[row_nearest_neighbors, column]
+
         if len(y_itprime) == 0 and len(y_jt) == 0:
             return np.array(np.nan)
 
@@ -266,6 +275,7 @@ class DREstimator(EstimationMethod):
         j_inds, tprime_inds = np.meshgrid(
             row_nearest_neighbors, col_nearest_neighbors, indexing="ij"
         )
+
         y_jtprime = data_array[j_inds, tprime_inds]
         mask_jtprime = mask_array[j_inds, tprime_inds]
 
@@ -387,6 +397,7 @@ class TSEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
         **kwargs: Any,
     ) -> npt.NDArray:
         r"""Impute the missing value at the given row and column using two-sided NN.
@@ -398,6 +409,7 @@ class TSEstimator(EstimationMethod):
             mask_array (npt.NDArray): Boolean mask matrix (True if observed).
             distance_threshold (float or Tuple[float, float]): Distance threshold(s) for row and column neighborhoods. This is our \vec eta = (\eta_row, \eta_col).
             data_type (DataType): Provides methods for computing distances and averaging.
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
             **kwargs (Any): Additional keyword arguments
 
         Returns:
@@ -415,15 +427,17 @@ class TSEstimator(EstimationMethod):
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
             # Exclude the target column
-            all_dists[:, column] = np.nan
+            if not allow_self_neighbor:
+                all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
-            if not mask_array[row, column]:
+            if not mask_array[row, column] and not allow_self_neighbor:
                 row_dists[row] = np.inf  # Exclude the target row
             # Exclude the target row
             all_dists = np.copy(self.col_distances[column])
-            all_dists[row, :] = np.nan
+            if not allow_self_neighbor:
+                all_dists[row, :] = np.nan
             col_dists = np.nanmean(all_dists, axis=0)
-            if not mask_array[row, column]:
+            if not mask_array[row, column] and not allow_self_neighbor:
                 col_dists[column] = np.inf  # Exclude the target col
 
         # Establish the neighborhoods subject to the distance thresholds
@@ -589,6 +603,7 @@ class AutoEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
         **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column using doubly robust method.
@@ -602,10 +617,11 @@ class AutoEstimator(EstimationMethod):
             distance_threshold (float or Tuple[float, float]): Distance threshold for nearest neighbors
             or a tuple of (row_threshold, col_threshold) for row and column respectively.
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
             **kwargs (Any): Additional keyword arguments
 
         """
-        if self.gamma is None or "gamma" not in kwargs:
+        if self.gamma is None and "gamma" not in kwargs:
             raise TypeError(
                 "AutoEstimator.impute() missing 1 required keyword-only argument: 'gamma'"
             )
@@ -623,15 +639,17 @@ class AutoEstimator(EstimationMethod):
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
             # Exclude the target column
-            all_dists[:, column] = np.nan
+            if not allow_self_neighbor:
+                all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
-            if not mask_array[row, column]:
+            if not mask_array[row, column] and not allow_self_neighbor:
                 row_dists[row] = np.inf  # Exclude the target row
             # Exclude the target row
             all_dists = np.copy(self.col_distances[column])
-            all_dists[row, :] = np.nan
+            if not allow_self_neighbor:
+                all_dists[row, :] = np.nan
             col_dists = np.nanmean(all_dists, axis=0)
-            if not mask_array[row, column]:
+            if not mask_array[row, column] and not allow_self_neighbor:
                 col_dists[column] = np.inf  # Exclude the target col
 
         # Find the row nearest neighbors indexes
@@ -677,8 +695,8 @@ class AutoEstimator(EstimationMethod):
                 else data_type.average(y_itprime)
             )
         # TODO: (Caleb) adjust gamma param to account for differing values for row, col, etc.
-        sum_y = y_itprime_inter + y_jt_inter - gamma * y_jtprime[intersec_inds]
-        avg = data_type.average(sum_y)
+        sum_y = y_itprime_inter + y_jt_inter + gamma * y_jtprime[intersec_inds]
+        avg = data_type.average(sum_y) * (1 / 3)
         return avg
 
     def _calculate_distances(

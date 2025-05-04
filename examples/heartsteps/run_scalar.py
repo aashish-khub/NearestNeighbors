@@ -117,6 +117,21 @@ if estimation_method == "usvt":
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
     fit_times = [0] * len(test_block)
+elif estimation_method == "star":
+    logger.info("Using star estimation")
+    estimator = StarNNEstimator()
+    imputer = NearestNeighborImputer(estimator, data_type, distance_threshold=-1)
+    # Impute missing values
+    imputations = []
+    imputation_times = []
+    for row, col in tqdm(test_block, desc="Imputing missing values"):
+        start_time = time()
+        imputed_value = imputer.impute(row, col, data, mask_test)
+        elapsed_time = time() - start_time
+        imputation_times.append(elapsed_time)
+        imputations.append(imputed_value)
+    imputations = np.array(imputations)
+    fit_times = [0] * len(test_block)
 else:
     if estimation_method == "dr":
         logger.info("Using doubly robust estimation")
@@ -164,20 +179,6 @@ else:
             block,
             distance_threshold_range_row=(0, 50),
             distance_threshold_range_col=(0, 50),
-            n_trials=200,
-            data_type=data_type,
-        )
-    elif estimation_method == "star":
-        logger.info("Using star estimation")
-        estimator = StarNNEstimator()
-        imputer = NearestNeighborImputer(estimator, data_type)
-
-        logger.info("Using StarNN fit method")
-        # Fit the imputer using leave-block-out validation
-        fitter = TSLeaveBlockOutValidation(
-            block,
-            distance_threshold_range_row=(0, 10),
-            distance_threshold_range_col=(0, 10),
             n_trials=200,
             data_type=data_type,
         )

@@ -24,4 +24,5 @@ METHOD_ALIASES = {
     "usvt": "USVT",
     "softimpute": "SoftImpute",
     "nadaraya": "NW",
+    "star": "Star-NN",
 }

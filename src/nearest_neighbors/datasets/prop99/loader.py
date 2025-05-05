@@ -18,7 +18,6 @@ import logging
 from joblib import Memory
 import os
 import requests
-import shutil
 
 memory = Memory(".joblib_cache", verbose=2)
 
@@ -71,6 +70,7 @@ class Prop99DataLoader(NNDataLoader):
             sample_states: Number of states to sample from the dataset. Default: None (use all states).
             seed: Random seed for reproducibility. Default: None
             kwargs: Additional keyword arguments.
+
         """
         super().__init__(
             **kwargs,
@@ -81,7 +81,9 @@ class Prop99DataLoader(NNDataLoader):
         self.data = None
         self.mask = None
         if seed is not None:
-            np.random.seed(seed)  # instantiate random seed if provided but do it only once here
+            np.random.seed(
+                seed
+            )  # instantiate random seed if provided but do it only once here
 
     def process_data_scalar(self, agg: str = "mean") -> tuple[np.ndarray, np.ndarray]:
         """Process the data into scalar setting focusing on cigarette consumption in packs.
@@ -94,37 +96,42 @@ class Prop99DataLoader(NNDataLoader):
         -------
             data: 2d processed data matrix of floats (states × years)
             mask: Mask for processed data
+
         """
         df = self._load_data()
-        
+
         # Filter for cigarette consumption in packs
         logger.info(f"Original data shape: {df.shape}")
-        df_consumption = df[df['SubMeasureDesc'] == 'Cigarette Consumption (Pack Sales Per Capita)']
+        df_consumption = df[
+            df["SubMeasureDesc"] == "Cigarette Consumption (Pack Sales Per Capita)"
+        ]
         logger.info(f"After SubMeasureDesc filter: {df_consumption.shape}")
-        
+
         # Filter by year range
-        df_consumption = df_consumption[(df_consumption['Year'] >= self.start_year) & 
-                                        (df_consumption['Year'] <= self.end_year)]
+        df_consumption = df_consumption[
+            (df_consumption["Year"] >= self.start_year)
+            & (df_consumption["Year"] <= self.end_year)
+        ]
         logger.info(f"After year range filter: {df_consumption.shape}")
-        
+
         # Pivot the data to get states as rows and years as columns
         data_df = df_consumption.pivot(
             index="LocationAbbr", columns="Year", values="Data_Value"
         )
         logger.info(f"Pivoted data shape: {data_df.shape}")
-        
+
         # Sample states if specified
         if self.sample_states is not None:
             data_df = data_df.sample(n=self.sample_states)
             logger.info(f"After sampling states: {data_df.shape}")
-        
+
         # Create the mask: 0 for CA after 1988, 1 for everything else
         mask_df = pd.DataFrame(1, index=data_df.index, columns=data_df.columns)
-        
+
         # If 'CA' is in the data, set mask values to 0 for years after 1988
-        if 'CA' in mask_df.index:
+        if "CA" in mask_df.index:
             ca_years = [year for year in mask_df.columns if int(year) > 1988]
-            mask_df.loc['CA', ca_years] = 0
+            mask_df.loc["CA", ca_years] = 0
 
         # Convert to numpy arrays
         data = data_df.to_numpy()
@@ -135,7 +142,7 @@ class Prop99DataLoader(NNDataLoader):
         self.mask = mask
         self.state_names = data_df.index.tolist()
         self.years = data_df.columns.tolist()
-        
+
         return data, mask
 
     def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
@@ -160,8 +167,8 @@ class Prop99DataLoader(NNDataLoader):
                 "sample_states": self.sample_states,
             },
         }
-        
-        if include_metadata and hasattr(self, 'state_names') and hasattr(self, 'years'):
+
+        if include_metadata and hasattr(self, "state_names") and hasattr(self, "years"):
             full_state["metadata"] = {
                 "state_names": self.state_names,
                 "years": self.years,
@@ -169,7 +176,7 @@ class Prop99DataLoader(NNDataLoader):
                 "agg": self.agg,
                 "save_processed": self.save_processed,
             }
-            
+
         return full_state
 
     @classmethod
@@ -177,16 +184,16 @@ class Prop99DataLoader(NNDataLoader):
     def _load_data(cls) -> pd.DataFrame:
         """Download and load the Tax Burden on Tobacco dataset."""
         csv_path = "tobacco_data.csv"
-        
+
         # Check for locally provided file
         local_file = "The_Tax_Burden_on_Tobacco.csv"
         if os.path.exists(local_file):
             logger.info(f"Using locally provided file: {local_file}")
             return pd.read_csv(local_file)
-        
+
         # Download if missing
         needs_download = not os.path.exists(csv_path)
-        
+
         if needs_download:
             logger.info("Downloading Tax Burden on Tobacco dataset...")
             response = requests.get(cls.urls["tobacco_data"])
@@ -197,7 +204,7 @@ class Prop99DataLoader(NNDataLoader):
             # Write the content directly instead of using raw stream
             with open(csv_path, "wb") as f:
                 f.write(response.content)
-        
+
         logger.info(f"Loading data from {csv_path}")
         df = pd.read_csv(csv_path)
         return df

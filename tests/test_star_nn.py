@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-from nearest_neighbors.estimation_methods import StarNNEstimator
 from nearest_neighbors.star_nn import star_nn
 
 # Initialize constants
@@ -17,9 +16,9 @@ def test_constant_imputation() -> None:
     data = np.ones((ROWS, COLS))
     mask = np.ones((ROWS, COLS))
     mask[1, 1] = 0  # Make one entry missing
-    
+
     imputer = star_nn(noise_variance=0.1, delta=0.05)
-    
+
     imputed_value = imputer.impute(1, 1, data, mask)
     # print(imputer.cached_estimated_signal_matrix)
     assert np.isclose(imputed_value, 1.0)

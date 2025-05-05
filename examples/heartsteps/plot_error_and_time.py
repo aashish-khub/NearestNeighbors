@@ -67,7 +67,7 @@ for col_name, alias in [
     ax.set_ylim(0, None)
     # Add labels and title
     labels: list[str] = [
-        plotting_utils.METHOD_ALIASES[method]
+        plotting_utils.METHOD_ALIASES.get(method, method)
         for method in df_grouped["estimation_method"]
     ]
     ax.set_xticks(

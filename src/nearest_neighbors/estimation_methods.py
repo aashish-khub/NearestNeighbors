@@ -520,7 +520,7 @@ class StarNNEstimator(EstimationMethod):
 
     def __init__(
         self,
-        delta: float = 0.05,
+        delta: float = 1,
         noise_variance: Optional[
             float
         ] = None,  # this is a the new variable specific to this!
@@ -558,7 +558,7 @@ class StarNNEstimator(EstimationMethod):
     ) -> npt.NDArray:
         """Imputes one specific value using the Star NN method."""
         n_rows, n_cols = data_array.shape
-        delta = self.delta
+        delta = self.delta / np.sqrt(n_rows)
         print("delta: %s" % delta)  # TODO switch to logger.log
         print("noise_variance: %s" % self.noise_variance)  # TODO switch to logger.log
         if self.noise_variance is None:
@@ -581,12 +581,14 @@ class StarNNEstimator(EstimationMethod):
                 )
             row_distances = np.copy(self.row_distances)
 
-        row_distances = (
-            row_distances[np.ix_(observed_rows, observed_rows)] - 2 * noise_variance
-        )
-        np.fill_diagonal(row_distances, 0)
-        mean_distance = np.mean(row_distances[0, :])
-        dist_diff = row_distances[0, :] - mean_distance
+        row_distances = row_distances[row, observed_rows]
+        row_distances = np.where(observed_rows == row, 0, row_distances - 2 * noise_variance)
+        
+        row_dist_min = min(0, np.min(row_distances))
+        row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
+        
+        mean_distance = np.mean(row_distances)
+        dist_diff = row_distances - mean_distance
         # print (noise_variance)
         if noise_variance != 0:
             weights = (1 / n_observed) - dist_diff / (

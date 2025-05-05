@@ -2,9 +2,8 @@ from .nnimputer import FitMethod, DataType, NearestNeighborImputer
 from .estimation_methods import DREstimator, TSEstimator
 from .data_types import DistributionKernelMMD
 import numpy.typing as npt
-import numpy as np
-from hyperopt import hp, fmin, tpe
-from typing import cast
+from hyperopt import hp, fmin, tpe, Trials
+from typing import cast, Union
 
 
 def evaluate_imputation(
@@ -36,18 +35,16 @@ def evaluate_imputation(
         if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
-    err_dists = []
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
-        error = data_type.distance(imputed_value, true_value)
-        err_dists.append(error)
+        error += data_type.distance(imputed_value, true_value)
 
     # Reset the mask
     for row, col in test_cells:
         mask_array[row, col] = 1
 
-    return float(np.nanmean(err_dists))
+    return error / len(test_cells)
 
 
 class LeaveBlockOutValidation(FitMethod):
@@ -79,8 +76,9 @@ class LeaveBlockOutValidation(FitMethod):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
+        ret_trials: bool = False,
         verbose: bool = False,
-    ) -> float:
+    ) -> Union[float, tuple[float, Trials]]:
         """Find the best distance threshold for the given data
         by leaving out a block of cells and testing imputation against them.
 
@@ -88,10 +86,11 @@ class LeaveBlockOutValidation(FitMethod):
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
             imputer (NearestNeighborImputer): Imputer object
+            ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
             verbose (bool, optional): Whether to print the progress. Defaults to False.
 
         Returns:
-            float: Best distance threshold
+            float: Best distance threshold or (float, Trials): Best distance threshold and trials object if ret_trials is True.
 
         """
 
@@ -111,17 +110,22 @@ class LeaveBlockOutValidation(FitMethod):
             )
 
         lower_bound, upper_bound = self.distance_threshold_range
+        trials = Trials()
         best_distance_threshold = fmin(
             fn=objective,
             verbose=verbose,
             space=hp.uniform("distance_threshold", lower_bound, upper_bound),
             algo=tpe.suggest,
             max_evals=self.n_trials,
+            trials=trials,
         )
         if best_distance_threshold is None:
             return float("nan")
+        imputer.distance_threshold = best_distance_threshold["distance_threshold"]
 
-        return best_distance_threshold["distance_threshold"]
+        if ret_trials:
+            return imputer.distance_threshold, trials
+        return imputer.distance_threshold
 
 
 class DualThresholdLeaveBlockOutValidation(FitMethod):
@@ -158,13 +162,15 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
-    ) -> tuple[float, float]:
+        ret_trials: bool = False,
+    ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns by leaving out a block of cells and testing imputation.
 
         Args:
             data_array (npt.NDArray): Data matrix.
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
+            ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -190,6 +196,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
 
         lower_bound_row, upper_bound_row = self.distance_threshold_range_row
         lower_bound_col, upper_bound_col = self.distance_threshold_range_col
+        trials = Trials()
         best_params = fmin(
             fn=_objective,
             space={
@@ -203,6 +210,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             algo=tpe.suggest,
             max_evals=self.n_trials,
             verbose=False,
+            trials=trials,
         )
 
         if best_params is None:
@@ -212,7 +220,8 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             best_params["distance_threshold_row"],
             best_params["distance_threshold_col"],
         )
-
+        if ret_trials:
+            return imputer.distance_threshold, trials
         return imputer.distance_threshold
 
 
@@ -226,13 +235,15 @@ class DRLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
-    ) -> tuple[float, float]:
+        ret_trials: bool = False,
+    ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns using a DREstimator.
 
         Args:
             data_array (npt.NDArray): Data matrix.
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
+            ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -246,7 +257,7 @@ class DRLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a DREstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(DREstimator, imputer.estimation_method)
-        return super().fit(data_array, mask_array, imputer)
+        return super().fit(data_array, mask_array, imputer, ret_trials)
 
 
 class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
@@ -259,13 +270,15 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
-    ) -> tuple[float, float]:
+        ret_trials: bool = False,
+    ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns using a TSEstimator.
 
         Args:
             data_array (npt.NDArray): Data matrix.
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
+            ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -280,125 +293,3 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
         return super().fit(data_array, mask_array, imputer)
-
-
-class DirectOptimization(FitMethod):
-    """Non-cross-validation fit method. Analytically optimizes the squared MMD error."""
-    
-    # TODO: add support for other kernels (challenge is that maximum of poly kernels depend on the data distribution)
-    def __init__(
-        self, row: int, column: int, kernel: str, eta_cand: npt.NDArray, delta: float
-    ):
-        """Initialize the fit method with additional parameters.
-
-        Args:
-            kernel (str): Kernel to use for the MMD
-            eta_cand (npt.NDArray): Candidate distance thresholds
-            delta (float): Significance level
-            row (int): target row index
-            column (int): target column index
-
-        """
-        supported_kernels = ["exponential"]
-
-        if kernel not in supported_kernels:
-            raise ValueError(
-                f"Kernel {kernel} is not supported. Supported kernels are {supported_kernels}"
-            )
-
-        self.kernel = kernel
-        self.eta_cand = eta_cand
-        self.delta = delta
-        self.row = row
-        self.column = column
-
-    def fit(
-        self,
-        data_array: npt.NDArray,
-        mask_array: npt.NDArray,
-        imputer: NearestNeighborImputer,
-    ) -> float:
-        """Analytically optimizes the squared MMD error.
-
-        Args:
-            data_array (npt.NDArray): Data array
-            mask_array (npt.NDArray): Mask array
-            imputer (NearestNeighborImputer): Imputer
-
-        Returns:
-            float: Best distance threshold
-
-        """
-        # Initialize sup_kern outside conditional
-        sup_kern = 1  # Default value
-        if self.kernel == "exponential":
-            sup_kern = 1  # TODO: need to change for general kernels
-
-        delta = self.delta
-        eta_cand = self.eta_cand
-        row = self.row
-        column = self.column
-
-        n_rows, n_cols = data_array.shape[0], data_array.shape[1]
-        n = data_array[0, 0].shape[0]  # number of samples per distribution
-        data_type = DistributionKernelMMD(self.kernel)
-
-        row_distances = np.zeros(n_rows)
-        for i in range(n_rows):
-            # Get columns observed in both row i and row
-            overlap_columns = np.logical_and(mask_array[row], mask_array[i])
-
-            if not np.any(overlap_columns):
-                row_distances[i] = np.inf
-                continue
-
-            # Calculate distance between rows
-            for j in range(n_cols):
-                if (
-                    not overlap_columns[j] or j == column
-                ):  # Skip missing values and the target column
-                    continue
-                row_distances[i] += data_type.distance(
-                    data_array[row, j], data_array[i, j]
-                )
-            row_distances[i] /= np.sum(overlap_columns)
-
-        perf = []
-
-        for eta in eta_cand:
-            neighborhood = np.where(
-                (row_distances < eta) * (mask_array[:, column]) == 1
-            )[0]  # Set of neighbors: (i) within eta distance (ii) observed
-
-            if (
-                sum(np.isin(neighborhood, row)) == 1
-            ):  # Pretending as if (row, column) entry is missing
-                neighborhood = np.delete(neighborhood, np.where(neighborhood == row)[0])
-
-            if (
-                len(neighborhood) == 0
-            ):  # Default (null) output when there is zero neighbor
-                perf.append(10**5)  # Avoid selecting such eta without neighbors
-            else:
-                overlap = []
-                for neighbor in neighborhood:
-                    overlap.append(np.sum(mask_array[row, :] * mask_array[neighbor, :]))
-
-                Bias = (
-                    8
-                    * np.exp(1 / np.exp(1))
-                    * sup_kern
-                    * np.log(2 * n_rows / delta)
-                    / (np.sqrt(2 * np.log(2) * np.min(overlap)))
-                )
-                Variance = 4 * sup_kern * (np.log(n) + 1.5) / (n * len(neighborhood))
-
-                perf.append(eta + Bias + Variance)
-
-        if not perf:  # Handle case when perf list is empty
-            return float(
-                "inf"
-            )  # Return infinity as a default value when no valid threshold is found
-
-        eta_star = eta_cand[np.argmin(perf)]
-        return eta_star

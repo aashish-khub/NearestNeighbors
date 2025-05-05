@@ -3,6 +3,7 @@
 import numpy.typing as npt
 from abc import ABC, abstractmethod
 from typing import Any, Union, Tuple
+from hyperopt import Trials
 
 
 class DataType(ABC):
@@ -146,13 +147,20 @@ class FitMethod(ABC):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
-    ) -> Union[float, Tuple[float, float]]:
+        ret_trials: bool = False,
+    ) -> Union[
+        float,
+        Tuple[float, float],
+        Tuple[float, Trials],
+        Tuple[Tuple[float, float], Trials],
+    ]:
         """Find the best distance threshold for the given data.
 
         Args:
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
             imputer (NearestNeighborImputer): Imputer object
+            ret_trials (bool): Whether to return metadata about the hyperparameter search. Defaults to False.
 
         Returns:
             float | Tuple[float, float]: Best distance threshold(s)

@@ -17,12 +17,12 @@ LINE_ALPHA = 0.75
 OUTWARD = 4
 
 METHOD_ALIASES = {
-    "row-row": "Row-NN",
-    "col-col": "Col-NN",
-    "dr": "DR-NN",
-    "ts": "TS-NN",
+    "row-row": "Row-\nNN",
+    "col-col": "Col-\nNN",
+    "dr": "DR-\nNN",
+    "ts": "TS-\nNN",
     "usvt": "USVT",
     "softimpute": "SoftImpute",
     "nadaraya": "NW",
-    "star": "Star-NN",
+    "star": "Star-\nNN",
 }

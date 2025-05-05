@@ -42,6 +42,12 @@ df_grouped = (
     .agg(lambda x: list([val for val in x if pd.notna(val)]))
     .reset_index()
 )
+# rearrange the order of the estimation methods by
+# "usvt", "row-row", "col-col", "dr", "ts", "star"
+ORDER = ["usvt", "col-col", "row-row", "dr", "ts", "star"]
+df_grouped = df_grouped.sort_values(
+    by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
+)
 
 for col_name, alias in [
     ("est_errors", "Absolute error"),

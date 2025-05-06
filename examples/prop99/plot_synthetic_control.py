@@ -24,8 +24,13 @@ fig = plt.figure(figsize=(5.5, 3))
 ax = fig.add_subplot(111)
 for i, file in enumerate(files):
     df = pd.read_csv(file, index_col=0)
-    method = df.iloc[0]["estimation_method"]
-    ax.plot(df.index, df["control"], label=f"Control ({method})", linestyle="--")
+    method = plotting_utils.METHOD_ALIASES_SINGLE_LINE.get(
+        df.iloc[0]["estimation_method"], df.iloc[0]["estimation_method"]
+    )
+    line_style = plotting_utils.METHOD_LINE_STYLES.get(
+        df.iloc[0]["estimation_method"], "-"
+    )
+    ax.plot(df.index, df["control"], label=f"Control ({method})", linestyle=line_style)
     if i == 0:
         ax.plot(df.index, df["obs"], label="Observed")
 # add a vertical line at 1989 called Proposal 99
@@ -55,6 +60,8 @@ ax.spines["bottom"].set_position(
 ax.spines["left"].set_position(
     ("outward", plotting_utils.OUTWARD)
 )  # Move y-axis outward
-ax.legend()
+ax.legend(fontsize=plotting_utils.LEGEND_FONT_SIZE)
 # plt.show()
-plt.savefig(os.path.join(figures_dir, "california-synthetic-control.pdf"))
+save_path = os.path.join(figures_dir, "california-synthetic-control.pdf")
+logger.info(f"Saving figure to {save_path}...")
+plt.savefig(save_path)

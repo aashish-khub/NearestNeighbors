@@ -26,3 +26,25 @@ METHOD_ALIASES = {
     "nadaraya": "NW",
     "star": "Star-\nNN",
 }
+
+METHOD_ALIASES_SINGLE_LINE = {
+    "row-row": "Row-NN",
+    "col-col": "Col-NN",
+    "dr": "DR-NN",
+    "ts": "TS-NN",
+    "usvt": "USVT",
+    "softimpute": "SoftImpute",
+    "nadaraya": "NW",
+    "star": "Star-NN",
+}
+
+METHOD_LINE_STYLES = {
+    "row-row": "--",
+    "col-col": "--",
+    "dr": "dotted",
+    "ts": "dotted",
+    "usvt": "-",
+    "softimpute": "-",
+    "nadaraya": "-",
+    "star": "dashdot",
+}

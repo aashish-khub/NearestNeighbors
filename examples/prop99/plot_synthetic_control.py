@@ -61,6 +61,13 @@ ax.spines["left"].set_position(
     ("outward", plotting_utils.OUTWARD)
 )  # Move y-axis outward
 ax.legend(fontsize=plotting_utils.LEGEND_FONT_SIZE)
+plt.subplots_adjust(
+    left=0.15,
+    right=0.95,
+    # top=0.9,
+    # bottom=0.2,
+)
+
 # plt.show()
 save_path = os.path.join(figures_dir, "california-synthetic-control.pdf")
 logger.info(f"Saving figure to {save_path}...")

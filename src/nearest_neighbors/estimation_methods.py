@@ -441,6 +441,7 @@ class TSEstimator(EstimationMethod):
         else:
             eta_row = distance_threshold
             eta_col = distance_threshold
+        # import pdb; pdb.set_trace()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -582,11 +583,13 @@ class StarNNEstimator(EstimationMethod):
             row_distances = np.copy(self.row_distances)
 
         row_distances = row_distances[row, observed_rows]
-        row_distances = np.where(observed_rows == row, 0, row_distances - 2 * noise_variance)
-        
+        row_distances = np.where(
+            observed_rows == row, 0, row_distances - 2 * noise_variance
+        )
+
         row_dist_min = min(0, np.min(row_distances))
         row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
-        
+
         mean_distance = np.mean(row_distances)
         dist_diff = row_distances - mean_distance
         # print (noise_variance)
@@ -702,7 +705,7 @@ class StarNNEstimator(EstimationMethod):
         """Computes distances, caches them."""
         # TODO add validation checks here
         n_rows, n_cols = data_array.shape
-        row_distances = np.zeros((n_rows, n_cols))
+        row_distances = np.zeros((n_rows, n_rows))
 
         for i in range(n_rows):
             for j in range(i + 1, n_rows):

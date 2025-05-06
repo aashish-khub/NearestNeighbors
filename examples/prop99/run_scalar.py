@@ -192,7 +192,6 @@ elif estimation_method == "star":
     for col in tqdm(range(data.shape[1]), desc="Imputing missing values"):
         imputed_value = imputer.impute(row_california, col, data, mask)
         control_list.append(imputed_value)
-    control_list = np.array(control_list)
 else:
     if estimation_method == "dr":
         logger.info("Using doubly robust estimation")
@@ -204,7 +203,7 @@ else:
             block,
             distance_threshold_range_row=(0, 300**2),
             distance_threshold_range_col=(0, 300**2),
-            n_trials=200,
+            n_trials=400,
             data_type=data_type,
         )
     elif estimation_method == "row-row":
@@ -226,7 +225,7 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            distance_threshold_range=(0, 300**2),
+            distance_threshold_range=(0, 1000**2),
             n_trials=200,
             data_type=data_type,
         )
@@ -241,7 +240,7 @@ else:
             block,
             distance_threshold_range_row=(0, 300**2),
             distance_threshold_range_col=(0, 300**2),
-            n_trials=200,
+            n_trials=500,
             data_type=data_type,
         )
     else:

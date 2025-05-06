@@ -61,7 +61,6 @@ class RowRowEstimator(EstimationMethod):
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
             # Exclude the target column
-<<<<<<< HEAD
             if not allow_self_neighbor:
                 all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
@@ -86,17 +85,6 @@ class RowRowEstimator(EstimationMethod):
 
         # NOTE: this code block will never be called since the target row
         # is always a nearest neighbor
-=======
-            all_dists[:, column] = np.nan
-            row_dists = np.nanmean(all_dists, axis=1)
-
-            # Find the nearest neighbors indexes
-            nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
-            # Apply mask_array to data_array
-            masked_data_array = np.where(mask_array, data_array, np.nan)
-
-        # If no neighbors found, return nan
->>>>>>> f89d193 (updated run_scalar)
         if len(nearest_neighbors) == 0:
             # return np.array(np.nan)
             # NOTE: implement the base case described by Eq. 11 in
@@ -107,18 +95,10 @@ class RowRowEstimator(EstimationMethod):
             else:
                 # return the average of all observed outcomes corresponding
                 # to treatment 1 at time t.
-<<<<<<< HEAD
                 return data_type.average(masked_data_array[:, column])
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
-=======
-                return np.array(np.nanmean(masked_data_array[:, column]))
-
-        # Calculate the average of the nearest neighbors
-        nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
-
->>>>>>> f89d193 (updated run_scalar)
         return data_type.average(nearest_neighbors_data)
 
     def _calculate_distances(
@@ -537,6 +517,16 @@ class TSEstimator(EstimationMethod):
             npt.NDArray: Imputed value.
 
         """
+<<<<<<< HEAD
+=======
+        if isinstance(distance_threshold, tuple):
+            eta_row, eta_col = distance_threshold
+        else:
+            eta_row = distance_threshold
+            eta_col = distance_threshold
+        # import pdb; pdb.set_trace()
+
+>>>>>>> 8076463 (bug fix in StarNNEstimator._calculate_distances)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             self._calculate_distances(row, column, data_array, mask_array, data_type)
@@ -706,16 +696,8 @@ class StarNNEstimator(EstimationMethod):
         row_dist_min = min(0, np.min(d))
         d = np.where(observed_rows == row, 0, d - row_dist_min)
 
-<<<<<<< HEAD
         mean_distance = np.mean(d)
         dist_diff = d - mean_distance
-=======
-        row_dist_min = min(0, np.min(row_distances))
-        row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
-
-        mean_distance = np.mean(row_distances)
-        dist_diff = row_distances - mean_distance
->>>>>>> f89d193 (updated run_scalar)
         # print (noise_variance)
         if noise_variance != 0:
             weights = (1 / n_observed) - dist_diff / (

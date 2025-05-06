@@ -2,11 +2,7 @@ from .nnimputer import FitMethod, DataType, NearestNeighborImputer
 from .estimation_methods import DREstimator, TSEstimator  # , AutoEstimator
 import numpy.typing as npt
 from hyperopt import hp, fmin, tpe, Trials
-<<<<<<< HEAD
 from typing import cast, Union, Any
-=======
-from typing import cast, Union
->>>>>>> a7aa5a5 (sped up estimation methods by pre-computing distances for cv)
 import numpy as np
 
 
@@ -334,8 +330,4 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a TSEstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
-<<<<<<< HEAD
-        return super().fit(data_array, mask_array, imputer)
-=======
         return super().fit(data_array, mask_array, imputer, ret_trials, verbose)
->>>>>>> a7aa5a5 (sped up estimation methods by pre-computing distances for cv)

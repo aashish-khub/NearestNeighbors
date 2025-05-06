@@ -36,6 +36,7 @@ METHOD_ALIASES_SINGLE_LINE = {
     "softimpute": "SoftImpute",
     "nadaraya": "NW",
     "star": "Star-NN",
+    "sc": "SC",
 }
 
 METHOD_LINE_STYLES = {
@@ -47,4 +48,5 @@ METHOD_LINE_STYLES = {
     "softimpute": "-",
     "nadaraya": "-",
     "star": "dashdot",
+    "sc": "-",
 }

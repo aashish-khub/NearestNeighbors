@@ -11,8 +11,9 @@ METHODS=(
     "col-col"
     "dr"
     "ts"
+    "star"
 )
 for em in ${METHODS[@]};
 do
-    python run_scalar.py -od $OUTPUT_DIR -em $em --force
+    python run_scalar.py -od $OUTPUT_DIR -em $em
 done

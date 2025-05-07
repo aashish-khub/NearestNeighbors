@@ -2,7 +2,11 @@ from .nnimputer import FitMethod, DataType, NearestNeighborImputer
 from .estimation_methods import DREstimator, TSEstimator  # , AutoEstimator
 import numpy.typing as npt
 from hyperopt import hp, fmin, tpe, Trials
+<<<<<<< HEAD
 from typing import cast, Union, Any
+=======
+from typing import cast, Union
+>>>>>>> a7aa5a5 (sped up estimation methods by pre-computing distances for cv)
 import numpy as np
 
 
@@ -35,8 +39,14 @@ def evaluate_imputation(
     """
     # Block out the test cells
     for row, col in test_cells:
-        if mask_array[row, col] == 0 or data_array[row, col] is None:
+        if mask_array[row, col] == 0:
             raise ValueError("Validation cell is missing.")
+        if isinstance(data_array, np.ndarray):
+            if data_array[row, col] is None:
+                raise ValueError("Validation cell is missing.")
+        # elif isinstance(data_array, coo_matrix):
+        #     if data_array.data[row, col] is None:
+        #         raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
     errors = []
     for row, col in test_cells:
@@ -184,6 +194,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
         ret_trials: bool = False,
+        verbose: bool = False,
     ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns by leaving out a block of cells and testing imputation.
 
@@ -192,6 +203,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
             ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
+            verbose (bool): If True, print the progress.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -235,7 +247,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             },
             algo=tpe.suggest,
             max_evals=self.n_trials,
-            verbose=False,
+            verbose=verbose,
             trials=trials,
         )
 
@@ -262,6 +274,7 @@ class DRLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
         ret_trials: bool = False,
+        verbose: bool = False,
     ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns using a DREstimator.
 
@@ -270,6 +283,7 @@ class DRLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
             ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
+            verbose (bool): If True, print the progress.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -283,7 +297,7 @@ class DRLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a DREstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(DREstimator, imputer.estimation_method)
-        return super().fit(data_array, mask_array, imputer, ret_trials)
+        return super().fit(data_array, mask_array, imputer, ret_trials, verbose)
 
 
 class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
@@ -297,6 +311,7 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
         ret_trials: bool = False,
+        verbose: bool = False,
     ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns using a TSEstimator.
 
@@ -305,6 +320,7 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
             ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
+            verbose (bool): If True, print the progress.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -318,4 +334,8 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a TSEstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
+<<<<<<< HEAD
         return super().fit(data_array, mask_array, imputer)
+=======
+        return super().fit(data_array, mask_array, imputer, ret_trials, verbose)
+>>>>>>> a7aa5a5 (sped up estimation methods by pre-computing distances for cv)

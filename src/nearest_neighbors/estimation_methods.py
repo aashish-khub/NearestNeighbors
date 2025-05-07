@@ -55,8 +55,13 @@ class RowRowEstimator(EstimationMethod):
             npt.NDArray: Imputed value
 
         """
+        if isinstance(distance_threshold, tuple):
+            raise ValueError(
+                "RowRowEstimator only supports a single distance threshold."
+            )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
+
             # Calculate distances between rows
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
@@ -120,9 +125,7 @@ class RowRowEstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        data_shape = data_array.shape
-        n_rows = data_shape[0]
-        n_cols = data_shape[1]
+        n_rows, n_cols = data_array.shape
 
         if row in self.row_distances:
             return
@@ -132,11 +135,11 @@ class RowRowEstimator(EstimationMethod):
         # Scalar optimization with vectorized operations instead of loops
         if isinstance(data_type, Scalar):
             # Determine overlap columns for any pairwise rows
-            overlap_columns_mask = np.logical_and(
-                np.tile(mask_array[row], (n_rows, 1)), mask_array
-            )
-            row_big_matrix = np.tile(data_array[row], (n_rows, 1))
-            row_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
+            overlap_columns_mask = np.logical_and(mask_array[row], mask_array)
+            row_dists = np.power(data_array - data_array[row], 2)
+
+            if row_dists.dtype is not np.float64:
+                row_dists = row_dists.astype(np.float64)
             # We need the row dists as a float matrix to use np.nanmean
             row_dists[~overlap_columns_mask] = np.nan
             self.row_distances[row] = row_dists

@@ -43,37 +43,84 @@ class RowRowEstimator(EstimationMethod):
             npt.NDArray: Imputed value
 
         """
+        if isinstance(distance_threshold, tuple):
+            raise ValueError(
+                "RowRowEstimator only supports a single distance threshold."
+            )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
+
             # Calculate distances between rows
             self._calculate_distances(row, column, data_array, mask_array, data_type)
-            all_dists = np.copy(self.row_distances[row])
-            # Exclude the target column
-            all_dists[:, column] = np.nan
-            row_dists = np.nanmean(all_dists, axis=1)
 
-            # Find the nearest neighbors indexes
-            nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
-            # Apply mask_array to data_array
-            masked_data_array = np.where(mask_array, data_array, np.nan)
+            if isinstance(self.row_distances[row], dict):
+                nearest_neighbors = []
 
-        # If no neighbors found, return nan
-        if len(nearest_neighbors) == 0:
-            # return np.array(np.nan)
-            # NOTE: implement the base case described by Eq. 11 in
-            # "Counterfactual Inference for Sequential Experiments".
-            if mask_array[row, column]:
-                # return the observed outcome
-                return data_array[row, column]
+                for i in range(data_array.shape[0]):
+                    if len(self.row_distances[row][i]) == 0:
+                        continue
+                    else:
+                        # distances except for the target column
+                        dists = [
+                            t[0] for t in self.row_distances[row][i] if t[1] != column
+                        ]
+                        if not dists:
+                            continue
+                        if (
+                            sum(dists) / len(dists) <= distance_threshold
+                            and mask_array[i, column]
+                        ):
+                            nearest_neighbors.append(data_array[i, column])
+
             else:
-                # return the average of all observed outcomes corresponding
-                # to treatment 1 at time t.
-                return np.array(np.nanmean(masked_data_array[:, column]))
+                all_dists = self.row_distances[row]
+                # Exclude the target column
+                column_values = all_dists[:, column]
+                all_dists[:, column] = np.nan
+                row_dists = np.nanmean(all_dists, axis=1)
+                all_dists[:, column] = column_values
+                # Find the nearest neighbors indexes
+                nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
+            # Apply mask_array to data_array
+            # masked_data_array = np.where(mask_array, data_array, np.nan)
+
+            # If no neighbors found, return nan
+            if len(nearest_neighbors) == 0:
+                # return np.array(np.nan)
+                # NOTE: implement the base case described by Eq. 11 in
+                # "Counterfactual Inference for Sequential Experiments".
+                if mask_array[row, column]:
+                    # return the observed outcome
+                    return data_array[row, column]
+                else:
+                    # return the average of all observed outcomes corresponding
+                    # to treatment 1 at time t.
+                    mask = mask_array[:, column].astype(bool)
+                    return np.array(np.nanmean(data_array[:, column][mask]))
 
         # Calculate the average of the nearest neighbors
-        nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
+        # Store nearest neighbors for further processing
+        masked_neighbors = mask_array[nearest_neighbors, column].astype(bool)
+        nearest_neighbors_data = data_array[nearest_neighbors, column]
+        return data_type.average(nearest_neighbors_data[masked_neighbors])
 
-        return data_type.average(nearest_neighbors_data)
+    def _precalculate_distances(
+        self, data_array: npt.NDArray, mask_array: npt.NDArray, rows: npt.NDArray
+    ) -> None:
+        """Pre-calculate distances for all rows in the data array.
+
+        Args:
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            rows (list[int]): List of row indices to calculate distances for
+
+        """
+        rows = np.sort(rows)
+        data_subset = data_array[rows, :]
+        dists = np.square(data_subset[:, None, :] - data_array[None, :, :])
+
+        for i, r in enumerate(rows):
+            self.row_distances[r] = dists[i]
 
     def _calculate_distances(
         self,
@@ -94,9 +141,7 @@ class RowRowEstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        data_shape = data_array.shape
-        n_rows = data_shape[0]
-        n_cols = data_shape[1]
+        n_rows, n_cols = data_array.shape
 
         if row in self.row_distances:
             return
@@ -107,11 +152,11 @@ class RowRowEstimator(EstimationMethod):
         # Scalar optimization with vectorized operations instead of loops
         if isinstance(data_type, Scalar):
             # Determine overlap columns for any pairwise rows
-            overlap_columns_mask = np.logical_and(
-                np.tile(mask_array[row], (n_rows, 1)), mask_array
-            )
-            row_big_matrix = np.tile(data_array[row], (n_rows, 1))
-            row_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
+            overlap_columns_mask = np.logical_and(mask_array[row], mask_array)
+            row_dists = np.power(data_array - data_array[row], 2)
+
+            if row_dists.dtype is not np.float64:
+                row_dists = row_dists.astype(np.float64)
             # We need the row dists as a float matrix to use np.nanmean
             row_dists[~overlap_columns_mask] = np.nan
             self.row_distances[row] = row_dists

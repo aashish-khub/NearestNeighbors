@@ -21,7 +21,7 @@ from baselines import usvt
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import TSEstimator
+from nearest_neighbors.estimation_methods import RowRowEstimator, TSEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -61,10 +61,12 @@ rng = np.random.default_rng(seed=seed)
 # Load the movielens
 # NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-sample_users = None# 1000
-sample_movies = None# 1000
+sample_users = None  # 1000
+sample_movies = None  # 1000
 seed = 0
-ml_dataloader = NNData.create("movielens", sample_users=sample_users, sample_movies=sample_movies, seed=seed)
+ml_dataloader = NNData.create(
+    "movielens", sample_users=sample_users, sample_movies=sample_movies, seed=seed
+)
 
 data, mask = ml_dataloader.process_data_scalar()
 data_sparsity = 1 - np.sum(mask) / mask.size
@@ -85,14 +87,16 @@ range_inds = np.arange(len(inds_rows))
 # randomly shuffle indices
 rng.shuffle(range_inds)
 # 20% of the indices will be used for testing
-test_size = int(0.2 * len(range_inds))
+test_size = int(0.8 * len(range_inds))
 test_inds = range_inds[:test_size]
+test_inds = test_inds[:200]
 # 80% of the indices will be used for training
 train_inds = range_inds[test_size:]
 range_train_inds = np.arange(len(train_inds))
 rng.shuffle(range_train_inds)
 # 20% of the training indices will be used for cv holdout
-cv_size = int(0.2 * len(train_inds))
+# cv_size = int(0.01 * len(train_inds))
+cv_size = 20
 cv_inds = range_train_inds[:cv_size]
 # get the rows and columns of the train indices
 
@@ -103,12 +107,20 @@ test_inds_rows = list(inds_rows[test_inds])
 test_inds_cols = list(inds_cols[test_inds])
 
 block = list(zip(cv_inds_rows, cv_inds_cols))
+
+# # Convert dense data_array to sparse, skipping NaNs using mask
+valid_mask = (~np.isnan(data)) & (mask == 1)
+# rows, cols = np.where(valid_mask)
+# values = data[rows, cols]
+
+# data_sparse = coo_matrix((values, (rows, cols)), shape=data.shape).tocsc()
+
 test_block = list(zip(test_inds_rows, test_inds_cols))
 
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
-num_trials = 100
+num_trials = 10
 if estimation_method == "usvt":
     logger.info("Using USVT estimation")
     # setup usvt imputation
@@ -141,6 +153,13 @@ else:
     elif estimation_method == "row-row":
         logger.info("Using row-row estimation")
         imputer = row_row()
+        if not isinstance(imputer.estimation_method, RowRowEstimator):
+            raise ValueError(
+                f"Estimation method {imputer.estimation_method} not supported for row-row"
+            )
+        imputer.estimation_method._precalculate_distances(
+            data, mask, np.array(cv_inds_rows)
+        )
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
@@ -180,7 +199,7 @@ else:
         )
 
     start_time = time()
-    trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
+    trials = fitter.fit(data, valid_mask, imputer, ret_trials=True, verbose=True)
     end_time = time()
     fit_times = [end_time - start_time] * len(test_block)
 

@@ -66,7 +66,8 @@ class RowRowEstimator(EstimationMethod):
             row_dists = np.nanmean(all_dists, axis=1)
             if self.is_percentile:
                 # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
-                eta_row = np.quantile(row_dists, distance_threshold)
+                quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
+                eta_row = np.quantile(quantile_row_dists, distance_threshold)
             else:
                 eta_row = distance_threshold
 
@@ -163,7 +164,7 @@ class ColColEstimator(EstimationMethod):
             is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
 
         """
-        self.estimator = RowRowEstimator(is_percentile=is_percentile)
+        self.estimator = RowRowEstimator()
         # use the same logic as RowRowEstimator but transposed
         # save the distances
 
@@ -264,6 +265,7 @@ class DREstimator(EstimationMethod):
             or a tuple of (row_threshold, col_threshold) for row and column respectively.
             data_type (DataType): Data type to use (e.g. scalars, distributions)
             allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
+            **kwargs (Any): Additional keyword arguments
 
         """
         with warnings.catch_warnings():
@@ -292,8 +294,10 @@ class DREstimator(EstimationMethod):
             eta_col = distance_threshold
         if self.is_percentile:
             # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
-            eta_row = np.quantile(row_dists, eta_row)
-            eta_col = np.quantile(col_dists, eta_col)
+            quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
+            quantile_col_dists = col_dists[~np.isnan(col_dists) & (col_dists != np.inf)]
+            eta_row = np.quantile(quantile_row_dists, eta_row)
+            eta_col = np.quantile(quantile_col_dists, eta_col)
 
         # Find the row nearest neighbors indexes
         row_nearest_neighbors = np.nonzero(row_dists <= eta_row)[0]
@@ -459,6 +463,7 @@ class TSEstimator(EstimationMethod):
             is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
 
         """
+        super().__init__(is_percentile)
         self.estimator = DREstimator(is_percentile=is_percentile)
 
     def __str__(self):
@@ -516,8 +521,10 @@ class TSEstimator(EstimationMethod):
             eta_col = distance_threshold
         if self.is_percentile:
             # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
-            eta_row = np.quantile(row_dists, eta_row)
-            eta_col = np.quantile(col_dists, eta_col)
+            quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
+            quantile_col_dists = col_dists[~np.isnan(col_dists) & (col_dists != np.inf)]
+            eta_row = np.quantile(quantile_row_dists, eta_row)
+            eta_col = np.quantile(quantile_col_dists, eta_col)
 
         # Establish the neighborhoods subject to the distance thresholds
         row_nearest_neighbors = np.where(row_dists <= eta_row)[0]

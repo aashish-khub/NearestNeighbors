@@ -34,6 +34,7 @@ def evaluate_imputation(
         if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
+    print(imputer.estimation_method.is_percentile)
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]

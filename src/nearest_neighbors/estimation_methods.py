@@ -14,8 +14,16 @@ logger = logging.getLogger(__name__)
 class RowRowEstimator(EstimationMethod):
     """Estimate the missing value using row-row nearest neighbors."""
 
-    def __init__(self):
+    def __init__(self, is_percentile: bool = True):
+        """Initialize the row-row estimator.
+
+        Args:
+            is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
+
+        """
+        super().__init__(is_percentile)
         self.row_distances = dict()
+
 
     def __str__(self):
         return "RowRowEstimator"
@@ -51,9 +59,14 @@ class RowRowEstimator(EstimationMethod):
             # Exclude the target column
             all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
+            if self.is_percentile:
+                # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
+                eta_row = np.quantile(row_dists, distance_threshold)
+            else:
+                eta_row = distance_threshold
 
             # Find the nearest neighbors indexes
-            nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
+            nearest_neighbors = np.where(row_dists <= eta_row)[0]
             # Apply mask_array to data_array
             masked_data_array = np.where(mask_array, data_array, np.nan)
 
@@ -139,8 +152,14 @@ class RowRowEstimator(EstimationMethod):
 class ColColEstimator(EstimationMethod):
     """Estimate the missing value using column-column nearest neighbors."""
 
-    def __init__(self):
-        self.estimator = RowRowEstimator()
+    def __init__(self, is_percentile: bool = True):
+        """Initialize the column-column estimator.
+
+        Args:
+            is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
+
+        """
+        self.estimator = RowRowEstimator(is_percentile=is_percentile)
         # use the same logic as RowRowEstimator but transposed
         # save the distances
 
@@ -203,7 +222,14 @@ class ColColEstimator(EstimationMethod):
 class DREstimator(EstimationMethod):
     """Estimate the missing entry using doubly robust nearest neighbors."""
 
-    def __init__(self):
+    def __init__(self, is_percentile: bool = True):
+        """Initialize the doubly robust estimator.
+
+        Args:
+            is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
+
+        """
+        super().__init__(is_percentile)
         self.row_distances = dict()
         self.col_distances = dict()
 
@@ -229,13 +255,6 @@ class DREstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        if isinstance(distance_threshold, tuple):
-            distance_threshold_row = distance_threshold[0]
-            distance_threshold_col = distance_threshold[1]
-        else:
-            distance_threshold_row = distance_threshold
-            distance_threshold_col = distance_threshold
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             self._calculate_distances(row, column, data_array, mask_array, data_type)
@@ -251,12 +270,23 @@ class DREstimator(EstimationMethod):
             col_dists = np.nanmean(all_dists, axis=0)
             if not mask_array[row, column]:
                 col_dists[column] = np.inf  # Exclude the target col
+        
+        if isinstance(distance_threshold, tuple):
+            eta_row = distance_threshold[0]
+            eta_col = distance_threshold[1]
+        else:
+            eta_row = distance_threshold
+            eta_col = distance_threshold
+        if self.is_percentile:
+            # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
+            eta_row = np.quantile(row_dists, eta_row)
+            eta_col = np.quantile(col_dists, eta_col)
 
         # Find the row nearest neighbors indexes
-        row_nearest_neighbors = np.nonzero(row_dists <= distance_threshold_row)[0]
+        row_nearest_neighbors = np.nonzero(row_dists <= eta_row)[0]
 
         # Find the col nearest neighbors indexes
-        col_nearest_neighbors = np.nonzero(col_dists <= distance_threshold_col)[0]
+        col_nearest_neighbors = np.nonzero(col_dists <= eta_col)[0]
 
         # neighbors can only be used if they are observed
         row_nearest_neighbors = row_nearest_neighbors[
@@ -407,8 +437,14 @@ class TSEstimator(EstimationMethod):
     over the cross-product of these neighborhoods.
     """
 
-    def __init__(self):
-        self.estimator = DREstimator()
+    def __init__(self, is_percentile: bool = True):
+        """Initialize the two-sided estimator.
+
+        Args:
+            is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
+
+        """
+        self.estimator = DREstimator(is_percentile=is_percentile)
 
     def __str__(self):
         return "TSEstimator"
@@ -436,12 +472,6 @@ class TSEstimator(EstimationMethod):
             npt.NDArray: Imputed value.
 
         """
-        if isinstance(distance_threshold, tuple):
-            eta_row, eta_col = distance_threshold
-        else:
-            eta_row = distance_threshold
-            eta_col = distance_threshold
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             self._calculate_distances(row, column, data_array, mask_array, data_type)
@@ -457,6 +487,16 @@ class TSEstimator(EstimationMethod):
             col_dists = np.nanmean(all_dists, axis=0)
             if not mask_array[row, column]:
                 col_dists[column] = np.inf  # Exclude the target col
+        
+        if isinstance(distance_threshold, tuple):
+            eta_row, eta_col = distance_threshold
+        else:
+            eta_row = distance_threshold
+            eta_col = distance_threshold
+        if self.is_percentile:
+            # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
+            eta_row = np.quantile(row_dists, eta_row)
+            eta_col = np.quantile(col_dists, eta_col)
 
         # Establish the neighborhoods subject to the distance thresholds
         row_nearest_neighbors = np.where(row_dists <= eta_row)[0]

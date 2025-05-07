@@ -10,9 +10,17 @@ T_values = np.array([2**4, 2**5, 2**6, 2**7])
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import argparse
 
+
+parser = argparse.ArgumentParser(description="Plot estimation errors")
+parser.add_argument("--num_sims", type=int, default=30, help="Number of simulations")
+parser.add_argument("--output_dir", type=str, help="Output directory")
+args = parser.parse_args()
 # Define T values (sizes)
 T_values = np.array([2**4, 2**5, 2**6, 2**7])
+num_sims = args.num_sims
+output_dir = args.output_dir
 
 # Function to process a single CSV file and extract errors by size
 def process_csv(filepath):
@@ -21,56 +29,15 @@ def process_csv(filepath):
     
     # Create an array to store the averaged errors for each size and simulation
     # Shape: (4 sizes, 20 simulations)
-    averaged_errors = np.zeros((len(T_values), 30))
+    averaged_errors = np.zeros((len(T_values), num_sims))
     
     for i, size in enumerate(T_values):
-        # Filter rows for this size
-        size_rows = df[df['size'] == size]
-        
-        # Group by simulation run (we need to identify which rows belong to the same simulation)
-        # We'll use a combination of features to identify unique simulation runs
-        # This assumes each simulation has the same number of rows (equal to 'size')
-        
-        # First, get all rows for this size
-        size_data = size_rows.copy()
-        
-        # Calculate number of rows per simulation (should be equal to size)
-        expected_rows_per_sim = size
-        
-        # Total number of rows for this size
-        total_rows = len(size_data)
-        
-        # Expected number of simulations
-        expected_sims = total_rows / expected_rows_per_sim
-        
-        if expected_sims != 30:
-            print(f"Warning: Expected 30 simulations for size {size}, got approximately {expected_sims}")
-        
-        # Now we need to split the data into simulation groups
-        # This assumes the data is already ordered by simulation
-        # and that each simulation has exactly 'size' number of rows
-        
-        for sim_idx in range(min(30, int(np.ceil(expected_sims)))):
-            start_idx = sim_idx * expected_rows_per_sim
-            end_idx = min(start_idx + expected_rows_per_sim, total_rows)
-            
-            if start_idx >= total_rows:
-                # No more data for this simulation, fill with NaN
-                averaged_errors[i, sim_idx] = np.nan
-                continue
-            
-            # Get data for this simulation
-            sim_data = size_data.iloc[start_idx:end_idx]
-            
-            # Average the errors for this simulation
-            if not sim_data.empty:
-                averaged_errors[i, sim_idx] = np.nanmean(sim_data['est_errors'].values)
-            else:
-                averaged_errors[i, sim_idx] = np.nan
-    
-    # Calculate mean and standard error across simulations for each size
-    #mean_errors = np.nanmean(averaged_errors, axis=1)
-    #std_errors = np.nanstd(averaged_errors, axis=1) / np.sqrt(np.sum(~np.isnan(averaged_errors), axis=1))
+        for j in range(num_sims):
+
+            # Filter rows for this simulation
+            size_rows = df[(df['sim_num'] == j) & (df['size'] == size)]
+            size_data = size_rows.copy()
+            averaged_errors[i, j] = np.nanmean(size_data['est_errors'].values)
     
     return averaged_errors
 
@@ -81,14 +48,16 @@ def process_csv(filepath):
 # df_tsnn_errors = pd.read_csv("last_col_exper/results/est_errors-ts-lbo.csv")
 
 # Process each CSV file
-col_err = process_csv("all_exper_errdec_30/results/est_errors-col-col-lbo.csv")
-row_err = process_csv("all_exper_errdec_30/results/est_errors-row-row-lbo.csv")
-usvt_err = process_csv("all_exper_errdec_30/results/est_errors-usvt-lbo.csv")
-drnn_err = process_csv("all_exper_errdec_30/results/est_errors-dr-lbo.csv")
-tsnn_err = process_csv("all_exper_errdec_30/results/est_errors-ts-lbo.csv")
+col_err = process_csv(f"{output_dir}/results/est_errors-col-col-lbo.csv")
+row_err = process_csv(f"{output_dir}/results/est_errors-row-row-lbo.csv")
+usvt_err = process_csv(f"{output_dir}/results/est_errors-usvt-lbo.csv")
+drnn_err = process_csv(f"{output_dir}/results/est_errors-dr-lbo.csv")
+tsnn_err = process_csv(f"{output_dir}/results/est_errors-ts-lbo.csv")
+#softimpute_err = process_csv("cvrange_30sims/results/est_errors-softimpute-lbo.csv")
 
 # Extract errors for each method as a numpy array 4 x 30
-
+print(drnn_err[3])
+print(tsnn_err[3])
 
 # USVT_errors = 2**-3 * T_values**-0.10
 UserNN_errors = np.nanmean(row_err, axis = 1)
@@ -96,6 +65,7 @@ TimeNN_errors = np.nanmean(col_err, axis = 1)
 DRNN_errors = np.nanmean(drnn_err, axis = 1)
 USVT_errors = np.nanmean(usvt_err, axis = 1)
 TSNN_errors = np.nanmean(tsnn_err, axis = 1)
+#Softimpute_errors = np.nanmean(softimpute_err, axis = 1)
 
 
 
@@ -104,7 +74,7 @@ tnn_stderr = np.nanstd(col_err, axis = 1) / np.sqrt(col_err.shape[1])
 drnn_stderr = np.nanstd(drnn_err, axis = 1) / np.sqrt(drnn_err.shape[1])
 usvt_stderr = np.nanstd(usvt_err, axis = 1) / np.sqrt(usvt_err.shape[1])
 tsnn_stderr = np.nanstd(tsnn_err, axis = 1) / np.sqrt(tsnn_err.shape[1])
-
+#softimpute_stderr = np.nanstd(softimpute_err, axis = 1) / np.sqrt(softimpute_err.shape[1])
 
 
 # Create the plot
@@ -123,6 +93,7 @@ unn_slope = add_regression_line(T_values, UserNN_errors, 'green', 'User-NN', ':'
 tnn_slope = add_regression_line(T_values, TimeNN_errors, 'orange', 'Time-NN', ':')
 drnn_slope = add_regression_line(T_values, DRNN_errors, 'blue', 'DR-NN', '--')
 tsnn_slope = add_regression_line(T_values, TSNN_errors, 'purple', 'Time-NN', ':')
+#softimpute_slope = add_regression_line(T_values, Softimpute_errors, 'black', 'SoftImpute', ':')
 
 # Plot each method with corresponding markers, colors, and line styles
 plt.errorbar(T_values, USVT_errors, yerr=usvt_stderr, fmt = 'r', marker='>', markersize=12, linestyle='None', barsabove=True, label=rf'USVT: $T^{{{usvt_slope:.2f}}}$')
@@ -130,6 +101,7 @@ plt.errorbar(T_values, UserNN_errors, yerr=unn_stderr, fmt = 'g', marker='o', ma
 plt.errorbar(T_values, TimeNN_errors, yerr=tnn_stderr, fmt='s', color = "orange", marker='s', linestyle='None', markersize=12, label=rf'Col-NN: $T^{{{tnn_slope:.2f}}}$')
 plt.errorbar(T_values, DRNN_errors, fmt='bD', yerr=drnn_stderr, markersize=12, linestyle="None", label=rf'DR-NN: $T^{{{drnn_slope:.2f}}}$')
 plt.errorbar(T_values, TSNN_errors, fmt='p', yerr=tsnn_stderr, markersize=12, linestyle="None", label=rf'TS-NN: $T^{{{tsnn_slope:.2f}}}$')
+#plt.errorbar(T_values, Softimpute_errors, fmt='k^', yerr=softimpute_stderr, markersize=12, linestyle="None", label=rf'SoftImpute: $T^{{{softimpute_slope:.2f}}}$')
 # Logarithmic scale for both axes
 plt.xscale('log', base=2)
 plt.yscale('log', base=2)
@@ -154,7 +126,7 @@ ax1.grid(True, alpha=0.4)
 
 
 # Show the plot#
-plt.savefig("all_exper_errdec_30/sims_plot.pdf", bbox_inches = "tight")
+plt.savefig(f"{output_dir}/sims_plot.pdf", bbox_inches = "tight")
 
 
 # import pandas as pd

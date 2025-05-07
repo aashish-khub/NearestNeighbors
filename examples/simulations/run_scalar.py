@@ -17,34 +17,37 @@ import pandas as pd
 from hyperopt import Trials
 
 # import baseline methods
-from baselines import usvt
+from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import TSEstimator
+from nearest_neighbors.estimation_methods import TSEstimator, AutoEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
 
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+import argparse
 
 parser = get_base_parser()
+parser.add_argument("--allow_self_neighbor", action=argparse.BooleanOptionalAction, help="Allow self neighbor")
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
 seed = args.seed
 log_level = args.log_level
-print(log_level)
+allow_self_neighbor = args.allow_self_neighbor
 setup_logging(log_level)
 logger = logging.getLogger(__name__)
-
+print(args.allow_self_neighbor)
 os.makedirs(output_dir, exist_ok=True)
 results_dir = os.path.join(output_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
@@ -139,6 +142,21 @@ def random_trial() -> None:
             # set the time to the average time per imputation
             imputation_times = [elapsed_time / len(test_block)] * len(test_block)
             fit_times = [0] * len(test_block)
+        elif estimation_method == "softimpute":
+            logger.info("Using SoftImpute estimation")
+            # setup usvt imputation
+            si_data = data.copy()
+            si_mask = mask.copy()
+            si_mask[test_inds_rows, test_inds_cols] = 0
+            si_data[si_mask != 1] = np.nan
+            # impute missing values simultaneously
+            start_time = time()
+            si_imputed = softimpute(si_data)
+            elapsed_time = time() - start_time
+            imputations = si_imputed[test_inds_rows, test_inds_cols]
+            # set the time to the average time per imputation
+            imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+            fit_times = [0] * len(test_block)
         else:
             if estimation_method == "dr":
                 logger.info("Using doubly robust estimation")
@@ -152,6 +170,7 @@ def random_trial() -> None:
                     distance_threshold_range_col=(0, 50),
                     n_trials=200,
                     data_type=data_type,
+                    allow_self_neighbor=args.allow_self_neighbor,
                 )
             elif estimation_method == "row-row":
                 logger.info("Using row-row estimation")
@@ -163,6 +182,7 @@ def random_trial() -> None:
                     distance_threshold_range=(0, 50),
                     n_trials=200,
                     data_type=data_type,
+                    allow_self_neighbor=args.allow_self_neighbor,
                 )
             elif estimation_method == "col-col":
                 logger.info("Using col-col estimation")
@@ -174,6 +194,7 @@ def random_trial() -> None:
                     distance_threshold_range=(0, 50),
                     n_trials=200,
                     data_type=data_type,
+                    allow_self_neighbor=args.allow_self_neighbor,
                 )
             elif estimation_method == "ts":
                 logger.info("Using two-sided estimation")
@@ -188,6 +209,25 @@ def random_trial() -> None:
                     distance_threshold_range_col=(0, 50),
                     n_trials=200,
                     data_type=data_type,
+                    allow_self_neighbor=args.allow_self_neighbor,
+                )
+            elif estimation_method == "autonn":
+                logger.info("Using AutoNN estimation")
+                estimator = AutoEstimator()
+                imputer = NearestNeighborImputer(
+                    estimator, data_type
+                )
+
+                logger.info("Using AutoNN fit method")
+                # Fit the imputer using leave-block-out validation
+                fitter = AutoDRTSLeaveBlockOutValidation(
+                    block,
+                    distance_threshold_range_row=(0, 50),
+                    distance_threshold_range_col=(0, 50),
+                    gamma_range=(-1, 1),
+                    n_trials=200,
+                    data_type=data_type,
+                    allow_self_neighbor=args.allow_self_neighbor,
                 )
             else:
                 raise ValueError(
@@ -195,48 +235,48 @@ def random_trial() -> None:
                 )
 
             start_time = time()
-            trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
+            trials = fitter.fit(data, mask_test, imputer, ret_trials=False)
             end_time = time()
             fit_times = [end_time - start_time] * len(test_block)
 
             # CODE FOR EXTRACTING TRIAL METADATA
-            if (
-                not isinstance(trials, float)
-                and not isinstance(trials, int)
-                and isinstance(trials[1], Trials)
-            ):
-                trials = trials[1]
-                trial_data = []
-                for trial in trials.trials:
-                    row = {}
-                    # get param vals
-                    params = trial["misc"]["vals"]
-                    for param_name, param_values in params.items():
-                        if param_values:
-                            row[param_name] = float(param_values[0])
+            # if (
+            #     not isinstance(trials, float)
+            #     and not isinstance(trials, int)
+            #     and isinstance(trials[1], Trials)
+            # ):
+            #     trials = trials[1]
+            #     trial_data = []
+            #     for trial in trials.trials:
+            #         row = {}
+            #         # get param vals
+            #         params = trial["misc"]["vals"]
+            #         for param_name, param_values in params.items():
+            #             if param_values:
+            #                 row[param_name] = float(param_values[0])
 
-                    row["loss"] = float(trial["result"]["loss"])
-                    trial_data.append(row)
+            #         row["loss"] = float(trial["result"]["loss"])
+            #         trial_data.append(row)
 
-                df_trials = pd.DataFrame(trial_data)
-                trials_save_path = os.path.join(
-                    results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
-                )
-                logger.info(f"Saving trials data to {trials_save_path}...")
-                df_trials.to_csv(trials_save_path, index=False)
+            #     df_trials = pd.DataFrame(trial_data)
+            #     trials_save_path = os.path.join(
+            #         results_dir, f"cvtrials-{estimation_method}-{fit_method}.csv"
+            #     )
+            #     logger.info(f"Saving trials data to {trials_save_path}...")
+            #     df_trials.to_csv(trials_save_path, index=False)
 
             # Impute missing values
             imputations = []
             imputation_times = []
             for row, col in tqdm(test_block, desc="Imputing missing values"):
-                mask[row, col] = 0
+                #mask[row, col] = 0
                 start_time = time()
-                imputed_value = imputer.impute(row, col, data, mask)
+                imputed_value = imputer.impute(row, col, data, mask, allow_self_neighbor=args.allow_self_neighbor)
                 elapsed_time = time() - start_time
                 imputation_times.append(elapsed_time)
                 imputations.append(imputed_value)
+                #mask[row, col] = 1
                 # restore the mask for next ind
-                mask[row, col] = 1
             imputations = np.array(imputations)
 
         ground_truth = data_true[test_inds_rows, test_inds_cols]
@@ -269,7 +309,6 @@ def cantor(x: int, y: int) -> int:
 
 def last_col_trial() -> None:
     """Run the last column trial experiment (last column is test set)."""
-    num_trials = 20
     all_data = []
     for i, size in enumerate(m_size):
         df_size = []
@@ -283,14 +322,18 @@ def last_col_trial() -> None:
                 num_rows=size,
                 num_cols=size,
                 seed=cantor(i, j),
-                miss_prob=0.0,
+                miss_prob=0.5,
+                stddev_noise=0.001
             )
             data, mask = sim_dataloader.process_data_scalar()
             data_state = sim_dataloader.get_full_state_as_dict()
             data_true = data_state["full_data_true"]
+            # NOTE: this is denoised data
+            #print("Max data: ", np.nanmax(data))
+            #exit()
+            #data = data_true.copy()
             elapsed_time = time() - start_time
             logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
-
             logger.info("Using scalar data type")
             data_type = Scalar()
 
@@ -345,6 +388,28 @@ def last_col_trial() -> None:
                 # set the time to the average time per imputation
                 imputation_times = [elapsed_time / len(test_block)] * len(test_block)
                 fit_times = [0] * len(test_block)
+            elif estimation_method == "softimpute":
+                logger.info("Using SoftImpute estimation")
+                # setup usvt imputation
+                si_data = data.copy()
+                si_mask = mask.copy()
+                imputations = []
+                imputation_times = []
+                for row, col in test_block:
+                    si_mask[row, col] = 0
+                    si_data_test = si_data.copy()
+                    si_data_test[si_mask != 1] = np.nan
+                #si_mask[test_inds_rows, test_inds_cols] = 0
+                #si_data[si_mask != 1] = np.nan
+                # impute missing values simultaneously
+                    start_time = time()
+                    si_imputed = softimpute(si_data_test)
+                    elapsed_time = time() - start_time
+                    si_mask[row, col] = 1
+                    imputations.append(si_imputed[row, col])
+                # set the time to the average time per imputation
+                    imputation_times.append([elapsed_time / len(test_block)])
+                fit_times = [0] * len(test_block)
             else:
                 if estimation_method == "dr":
                     logger.info("Using doubly robust estimation")
@@ -354,8 +419,8 @@ def last_col_trial() -> None:
                     # Fit the imputer using leave-block-out validation
                     fitter = DRLeaveBlockOutValidation(
                         block,
-                        distance_threshold_range_row=(0, 50),
-                        distance_threshold_range_col=(0, 50),
+                        distance_threshold_range_row=(0, 1),
+                        distance_threshold_range_col=(0, 1),
                         n_trials=100,
                         data_type=data_type,
                     )
@@ -366,7 +431,7 @@ def last_col_trial() -> None:
                     logger.info("Using leave-block-out validation")
                     fitter = LeaveBlockOutValidation(
                         block,
-                        distance_threshold_range=(0, 50),
+                        distance_threshold_range=(0, 1),
                         n_trials=100,
                         data_type=data_type,
                     )
@@ -377,7 +442,7 @@ def last_col_trial() -> None:
                     logger.info("Using leave-block-out validation")
                     fitter = LeaveBlockOutValidation(
                         block,
-                        distance_threshold_range=(0, 50),
+                        distance_threshold_range=(0, 1),
                         n_trials=100,
                         data_type=data_type,
                     )
@@ -390,10 +455,29 @@ def last_col_trial() -> None:
                     # Fit the imputer using leave-block-out validation
                     fitter = TSLeaveBlockOutValidation(
                         block,
-                        distance_threshold_range_row=(0, 50),
-                        distance_threshold_range_col=(0, 50),
+                        distance_threshold_range_row=(0, 1),
+                        distance_threshold_range_col=(0, 1),
                         n_trials=100,
                         data_type=data_type,
+                        allow_self_neighbor=args.allow_self_neighbor,
+                    )
+                elif estimation_method == "autonn":
+                    logger.info("Using AutoNN estimation")
+                    estimator = AutoEstimator()
+                    imputer = NearestNeighborImputer(
+                        estimator, data_type
+                    )
+
+                    logger.info("Using AutoNN fit method")
+                    # Fit the imputer using leave-block-out validation
+                    fitter = AutoDRTSLeaveBlockOutValidation(
+                        block,
+                        distance_threshold_range_row=(0, 1),
+                        distance_threshold_range_col=(0, 1),
+                        gamma_range=(-1, 1),
+                        n_trials=200,
+                        data_type=data_type,
+                        allow_self_neighbor=args.allow_self_neighbor,
                     )
                 else:
                     raise ValueError(
@@ -403,7 +487,7 @@ def last_col_trial() -> None:
                 start_time = time()
                 # USE this to get trail metadata
                 # trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
-                fitter.fit(data, mask_test, imputer, ret_trials=True)
+                fitter.fit(data, mask_test, imputer, ret_trials=False)
                 end_time = time()
                 fit_times = [end_time - start_time] * len(test_block)
 
@@ -438,7 +522,7 @@ def last_col_trial() -> None:
                 ) in test_block:
                     mask[row, col] = 0
                     start_time = time()
-                    imputed_value = imputer.impute(row, col, data, mask)
+                    imputed_value = imputer.impute(row, col, data, mask, allow_self_neighbor=args.allow_self_neighbor)
                     elapsed_time = time() - start_time
                     imputation_times.append(elapsed_time)
                     imputations.append(imputed_value)
@@ -460,6 +544,7 @@ def last_col_trial() -> None:
                     "time_impute": imputation_times,
                     "time_fit": fit_times,
                     "size": size,
+                    "sim_num": j
                 }
             )
             df_size.append(df_trial)
@@ -471,4 +556,4 @@ def last_col_trial() -> None:
 
 
 # change this to change the experiment
-random_trial()
+last_col_trial()

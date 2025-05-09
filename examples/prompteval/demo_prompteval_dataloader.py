@@ -35,8 +35,8 @@ tasks = ['college_mathematics', 'miscellaneous', 'moral_disputes', 'jurisprudenc
          'marketing', 'human_aging', 'professional_law', 'high_school_mathematics', 'prehistory', 'machine_learning',
          'computer_security', 'human_sexuality']
 
-data_generator = NNData.create("prompteval", models=models, tasks=tasks)
-data, mask = data_generator.process_data_distribution()
+# data_generator = NNData.create("prompteval", models=models, tasks=tasks)
+# data, mask = data_generator.process_data_distribution()
 
 model = models[0]
 task = tasks[0]
@@ -54,19 +54,3 @@ print("\nData matrix shape:")
 print(data.shape)
 print("\nAvailability Mask shape:")
 print(mask.shape)
-
-
-
-# print(
-#     "\n===== Loading PromptEval dataset with default params in distributional form ==="
-# )
-# # print("\n Custom params: freq='1min', participants=25, num_measurements=60")
-# custom_data_generator = NNData.create(
-#     "prompteval", models=models, tasks=tasks
-# )
-# data, mask = custom_data_generator.process_data_distribution()
-
-# print("\nData matrix shape:")
-# print(data.shape)
-# print("\nAvailability Mask shape:")
-# print(mask.shape)

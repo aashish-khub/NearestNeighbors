@@ -36,6 +36,15 @@ class EstimationMethod(ABC):
     Examples include row-row, col-col, two-sided, and doubly-robust.
     """
 
+    def __init__(self, is_percentile: bool = True):
+        """Initialize the estimation method.
+
+        Args:
+            is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
+
+        """
+        self.is_percentile = is_percentile
+
     @abstractmethod
     def impute(
         self,

@@ -21,13 +21,13 @@ from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import TSEstimator, AutoEstimator
+from nearest_neighbors.estimation_methods import TSEstimator#, AutoEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
-    AutoDRTSLeaveBlockOutValidation,
+    #AutoDRTSLeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
@@ -211,24 +211,25 @@ def random_trial() -> None:
                     data_type=data_type,
                     allow_self_neighbor=args.allow_self_neighbor,
                 )
-            elif estimation_method == "autonn":
-                logger.info("Using AutoNN estimation")
-                estimator = AutoEstimator()
-                imputer = NearestNeighborImputer(
-                    estimator, data_type
-                )
+            # elif estimation_method == "autonn":
+            #     logger.info("AutoNN Incomplete")
+                # logger.info("Using AutoNN estimation")
+                # estimator = AutoEstimator()
+                # imputer = NearestNeighborImputer(
+                #     estimator, data_type
+                # )
 
-                logger.info("Using AutoNN fit method")
-                # Fit the imputer using leave-block-out validation
-                fitter = AutoDRTSLeaveBlockOutValidation(
-                    block,
-                    distance_threshold_range_row=(0, 50),
-                    distance_threshold_range_col=(0, 50),
-                    gamma_range=(-1, 1),
-                    n_trials=200,
-                    data_type=data_type,
-                    allow_self_neighbor=args.allow_self_neighbor,
-                )
+                # logger.info("Using AutoNN fit method")
+                # # Fit the imputer using leave-block-out validation
+                # fitter = AutoDRTSLeaveBlockOutValidation(
+                #     block,
+                #     distance_threshold_range_row=(0, 50),
+                #     distance_threshold_range_col=(0, 50),
+                #     gamma_range=(-1, 1),
+                #     n_trials=200,
+                #     data_type=data_type,
+                #     allow_self_neighbor=args.allow_self_neighbor,
+                # )
             else:
                 raise ValueError(
                     f"Estimation method {estimation_method} and fit method {fit_method} not supported"
@@ -459,26 +460,26 @@ def last_col_trial() -> None:
                         distance_threshold_range_col=(0, 1),
                         n_trials=100,
                         data_type=data_type,
-                        allow_self_neighbor=args.allow_self_neighbor,
+                        allow_self_neighbor=True,
                     )
-                elif estimation_method == "autonn":
-                    logger.info("Using AutoNN estimation")
-                    estimator = AutoEstimator()
-                    imputer = NearestNeighborImputer(
-                        estimator, data_type
-                    )
+            #     elif estimation_method == "autonn":
+            #         logger.info("Using AutoNN estimation")
+            #         estimator = AutoEstimator()
+            #         imputer = NearestNeighborImputer(
+            #             estimator, data_type
+            #         )
 
-                    logger.info("Using AutoNN fit method")
-                    # Fit the imputer using leave-block-out validation
-                    fitter = AutoDRTSLeaveBlockOutValidation(
-                        block,
-                        distance_threshold_range_row=(0, 1),
-                        distance_threshold_range_col=(0, 1),
-                        gamma_range=(-1, 1),
-                        n_trials=200,
-                        data_type=data_type,
-                        allow_self_neighbor=args.allow_self_neighbor,
-                    )
+            #         logger.info("Using AutoNN fit method")
+            #         # Fit the imputer using leave-block-out validation
+            #         fitter = AutoDRTSLeaveBlockOutValidation(
+            #             block,
+            #             distance_threshold_range_row=(0, 1),
+            #             distance_threshold_range_col=(0, 1),
+            #             gamma_range=(-1, 1),
+            #             n_trials=200,
+            #             data_type=data_type,
+            #             allow_self_neighbor=args.allow_self_neighbor,
+            #         )
                 else:
                     raise ValueError(
                         f"Estimation method {estimation_method} and fit method {fit_method} not supported"

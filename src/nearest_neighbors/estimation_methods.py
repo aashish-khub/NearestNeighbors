@@ -675,7 +675,8 @@ class StarNNEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],  # unused
         data_type: DataType,
-        **kwargs: Any,
+        allow_self_neighbor: bool = False,
+        **kwargs: Any
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
 
@@ -685,7 +686,9 @@ class StarNNEstimator(EstimationMethod):
             data_array (npt.NDArray): Data matrix containing observed and missing values.
             mask_array (npt.NDArray): Boolean mask matrix indicating observed values.
             distance_threshold (Union[float, Tuple[float, float]]): Distance threshold (unused in this method).
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False. (unused in this method)
             data_type (DataType): Data type providing methods for distance calculation and averaging.
+            **kwargs (Any): Additional keyword arguments.
 
         Returns:
             npt.NDArray: Imputed value for the specified row and column.
@@ -847,7 +850,7 @@ class AutoEstimator(EstimationMethod):
         tot_mask = f_row_obs_mask + f_col_obs_mask.T + mask_js 
         
         # z est is addition of Z_tilde_row, Z_tilde_col, and intersection (same broadcast as mask)
-        z_est = row_z_tilde + col_z_tilde.T + data_js
+        z_est = row_z_tilde + col_z_tilde.T + self.gamma * data_js
 
         z_numerator = np.nansum(tot_mask * z_est)
         z_denominator = np.nansum(tot_mask)

@@ -790,7 +790,8 @@ class AutoEstimator(EstimationMethod):
                 "AutoEstimator.impute() missing 1 required keyword-only argument: 'gamma'"
             )
         gamma = self.gamma if self.gamma else kwargs.pop("gamma")
-
+        self.f = lambda x: (-gamma * 0.5 + 0.5) * x + (gamma *0.5 + 0.5) 
+        self.g = lambda x: (-gamma * 0.5 + 0.5) * x
         if isinstance(distance_threshold, tuple):
             distance_threshold_row = distance_threshold[0]
             distance_threshold_col = distance_threshold[1]
@@ -850,7 +851,7 @@ class AutoEstimator(EstimationMethod):
         tot_mask = f_row_obs_mask + f_col_obs_mask.T + mask_js 
         
         # z est is addition of Z_tilde_row, Z_tilde_col, and intersection (same broadcast as mask)
-        z_est = row_z_tilde + col_z_tilde.T + self.gamma * data_js
+        z_est = row_z_tilde + col_z_tilde.T + gamma * data_js
 
         z_numerator = np.nansum(tot_mask * z_est)
         z_denominator = np.nansum(tot_mask)

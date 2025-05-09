@@ -13,12 +13,11 @@ from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
 import numpy as np
 import pandas as pd
-import pickle
-import requests
-import io
 from typing import Any
 import logging
 from joblib import Memory
+from datasets import load_dataset
+from datasets import DatasetDict
 
 
 memory = Memory(".joblib_cache", verbose=2)
@@ -46,8 +45,6 @@ class PromptEvalDataLoader(NNDataLoader):
     To initialize with default settings, use: NNData.create("prompteval").
 
     """
-
-    url = "https://raw.githubusercontent.com/kyuseongchoi5/EfficientEval_BayesOpt/main/data/MMLU/data_all.pkl"
 
     def __init__(
         self,
@@ -79,6 +76,48 @@ class PromptEvalDataLoader(NNDataLoader):
                 seed=seed
             )  # instantiate random seed if provided but do it only once here
 
+    def load_config_data(self, config_name: str) -> pd.DataFrame | None:
+        """Load and process data for a specific configuration.
+
+        Args:
+            config_name: Name of the configuration/task to load.
+
+        Returns:
+            DataFrame containing the processed data or None if loading fails.
+
+        """
+        try:
+            # Load the dataset with the specific config
+            dataset = load_dataset("PromptEval/PromptEval_MMLU_correctness", config_name, download_mode='force_redownload')        
+            list_dfs = []
+            for key in dataset:
+                print(f"Keys in the dataset: {key}")
+                if isinstance(dataset, DatasetDict):
+                    df = dataset[key].to_pandas()
+                    if isinstance(df, pd.DataFrame):
+                        df = pd.DataFrame(df)
+                        df_reset = df.reset_index()
+                        df_long = pd.melt(
+                            df_reset, 
+                            id_vars=['index'], 
+                            var_name='example', 
+                            value_name='correctness'  
+                        )
+                        df_long['model'] = key
+                        df_long['task'] = config_name
+                        df_long = df_long.rename(columns={'index': 'format'})
+
+                        list_dfs.append(df_long)
+                    else:
+                        print(f"Data for key '{key}' is not a DataFrame")
+                else:
+                    raise ValueError("Loaded dataset is not a DatasetDict")
+            df_final = pd.concat(list_dfs, ignore_index=True)
+            return df_final
+        except Exception as e:
+            print(f"Error loading config '{config_name}': {e}")
+            return None
+    
     def process_data_scalar(self) -> tuple[np.ndarray, np.ndarray]:
         """Processes the data into scalar setting. This implementation is applicable when generating (template * example) matrix, while fixing model and task.
 
@@ -90,40 +129,27 @@ class PromptEvalDataLoader(NNDataLoader):
         """
         if not self.tasks or not self.models:
             raise ValueError("Tasks and models must be specified")
-
-        model = self.models[0]  # Use the first model
-        task = self.tasks[0]  # Use the first task
-        propensity = self.propensity
-
+        
         assert len(self.models) == 1, "Only one model is supported in scalar mode"
         assert len(self.tasks) == 1, "Only one task is supported in scalar mode"
 
-        full_data = self._load_data()
+        model = self.models[0]  
+        task = self.tasks[0]  
+        propensity = self.propensity
 
-        df = pd.DataFrame(full_data[0][model])
-        df_subject = df[df["subject"] == task]
-        N, T = len(full_data),  len(df_subject["correctness"])  # decide the column dimension of the data matrix
-
-        temp_example = np.zeros((N, T))  # num_templates * num_examples
-
-        for j in range(N):
-            # j : per prompt template
-            df = pd.DataFrame(full_data[j][model])
-            df_subject = df[df["subject"] == task]
-            temp_example[j, :] = df_subject["correctness"]
-
-        # Create a mask of the original data according to the propensity
-        
+        dataset = load_dataset("PromptEval/PromptEval_MMLU_correctness", task)
+        df = pd.DataFrame(dataset[model])
+        N, T = df.shape[0], df.shape[1]
         Masking: np.ndarray = np.zeros((N, T))
         
         Masking = np.reshape(np.random.binomial(1, propensity, (N * T)), (N, T))
         
-        data = temp_example
+        data = df
         mask = Masking
         self.data = data
         self.mask = mask
         return data, mask
-
+    
     def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into distributional setting.
 
@@ -140,48 +166,50 @@ class PromptEvalDataLoader(NNDataLoader):
         tasks = self.tasks
         propensity = self.propensity
 
-        full_data = self._load_data()
+        # Load the data for the multiple config and model
+        final_list = []
+        for config in tasks:
+            df = self.load_config_data(config)
+            if df is not None:
+                final_list.append(df)     
+            else:
+                print(f"Failed to load data for config: {config}")
 
-        N, T, n = len(tasks), len(models), len(full_data)
+        df_final = pd.concat(final_list, ignore_index=True)
 
-        task_model_temp = np.zeros((N, T, n))
+        formats = df_final['format'].unique()
+        models = df_final['model'].unique()
+        tasks = df_final['task'].unique()
 
-        for j in range(n):
-            # j : per prompt template
-            for k, model in enumerate(models):
-                # model : per model
-                df = pd.DataFrame(full_data[j][model])
-                for l, subject in enumerate(tasks):
-                    df_subject = df[df["subject"] == subject]
-                    task_model_temp[l, k, j] = np.mean(df_subject["correctness"])
+        # data_array = np.empty((len(formats), len(models), len(tasks)))
+        data_array = np.empty((len(tasks), len(models), len(formats)))
+        for id_model, model in enumerate(models):
+            for id_task, task in enumerate(tasks):
+                df_sub = df_final[(df_final['task'] == task) & (df_final['model'] == model)]
+                format_examples = []
+                for id_format, format in enumerate(formats):
+                    df_sub_task = df_sub[df_sub['format'] == format]
+                    format_examples = df_sub_task["correctness"].to_list()
+                    data_array[id_task, id_model, id_format] = np.mean(format_examples)
 
-        task_model_temp = task_model_temp[:, :, :, np.newaxis]
-
-        task_model_temp_DM = np.empty([N, T], dtype = object)
-
-        for l in range(N):
-            for k in range(T):
-                task_model_temp_DM[l, k] = task_model_temp[l, k, :, :]
-
-        # Create a mask of the original data according to the propensity    
-        
+        N, T = len(tasks), len(models)
         Masking: np.ndarray = np.zeros((N, T))
-        
         Masking = np.reshape(np.random.binomial(1, propensity, (N * T)), (N, T))
         
-        data = task_model_temp_DM
+        data = df_final
         mask = Masking
         self.data = data
         self.mask = mask
         return data, mask
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
-        """Returns the full state as a dictionary. For HeartSteps, this includes the data, masking matrix, and the custom parameters (if include_metadata == True
-
-        If the data and mask are None, then the data has not been processed yet. Call process_data_scalar() or process_data_distribution() to process the data first.
+        """Returns the full state as a dictionary.
 
         Args:
-            include_metadata (bool): Whether to include metadata in the dictionary. Default: False. The metadata for HeartSteps is currently empty.
+            include_metadata (bool): Whether to include metadata in the dictionary. Default: False.
+
+        Returns:
+            dict: Dictionary containing the data and mask
 
         """
         full_state = {
@@ -190,27 +218,4 @@ class PromptEvalDataLoader(NNDataLoader):
         }
         return full_state
 
-    @classmethod
-    @memory.cache
-    def _load_data(cls) -> Any:
-        """Load the MMLU full dataset.
-
-        Returns:
-            full_data: Any Python object stored in the pickle file
-
-        """
-        logger.info("Retrieving MMLU full dataset from url...")
-        # full_data_path = cls.urls["full_data"]
-        response = requests.get(cls.url)
-        response.raise_for_status()
-        try:
-            # Using standard pickle module instead of pandas
-            with io.BytesIO(response.content) as f:
-                full_data = pickle.load(f)
-        except Exception as e:
-            logger.error(f"Error loading pickle file: {e}")
-            raise ValueError(
-                f"Could not load data from {cls.url}. Make sure the file exists."
-            )
-
-        return full_data
+    

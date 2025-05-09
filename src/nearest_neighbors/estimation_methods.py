@@ -609,49 +609,47 @@ class AutoEstimator(EstimationMethod):
         # Find the col nearest neighbors indexes
         col_nearest_neighbors = np.nonzero(col_dists <= distance_threshold_col)[0]
 
-        # neighbors can only be used if they are observed
-        row_nearest_neighbors = row_nearest_neighbors[
-            mask_array[row_nearest_neighbors, column] == 1
-        ]
-        col_nearest_neighbors = col_nearest_neighbors[
-            mask_array[row, col_nearest_neighbors] == 1
-        ]
+        # for unobserved col and row neighbors, construct Z_tilde
+        col_z_tilde = np.zeros(len(col_nearest_neighbors))
+        row_z_tilde = np.zeros(len(row_nearest_neighbors))
 
-        alt_mask_array_row = self.f(mask_array[row_nearest_neighbors, column])
-        alt_mask_array_col = self.f(mask_array[row, col_nearest_neighbors])
+        col_obs_mask = mask_array[row, col_nearest_neighbors]
+        f_col_obs_mask = self.f(col_obs_mask)
+        col_z_tilde[col_obs_mask == 1] = col_nearest_neighbors[col_obs_mask == 1]
+        # take mean across entire (obs) column if col neighbor is unobserved
+        col_z_tilde[col_obs_mask == 0] = np.mean(data_array[mask_array[:, column] == 1, col_obs_mask == 0], axis = 0)
 
-        y_itprime = data_array[row, col_nearest_neighbors]
-        y_jt = data_array[row_nearest_neighbors, column]
-        if len(y_itprime) == 0 and len(y_jt) == 0:
-            return np.array(np.nan)
+        row_obs_mask = mask_array[row_nearest_neighbors, column]
+        f_row_obs_mask = self.f(row_obs_mask)
+        row_z_tilde[row_obs_mask == 1] = row_nearest_neighbors[row_obs_mask == 1]
+        # take mean across entire (obs) row if row neighbor is unobserved
+        row_z_tilde[row_obs_mask == 0] = np.mean(data_array[row_obs_mask == 0, mask_array[row_nearest_neighbors, column] == 1], axis = 1)
 
-        # get intersecting entries
-        j_inds, tprime_inds = np.meshgrid(
+        row_z_tilde = self.g(row_z_tilde)
+        col_z_tilde = self.g(col_z_tilde)
+        # numerator is col_z_tilde + row_z_tilde + intersection
+        j_inds, s_inds = np.meshgrid(
             row_nearest_neighbors, col_nearest_neighbors, indexing="ij"
         )
-        y_jtprime = data_array[j_inds, tprime_inds]
-        mask_jtprime = mask_array[j_inds, tprime_inds]
+        mask_js = mask_array[j_inds, s_inds]
+        data_js = data_array[j_inds, s_inds]
+        # this should be: len(row_nn) + len(col_nn) => row_nn x col_nn. Then mask_js is also row_nn x col_nn 
+        tot_mask = f_row_obs_mask + f_col_obs_mask.T + mask_js 
+        
+        # z est is addition of Z_tilde_row, Z_tilde_col, and intersection (same broadcast as mask)
+        z_est = row_z_tilde + col_z_tilde.T + data_js
 
-        # nonzero gets all indices of the mask that are 1
-        intersec_inds = np.nonzero(mask_jtprime == 1)
+        z_numerator = np.nansum(tot_mask * z_est)
+        z_denominator = np.nansum(tot_mask)
 
-        y_itprime_inter = y_itprime[
-            intersec_inds[1]
-        ]  # this is a array of column values for all intersecting triplets
-        y_jt_inter = y_jt[
-            intersec_inds[0]
-        ]  # this is a array of row values for all intersecting triplets
-        # note: defaults to rownn if no intersection -> should default to ts-nn instead?
-        if len(y_itprime_inter) == 0 or len(y_jt_inter) == 0:
-            return np.array(
-                data_type.average(y_jt)
-                if len(y_jt) > 0
-                else data_type.average(y_itprime)
+        if z_denominator == 0:
+            logger.log(
+                logging.WARNING,
+                "Warning: Cannot divide by zero in AutoEstimator imputation. Returning np.nan.",
             )
-        # TODO: (Caleb) adjust gamma param to account for differing values for row, col, etc.
-        sum_y = y_itprime_inter + y_jt_inter + gamma * y_jtprime[intersec_inds]
-        avg = data_type.average(sum_y) * (1 / 3)
-        return avg
+            return np.array(np.nan)
+        return z_numerator / z_denominator
+
 
     def _calculate_distances(
         self,

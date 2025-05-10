@@ -31,7 +31,6 @@ from nearest_neighbors.fit_methods import (
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
-
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
@@ -59,32 +58,17 @@ if os.path.exists(save_path) and not args.force:
 rng = np.random.default_rng(seed=seed)
 
 # Load the PromptEval dataset
-if False:
-    # NOTE: the raw and processed data is cached in .joblib_cache
-    start_time = time()
-    hs_dataloader = NNData.create("prompteval")
-    data, mask = hs_dataloader.process_data_scalar()
-    data = data[:, :200]  # only use the first 200 timesteps
-    mask = mask[:, :200]
-    elapsed_time = time() - start_time
-    logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
-else:
-    # NOTE: From Kyuseong: you can induce any missingness and do sth like 1(\hat{\theta} > 1/2) VS. observed 0/1 for the error?
-
-    import pickle
-
-    # HACK: load the data from a local file
-    data_path = "data/temp_example_meta_llama_llama_3_8b_instruct_high_school_microeconomics.pkl"
-    # data_path = "data/temp_example_meta_llama_llama_3_8b_high_school_geography.pkl"
-    with open(data_path, "rb") as f:
-        data_obs = pickle.load(f)
-
-    missing_mask = np.random.binomial(1, 0.5, size=data_obs.shape) == 1
-    data_obs[missing_mask] = np.nan
-    A = ~missing_mask  # A = NOT M, i.e. A_ij = 1 if Y_ij is observed, 0 if missing
-    data = data_obs
-    mask = A
-
+start_time = time()
+hs_dataloader = NNData.create(
+    "prompteval",
+    models=["meta_llama_llama_3_8b_instruct"],
+    tasks=["high_school_microeconomics"],
+    propensity=0.5,
+    rng=rng,
+)
+data, mask = hs_dataloader.process_data_scalar()
+elapsed_time = time() - start_time
+logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 logger.info("Using scalar data type")
 data_type = Scalar()

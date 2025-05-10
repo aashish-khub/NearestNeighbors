@@ -217,6 +217,8 @@ class FitMethod(ABC):
         """Find the best distance threshold for the given data.
 
         Args:
+            row (int): Row index
+            column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
             imputer (NearestNeighborImputer): Imputer object

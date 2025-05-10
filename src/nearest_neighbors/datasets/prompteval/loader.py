@@ -88,7 +88,11 @@ class PromptEvalDataLoader(NNDataLoader):
         """
         try:
             # Load the dataset with the specific config
-            dataset = load_dataset("PromptEval/PromptEval_MMLU_correctness", config_name, download_mode='force_redownload')        
+            dataset = load_dataset(
+                "PromptEval/PromptEval_MMLU_correctness",
+                config_name,
+                #    download_mode='force_redownload'
+            )
             list_dfs = []
             for key in dataset:
                 print(f"Keys in the dataset: {key}")
@@ -98,14 +102,14 @@ class PromptEvalDataLoader(NNDataLoader):
                         df = pd.DataFrame(df)
                         df_reset = df.reset_index()
                         df_long = pd.melt(
-                            df_reset, 
-                            id_vars=['index'], 
-                            var_name='example', 
-                            value_name='correctness'  
+                            df_reset,
+                            id_vars=["index"],
+                            var_name="example",
+                            value_name="correctness",
                         )
-                        df_long['model'] = key
-                        df_long['task'] = config_name
-                        df_long = df_long.rename(columns={'index': 'format'})
+                        df_long["model"] = key
+                        df_long["task"] = config_name
+                        df_long = df_long.rename(columns={"index": "format"})
 
                         list_dfs.append(df_long)
                     else:
@@ -117,7 +121,7 @@ class PromptEvalDataLoader(NNDataLoader):
         except Exception as e:
             print(f"Error loading config '{config_name}': {e}")
             return None
-    
+
     def process_data_scalar(self) -> tuple[np.ndarray, np.ndarray]:
         """Processes the data into scalar setting. This implementation is applicable when generating (template * example) matrix, while fixing model and task.
 
@@ -129,27 +133,28 @@ class PromptEvalDataLoader(NNDataLoader):
         """
         if not self.tasks or not self.models:
             raise ValueError("Tasks and models must be specified")
-        
+
         assert len(self.models) == 1, "Only one model is supported in scalar mode"
         assert len(self.tasks) == 1, "Only one task is supported in scalar mode"
 
-        model = self.models[0]  
-        task = self.tasks[0]  
+        model = self.models[0]
+        task = self.tasks[0]
         propensity = self.propensity
 
         dataset = load_dataset("PromptEval/PromptEval_MMLU_correctness", task)
         df = pd.DataFrame(dataset[model])
         N, T = df.shape[0], df.shape[1]
         Masking: np.ndarray = np.zeros((N, T))
-        
-        Masking = np.reshape(np.random.binomial(1, propensity, (N * T)), (N, T))
-        
-        data = df
+
+        Masking = np.random.binomial(1, propensity, size=(N, T))
+
+        data = df.to_numpy(dtype=float)
+        data[Masking == 0] = np.nan
         mask = Masking
         self.data = data
         self.mask = mask
         return data, mask
-    
+
     def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into distributional setting.
 
@@ -171,32 +176,34 @@ class PromptEvalDataLoader(NNDataLoader):
         for config in tasks:
             df = self.load_config_data(config)
             if df is not None:
-                final_list.append(df)     
+                final_list.append(df)
             else:
                 print(f"Failed to load data for config: {config}")
 
         df_final = pd.concat(final_list, ignore_index=True)
 
-        formats = df_final['format'].unique()
-        models = df_final['model'].unique()
-        tasks = df_final['task'].unique()
+        formats = df_final["format"].unique()
+        models = df_final["model"].unique()
+        tasks = df_final["task"].unique()
 
         # data_array = np.empty((len(formats), len(models), len(tasks)))
         data_array = np.empty((len(tasks), len(models), len(formats)))
         for id_model, model in enumerate(models):
             for id_task, task in enumerate(tasks):
-                df_sub = df_final[(df_final['task'] == task) & (df_final['model'] == model)]
+                df_sub = df_final[
+                    (df_final["task"] == task) & (df_final["model"] == model)
+                ]
                 format_examples = []
                 for id_format, format in enumerate(formats):
-                    df_sub_task = df_sub[df_sub['format'] == format]
+                    df_sub_task = df_sub[df_sub["format"] == format]
                     format_examples = df_sub_task["correctness"].to_list()
                     data_array[id_task, id_model, id_format] = np.mean(format_examples)
 
         N, T = len(tasks), len(models)
         Masking: np.ndarray = np.zeros((N, T))
         Masking = np.reshape(np.random.binomial(1, propensity, (N * T)), (N, T))
-        
-        data = df_final
+
+        data = df_final.to_numpy()
         mask = Masking
         self.data = data
         self.mask = mask
@@ -217,5 +224,3 @@ class PromptEvalDataLoader(NNDataLoader):
             "mask": self.mask,
         }
         return full_state
-
-    

@@ -21,7 +21,7 @@ from baselines import usvt
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import RowRowEstimator, TSEstimator
+from nearest_neighbors.estimation_methods import ColColEstimator, RowRowEstimator, TSEstimator, StarNNEstimator
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -89,14 +89,14 @@ rng.shuffle(range_inds)
 # 20% of the indices will be used for testing
 test_size = int(0.8 * len(range_inds))
 test_inds = range_inds[:test_size]
-test_inds = test_inds[:200]
+test_inds = test_inds[:500]
 # 80% of the indices will be used for training
 train_inds = range_inds[test_size:]
 range_train_inds = np.arange(len(train_inds))
 rng.shuffle(range_train_inds)
 # 20% of the training indices will be used for cv holdout
 # cv_size = int(0.01 * len(train_inds))
-cv_size = 20
+cv_size = 100
 cv_inds = range_train_inds[:cv_size]
 # get the rows and columns of the train indices
 
@@ -120,7 +120,7 @@ test_block = list(zip(test_inds_rows, test_inds_cols))
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
-num_trials = 10
+num_trials = 50
 if estimation_method == "usvt":
     logger.info("Using USVT estimation")
     # setup usvt imputation
@@ -135,6 +135,21 @@ if estimation_method == "usvt":
     imputations = usvt_imputed[test_inds_rows, test_inds_cols]
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+    fit_times = [0] * len(test_block)
+elif estimation_method == "star":
+    logger.info("Using star estimation")
+    estimator = StarNNEstimator()
+    imputer = NearestNeighborImputer(estimator, data_type, distance_threshold=-1)
+    # Impute missing values
+    imputations = []
+    imputation_times = []
+    for row, col in tqdm(test_block, desc="Imputing missing values"):
+        start_time = time()
+        imputed_value = imputer.impute(row, col, data, mask_test)
+        elapsed_time = time() - start_time
+        imputation_times.append(elapsed_time)
+        imputations.append(imputed_value)
+    imputations = np.array(imputations)
     fit_times = [0] * len(test_block)
 else:
     if estimation_method == "dr":
@@ -171,6 +186,15 @@ else:
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
         imputer = col_col()
+        
+        if not isinstance(imputer.estimation_method, ColColEstimator):
+            raise ValueError(
+                f"Estimation method {imputer.estimation_method} not supported for col-col"
+            )
+        
+        imputer.estimation_method.estimator._precalculate_distances(
+            np.swapaxes(data, 0, 1), np.swapaxes(mask, 0, 1), np.array(cv_inds_cols)
+        )
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(

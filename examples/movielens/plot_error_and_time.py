@@ -17,6 +17,7 @@ import pandas as pd
 import logging
 
 from nearest_neighbors.utils.experiments import get_base_parser
+from nearest_neighbors.utils import plotting_utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,15 +42,25 @@ df_grouped = (
     .agg(lambda x: list([val for val in x if pd.notna(val)]))
     .reset_index()
 )
+# rearrange the order of the estimation methods by
+# "usvt", "row-row", "col-col", "dr", "ts", "star"
+ORDER = ["usvt", "col-col", "row-row", "dr", "ts", "star"]
+df_grouped = df_grouped.sort_values(
+    by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
+)
 
 for col_name, alias in [
     ("est_errors", "Absolute error"),
     ("time_impute", "Imputation time"),
     ("time_fit", "Fit time"),
 ]:
-    plt.figure()
+    # NOTE: set the width to be the physical size of the figure in inches
+    # The NeurIPS text is 5.5 inches wide and 9 inches long
+    # If we use wrapfigure with 0.4\textwidth, then the figure needs to be 2.2 inches wide
+    fig = plt.figure(figsize=(2.2, 2))
     # Create boxplot
-    box = plt.boxplot(
+    ax = fig.add_subplot(111)
+    box = ax.boxplot(
         df_grouped[col_name], patch_artist=True, widths=0.6, showfliers=False
     )
     colors = ["orange"] * len(df_grouped)
@@ -59,18 +70,25 @@ for col_name, alias in [
         median.set_color("black")
     # Set y-axis limit
     # plt.ylim(0, 0.4)
-    plt.ylim(0, None)
+    ax.set_ylim(0, None)
     # Add labels and title
-    labels: list[str] = list(df_grouped["estimation_method"])
-    plt.xticks(list(range(1, len(labels) + 1)), labels, fontsize=15)
-    plt.ylabel(alias, fontsize=15)
-    ax1 = plt.gca()
-    ax1.spines["top"].set_visible(False)
-    ax1.spines["right"].set_visible(False)
-    ax1.spines["left"].set_visible(False)
-    ax1.grid(True, alpha=0.4)
-    plt.xlabel("Estimation method", fontsize=15)
-    save_path = os.path.join(figures_dir, f"{col_name}_boxplot.pdf")
+    labels: list[str] = [
+        plotting_utils.METHOD_ALIASES.get(method, method)
+        for method in df_grouped["estimation_method"]
+    ]
+    ax.set_xticks(
+        list(range(1, len(labels) + 1)), labels, fontsize=plotting_utils.TICK_FONT_SIZE
+    )
+    ax.tick_params(axis="x", length=0)  # Set tick length to 0
+    ax.set_ylabel(alias, fontsize=plotting_utils.LABEL_FONT_SIZE)
+    # ax.set_xlabel("Estimation method", fontsize=plotting_utils.LABEL_FONT_SIZE)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.grid(True, alpha=0.4)
+
+    save_path = os.path.join(figures_dir, f"movielens_{col_name}_boxplot.pdf")
     logger.info(f"Saving plot to {save_path}...")
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()

@@ -5,6 +5,7 @@ using 20% of the observed indices as a test block. The main experiment involves 
 
 # standard imports
 import numpy as np
+import numpy.typing as npt
 from tqdm import tqdm
 import logging
 import os
@@ -22,7 +23,7 @@ from nearest_neighbors.fit_methods import (
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row
-from nearest_neighbors.star_nn import star_nn
+from nearest_neighbors.star_nn import star_nn, StarNNEstimator
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
@@ -60,7 +61,7 @@ m_size = np.repeat([2**4, 2**5, 2**6, 2**7], k)
 # m_size = np.repeat([2**4, 2**5, 2**6, 2**7, 2**8, 2**9], k)
 
 
-def StarVsRowRowVsUsvt(m_size):
+def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
     """Compare the performance of StarNN and RowRow on simulated data"""
     sizes_data = []
     train_times = []
@@ -124,9 +125,9 @@ def StarVsRowRowVsUsvt(m_size):
         mask_test = mask.copy()
         mask_test[test_inds_rows, test_inds_cols] = 0
 
-        m_avg = np.average(mask)
-        m_test_avg = np.average(mask_test)
-        m_star_nn_avg = np.average(mask_test_star_nn)
+        _m_avg = np.average(mask)
+        _m_test_avg = np.average(mask_test)
+        _m_star_nn_avg = np.average(mask_test_star_nn)
 
         logger.info("Using USVT estimation")
         usvt_data = data.copy()
@@ -170,11 +171,18 @@ def StarVsRowRowVsUsvt(m_size):
 
         # Fit the imputer
         start_time = time()
-        imputed_train_data = imputer.fit(data, mask_test)
+        _imputed_train_data = imputer.impute_all(data, mask_test)
         end_time = time()
         fit_time = end_time - start_time
+        est_method = imputer.estimation_method
+        if not isinstance(est_method, StarNNEstimator):
+            raise ValueError(
+                "The estimation method should be StarNNEstimator for StarNN."
+            )
+        noise_variance = est_method.noise_variance
+
         logger.info(
-            f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {imputer.noise_variance}"
+            f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {noise_variance}"
         )
 
         # imputer.set_noise_variance(empirical_noise_variance)
@@ -215,9 +223,9 @@ def StarVsRowRowVsUsvt(m_size):
                 "empirical_noise_variance": np.var(
                     data[mask == 1] - data_true[mask == 1]
                 ),
-                "estimated_noise_variance": imputer.noise_variance,
+                "estimated_noise_variance": noise_variance,
             },
-            index=[0],  # Add an index with a single row
+            index=pd.Index([0]),  # Add an index with a single row
         )
         train_times.append(train_time)
 
@@ -285,7 +293,7 @@ def StarVsRowRowVsUsvt(m_size):
                 ),
                 "estimated_noise_variance": np.var(imputations - ground_truth),
             },
-            index=[0],  # Add an index with a single row
+            index=pd.Index([0]),  # Add an index with a single row
         )
         train_times.append(train_time)
 
@@ -310,13 +318,12 @@ def StarVsRowRowVsUsvt(m_size):
     df = pd.concat(sizes_data, ignore_index=True)
     logger.info(f"Saving est_errors to {save_path}...")
     df.to_csv(save_path, index=False)
-
     train_times_df = pd.concat(train_times, ignore_index=True)
     logger.info(f"Saving train_times to {train_times_path}...")
     train_times_df.to_csv(train_times_path, index=False)
 
 
-def StarVsUsvt(m_size):
+def StarVsUsvt(m_size: npt.NDArray) -> None:
     """Compare the performance of StarNN and RowRow on simulated data"""
     sizes_data = []
     train_times = []
@@ -344,7 +351,7 @@ def StarVsUsvt(m_size):
 
         empirical_noise_variance = np.var(data[mask == 1] - data_true[mask == 1])
         logger.info("Using scalar data type")
-        data_type = Scalar()
+        _data_type = Scalar()
 
         holdout_inds = np.nonzero(mask == 1)
         inds_rows = holdout_inds[0]
@@ -371,7 +378,7 @@ def StarVsUsvt(m_size):
         test_inds_rows = list(inds_rows[test_inds])
         test_inds_cols = list(inds_cols[test_inds])
 
-        block = list(zip(cv_inds_rows, cv_inds_cols))
+        _block = list(zip(cv_inds_rows, cv_inds_cols))
         test_block = list(zip(test_inds_rows, test_inds_cols))
         mask_test_star_nn = np.zeros_like(mask)
         for i, j in test_block:
@@ -380,9 +387,9 @@ def StarVsUsvt(m_size):
         mask_test = mask.copy()
         mask_test[test_inds_rows, test_inds_cols] = 0
 
-        m_avg = np.average(mask)
-        m_test_avg = np.average(mask_test)
-        m_star_nn_avg = np.average(mask_test_star_nn)
+        _m_avg = np.average(mask)
+        _m_test_avg = np.average(mask_test)
+        _m_star_nn_avg = np.average(mask_test_star_nn)
 
         logger.info("Using USVT estimation")
         usvt_data = data.copy()
@@ -426,11 +433,17 @@ def StarVsUsvt(m_size):
 
         # Fit the imputer
         start_time = time()
-        imputed_train_data = imputer.fit(data, mask_test)
+        _imputed_train_data = imputer.impute_all(data, mask_test)
         end_time = time()
         fit_time = end_time - start_time
+        est_method = imputer.estimation_method
+        if not isinstance(est_method, StarNNEstimator):
+            raise ValueError(
+                "The estimation method should be StarNNEstimator for StarNN."
+            )
+        noise_variance = est_method.noise_variance
         logger.info(
-            f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {imputer.noise_variance}"
+            f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {noise_variance}"
         )
 
         # imputer.set_noise_variance(empirical_noise_variance)
@@ -471,9 +484,9 @@ def StarVsUsvt(m_size):
                 "empirical_noise_variance": np.var(
                     data[mask == 1] - data_true[mask == 1]
                 ),
-                "estimated_noise_variance": imputer.noise_variance,
+                "estimated_noise_variance": noise_variance,
             },
-            index=[0],  # Add an index with a single row
+            index=pd.Index([0]),  # Add an index with a single row
         )
         train_times.append(train_time)
 

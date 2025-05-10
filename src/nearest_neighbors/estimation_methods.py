@@ -520,13 +520,23 @@ class StarNNEstimator(EstimationMethod):
 
     def __init__(
         self,
-        delta: float = 0.05,
+        delta: float = 1,
         noise_variance: Optional[
             float
         ] = None,  # this is a the new variable specific to this!
         convergence_threshold: float = 1e-4,
         max_iterations: int = 10,
     ):
+        """Initialize the Star NN estimator."""
+        # sanity checks:
+        if delta < 0 or delta > 1:
+            raise ValueError("Delta must be between 0 and 1.")
+        if convergence_threshold < 0:
+            raise ValueError("Convergence threshold must be non-negative.")
+        if max_iterations <= 0:
+            raise ValueError("Max iterations must be positive.")
+        if noise_variance is not None and noise_variance < 0:
+            raise ValueError("Noise variance must be non-negative.")
         self.row_distances = np.array([])
         self.noise_variance = noise_variance
         self.convergence_threshold = convergence_threshold
@@ -538,16 +548,6 @@ class StarNNEstimator(EstimationMethod):
     def __str__(self):
         return "StarNNEstimator"
 
-    def get_estimated_signal_matrix(self) -> npt.NDArray | None:
-        """Get the estimated signal matrix."""
-        sig_mat = self.estimated_signal_matrix
-        if sig_mat is not None:
-            return sig_mat
-        else:
-            raise ValueError(
-                "Estimated signal matrix is None. Please call impute first."
-            )
-
     def _impute_single_value_helper(
         self,
         row: int,
@@ -558,7 +558,7 @@ class StarNNEstimator(EstimationMethod):
     ) -> npt.NDArray:
         """Imputes one specific value using the Star NN method."""
         n_rows, n_cols = data_array.shape
-        delta = self.delta
+        delta = self.delta / np.sqrt(n_rows)
         print("delta: %s" % delta)  # TODO switch to logger.log
         print("noise_variance: %s" % self.noise_variance)  # TODO switch to logger.log
         if self.noise_variance is None:
@@ -581,12 +581,16 @@ class StarNNEstimator(EstimationMethod):
                 )
             row_distances = np.copy(self.row_distances)
 
-        row_distances = (
-            row_distances[np.ix_(observed_rows, observed_rows)] - 2 * noise_variance
+        row_distances = row_distances[row, observed_rows]
+        row_distances = np.where(
+            observed_rows == row, 0, row_distances - 2 * noise_variance
         )
-        np.fill_diagonal(row_distances, 0)
-        mean_distance = np.mean(row_distances[0, :])
-        dist_diff = row_distances[0, :] - mean_distance
+
+        row_dist_min = min(0, np.min(row_distances))
+        row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
+
+        mean_distance = np.mean(row_distances)
+        dist_diff = row_distances - mean_distance
         # print (noise_variance)
         if noise_variance != 0:
             weights = (1 / n_observed) - dist_diff / (
@@ -642,6 +646,7 @@ class StarNNEstimator(EstimationMethod):
                     self.noise_variance = new_variance_estimate
                     break
                 self.noise_variance = new_variance_estimate
+        self.estimated_signal_matrix = imputed_data
         return imputed_data
 
     def impute(
@@ -667,27 +672,45 @@ class StarNNEstimator(EstimationMethod):
             npt.NDArray: Imputed value for the specified row and column.
 
         """
-        # full_converged_theta_hat = self.fit_full_matrix(data_array, mask_array, data_type, distance_threshold)
-        # cache it for this value of distance
-        # if (
-        #     self.estimated_signal_matrix is None
-        #     or self.delta_value_for_signal_matrix != distance_threshold
-        # ):
+        full_matrix = self.impute_all(
+            data_array,
+            mask_array,
+            distance_threshold,
+            data_type,
+        )
+        val_at_index = full_matrix[row, column]
+        return val_at_index
+
+    def impute_all(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        distance_threshold: Union[float, Tuple[float, float]],
+        data_type: DataType,
+    ) -> npt.NDArray:
+        """Impute all missing values in the data array.
+
+        Args:
+            data_array (npt.NDArray): Data matrix containing observed and missing values.
+            mask_array (npt.NDArray): Boolean mask matrix indicating observed values.
+            distance_threshold (Union[float, Tuple[float, float]]): Distance threshold for nearest neighbors.
+            data_type (DataType): Data type providing methods for distance calculation and averaging.
+
+        Returns:
+            npt.NDArray: Imputed value for the specified row and column.
+
+        """
         if self.estimated_signal_matrix is None:
-            estimated_signal_matrix = self._fit_full_matrix(
+            full_mat = self._fit_full_matrix(
                 data_array,
                 mask_array,
                 data_type,
             )
-            self.estimated_signal_matrix = estimated_signal_matrix
+            self.estimated_signal_matrix = full_mat  # cache it
         else:
-            estimated_signal_matrix = self.estimated_signal_matrix
-            # self.c_value_for_full_converged_theta_hat = distance_threshold
-        # else:
-        #     estimated_signal_matrix = self.estimated_signal_matrix
+            full_mat = self.estimated_signal_matrix
 
-        ret_val = estimated_signal_matrix[row, column]
-        return ret_val
+        return full_mat
 
     def _calculate_distances(
         self,
@@ -700,7 +723,7 @@ class StarNNEstimator(EstimationMethod):
         """Computes distances, caches them."""
         # TODO add validation checks here
         n_rows, n_cols = data_array.shape
-        row_distances = np.zeros((n_rows, n_cols))
+        row_distances = np.zeros((n_rows, n_rows))
 
         for i in range(n_rows):
             for j in range(i + 1, n_rows):
@@ -709,12 +732,20 @@ class StarNNEstimator(EstimationMethod):
                     row_distances[i, j] = np.inf
                     row_distances[j, i] = np.inf
                     continue
-                for k in range(n_cols):
-                    if not overlap_cols[k]:
-                        continue
-                    row_distances[i, j] += data_type.distance(
-                        data_array[i, k], data_array[j, k]
+                if isinstance(data_type, Scalar):
+                    row_distances[i, j] = np.sum(
+                        np.square(
+                            data_array[i, overlap_cols] - data_array[j, overlap_cols]
+                        )
                     )
+                else:
+                    for k in range(n_cols):
+                        if not overlap_cols[k]:
+                            continue
+                        row_distances[i, j] += data_type.distance(
+                            data_array[i, k], data_array[j, k]
+                        )
                 row_distances[i, j] /= np.sum(overlap_cols)
                 row_distances[j, i] = row_distances[i, j]
+
         self.row_distances = row_distances

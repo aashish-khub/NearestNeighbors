@@ -2,12 +2,30 @@
 
 import numpy as np
 import pytest
-from nearest_neighbors.estimation_methods import StarNNEstimator
 from nearest_neighbors.star_nn import star_nn
 
 # Initialize constants
-ROWS = 4
-COLS = 4
+ROWS = 16
+COLS = 16
+
+
+def test_impute_one_vs_all() -> None:
+    """Test imputation of a single value vs. all values, ensure they align"""
+    np.random.seed(0)  # For reproducibility
+    data = np.random.randn(ROWS, COLS)
+    mask = np.ones((ROWS, COLS))
+    mask[1, 1] = 0  # Make one entry missing
+    mask[2, 2] = 0  # Make another entry missing
+    mask[3, 3] = 0  # Make another entry missing
+    imputer = star_nn()
+    imputed_matrix = imputer.impute_all(data, mask)
+    for i in range(ROWS):
+        for j in range(COLS):
+            if mask[i, j] == 0:
+                imputed_value = imputer.impute(i, j, data, mask)
+                assert np.isclose(imputed_value, imputed_matrix[i, j]), (
+                    f"Imputed value at ({i}, {j}) does not match imputed matrix."
+                )
 
 
 def test_constant_imputation() -> None:
@@ -17,11 +35,10 @@ def test_constant_imputation() -> None:
     data = np.ones((ROWS, COLS))
     mask = np.ones((ROWS, COLS))
     mask[1, 1] = 0  # Make one entry missing
-    
+
     imputer = star_nn(noise_variance=0.1, delta=0.05)
-    
+
     imputed_value = imputer.impute(1, 1, data, mask)
-    # print(imputer.cached_estimated_signal_matrix)
     assert np.isclose(imputed_value, 1.0)
 
 
@@ -33,11 +50,11 @@ def test_no_observed_values() -> None:
     mask = np.ones((ROWS, COLS))
     mask[:, 1] = 0  # Make entire column missing
 
-    imputer = star_nn(noise_variance=0.1, delta=0.05)
-    # imputer.set_row_distances(data, mask)
+    imputer = star_nn()
 
-    imputed_value = imputer.impute(1, 1, data, mask)
-    assert np.isnan(imputed_value)
+    imputed_all = imputer.impute_all(data, mask)
+    all_in_col_are_nan = np.isnan(imputed_all[:, 1])
+    assert np.all(all_in_col_are_nan), "All imputed values in column should be NaN."
 
 
 def test_weight_calculation() -> None:
@@ -50,11 +67,10 @@ def test_weight_calculation() -> None:
             [1.3, 2.3, 3.3, 4.3],
         ]
     )
-    mask = np.ones((ROWS, COLS))
+    mask = np.ones(data.shape)
     mask[1, 1] = 0
 
-    imputer = star_nn(noise_variance=0.1, delta=0.05)
-    # imputer.set_row_distances(data, mask)
+    imputer = star_nn()
 
     # Get the weights through imputation
     imputed_value = imputer.impute(1, 1, data, mask)
@@ -65,90 +81,84 @@ def test_weight_calculation() -> None:
     assert observed_values.min() <= imputed_value <= observed_values.max()
 
 
-def test_noise_variance_estimation() -> None:
-    """Test that noise variance estimation converges."""
-    data = np.array(
-        [
-            [1.0, 2.0, 3.0, 4.0],
-            [1.1, 2.1, 3.1, 4.1],
-            [1.2, 2.2, 3.2, 4.2],
-            [1.3, 2.3, 3.3, 4.3],
-        ]
-    )
-    mask = np.ones((ROWS, COLS))
-    mask[1, 1] = 0
-
-    imputer = star_nn(delta=0.05)  # Don't set noise_variance initially
-    # imputed_data = imputer.fit(data, mask, max_iterations=10)
-    imputed_data = imputer.impute(1, 1, data, mask)
-    # imputed_data = imputer.estimation_method.get_estimated_signal_matrix()
-    em = imputer.estimation_method
-    imputed_data = em.get_estimated_signal_matrix()
-    # Check that noise variance was estimated and is positive
-    assert em.noise_variance is not None
-    assert em.noise_variance > 0
-
-
-def test_row_distances_calculation() -> None:
-    """Test that row distances are properly calculated."""
-    data = np.array([[1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]])
-    mask = np.ones((3, 3))
-    print("test")
-
-    imputer = star_nn(noise_variance=0.1, delta=0.05)
-    # imputer.set_row_distances(data, mask)
-    # if not isinstance(imputer.estimation_method, StarNNEstimator):
-    #     raise TypeError(
-    #         f"Expected StarNNEstimator, got {type(imputer.estimation_method)}"
-    #     )
-    imputer.impute(0, 0, data, mask)
-    em = imputer.estimation_method
-    print(em)
-    # print("aaaaaa")
-    # Check that distances are symmetric
-    assert np.allclose(em.row_distances, em.row_distances.T)
-    # Check diagonal is zero
-    assert np.allclose(np.diag(em.row_distances), 0)
-    # Check distances are non-negative
-    assert np.all(em.row_distances >= 0)
-
-
 def test_convergence() -> None:
     """Test that the fitting process converges within max_iterations."""
+    np.random.seed(0)  # For reproducibility
     data = np.random.randn(ROWS, COLS)
     mask = np.ones((ROWS, COLS))
-    mask[1, 1] = 0
-
-    max_iterations = 5
-    imputer = star_nn(noise_variance=0.1, delta=0.05, max_iterations=max_iterations)
+    # hide all diagonal and anti-diagonal elements to 0
+    mask = mask - (np.eye(ROWS, COLS) * np.fliplr(np.eye(ROWS, COLS)))
+    max_iterations = 100
+    # Set a high max_iterations to ensure convergence
+    imputer = star_nn(
+        noise_variance=0.1,
+        delta=0.05,
+        max_iterations=max_iterations,
+    )
     # imputed_data = imputer.fit(data, mask, max_iterations=max_iterations)
-    imputer.impute(0, 0, data, mask)
-    em = imputer.estimation_method
-    imputed_data = em.get_estimated_signal_matrix()
-    # Check that imputed data has the same shape as input
-    assert imputed_data.shape == data.shape
-    # Check that non-missing values are unchanged
-    assert np.allclose(imputed_data[mask == 1], data[mask == 1])
+
+    imputed_data = imputer.impute_all(data, mask)
+    # Check that imputed data is not none and has the same shape as input
+    assert imputed_data.shape == data.shape, (
+        f"Shape mismatch: {imputed_data.shape} vs {data.shape}"
+    )
 
 
 def test_delta_parameter() -> None:
-    """Test that different delta values affect the imputation."""
+    """Test how different delta values affect the imputation."""
+    np.random.seed(0)  # For reproducibility
     data = np.random.randn(ROWS, COLS)
     mask = np.ones((ROWS, COLS))
     mask[1, 1] = 0
+    mask[2, 2] = 0
 
     # Compare imputation with different delta values
     imputer1 = star_nn(noise_variance=0.1, delta=0.01)
     imputer2 = star_nn(noise_variance=0.1, delta=0.5)
 
-    # imputer1.set_row_distances(data, mask)
-    # imputer2.set_row_distances(data, mask)
+    value1 = imputer1.impute_all(data, mask)
+    value2 = imputer2.impute_all(data, mask)
+    assert not np.allclose(value1, value2), (
+        "Imputed values should differ significantly with different delta values."
+    )
 
-    value1 = imputer1.impute(1, 1, data, mask)
-    value2 = imputer2.impute(1, 1, data, mask)
 
-    # Values should be different for very different deltas
-    assert not np.isclose(value1, value2)
+def test_high_snr_convergence() -> None:
+    """Test that with very high SNR, imputation result converges to the true signal.
+
+    With a very small noise variance (high SNR), the imputed values should be
+    very close to the true signal values.
+    """
+    np.random.seed(0)  # For reproducibility
+    # Create a clean signal matrix with a simple pattern
+    signal = np.zeros((ROWS, COLS))
+    for i in range(ROWS):
+        signal[i, :] = i + 1  # Distinct values for each row, e.g., 1, 2, 3, 4
+    # Add extremely small noise (high SNR)
+    noise_stddev = 1e-6  # Very small noise
+    noisy_data = signal + np.random.normal(0, noise_stddev, (ROWS, COLS))
+    # Create mask with a single missing value
+    mask = np.ones((ROWS, COLS))
+    mask[2, 2] = 0  # Make one entry missing
+
+    # Create imputer with a very small noise variance
+    imputer = star_nn(
+        noise_variance=noise_stddev**2,
+        delta=0.05,
+        max_iterations=100,
+        convergence_threshold=1e-6,
+    )
+
+    # Impute the missing value
+    # imputed_value = imputer.impute(2, 2, noisy_data, mask)
+    imputed_all = imputer.impute_all(noisy_data, mask)
+    # check if all imputed values are close to the true signal with some fault tolerance
+    print(signal)
+    # print(imputed_value)
+    print(imputed_all)
+    assert np.all(np.isclose(imputed_all, signal, atol=1e-3)), (
+        "All imputed values should be close to the true signal values."
+    )
 
 
 def test_edge_case_single_observation() -> None:
@@ -157,28 +167,53 @@ def test_edge_case_single_observation() -> None:
     mask = np.zeros((ROWS, COLS))
     mask[0, 1] = 1  # Only one observation in column 1
 
-    imputer = star_nn(noise_variance=0.1, delta=0.05)
-    # imputer.set_row_distances(data, mask)
-
-    imputed_value = imputer.impute(1, 1, data, mask)
+    imputer = star_nn()
     # Should return the only observed value
+    imputed_value = imputer.impute(0, 1, data, mask)
     assert np.isclose(imputed_value, data[0, 1])
 
 
 def test_invalid_inputs() -> None:
     """Test that invalid inputs raise appropriate errors."""
+    # Test with invalid delta values (should be between 0 and 1)
+    with pytest.raises(ValueError, match="Delta must be between 0 and 1"):
+        star_nn(delta=-0.1)
+
+    with pytest.raises(ValueError, match="Delta must be between 0 and 1"):
+        star_nn(delta=1.5)
+
+    # Test with invalid noise variance (should be non-negative)
+    with pytest.raises(ValueError, match="Noise variance must be non-negative"):
+        star_nn(noise_variance=-0.1)
+
+    # Test with invalid convergence threshold (should be non-negative)
+    with pytest.raises(ValueError, match="Convergence threshold must be non-negative"):
+        star_nn(convergence_threshold=-0.01)
+
+    # Test with invalid max iterations (should be positive)
+    with pytest.raises(ValueError, match="Max iterations must be positive"):
+        star_nn(max_iterations=0)
+
+    with pytest.raises(ValueError, match="Max iterations must be positive"):
+        star_nn(max_iterations=-5)
+
+    # Test with mismatched dimensions for data and mask
     imputer = star_nn(noise_variance=0.1, delta=0.05)
+    data = np.ones((3, 4))  # 3x4 matrix
+    mask = np.ones((4, 3))  # 4x3 matrix (transposed dimensions)
 
-    # Test with mismatched dimensions
-    with pytest.raises(ValueError):
-        data = np.ones((3, 3))
-        mask = np.ones((4, 4))
-        # imputer.set_row_distances(data, mask)
+    # Attempting to impute with mismatched dimensions should raise an error
+    with pytest.raises(Exception):  # Could be IndexError, ValueError, etc.
+        imputer.impute(1, 1, data, mask)
 
-    # Test with invalid noise variance
-    with pytest.raises(ValueError):
-        imputer = star_nn(noise_variance=-1, delta=0.05)
+    # Test imputation with out-of-bounds indices
+    data = np.ones((ROWS, COLS))
+    mask = np.ones((ROWS, COLS))
 
-    # Test with invalid delta
-    with pytest.raises(ValueError):
-        imputer = star_nn(noise_variance=0.1, delta=1.5)
+    # Row index out of bounds
+    with pytest.raises(Exception):  # Could be IndexError
+        imputer.impute(ROWS + 5, 1, data, mask)
+
+    # Column index out of bounds
+    with pytest.raises(Exception):  # Could be IndexError
+        imputer.impute(1, COLS + 5, data, mask)

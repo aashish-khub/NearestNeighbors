@@ -36,6 +36,8 @@ dependencies = [
     "joblib",
     "wrds",
     "requests",
+    "seaborn",
+    "SyntheticControlMethods",
     "datasets",
 ]
 

@@ -13,11 +13,10 @@ from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
 import numpy as np
 import pandas as pd
-from typing import Any
+from typing import Any, cast
 import logging
 from joblib import Memory
-from datasets import load_dataset
-from datasets import DatasetDict
+from datasets import load_dataset, Dataset
 
 
 memory = Memory(".joblib_cache", verbose=2)
@@ -46,12 +45,91 @@ class PromptEvalDataLoader(NNDataLoader):
 
     """
 
+    MODELS = [
+        "meta_llama_llama_3_8b",
+        "meta_llama_llama_3_8b_instruct",
+        "meta_llama_llama_3_70b_instruct",
+        "codellama_codellama_34b_instruct",
+        "google_flan_t5_xl",
+        "google_flan_t5_xxl",
+        "google_flan_ul2",
+        "ibm_mistralai_merlinite_7b",
+        "mistralai_mixtral_8x7b_instruct_v01",
+        "mistralai_mistral_7b_instruct_v0_2",
+        "google_gemma_7b",
+        "google_gemma_7b_it",
+        "tiiuae_falcon_40b",
+        "mistralai_mistral_7b_v0_1",
+        "tiiuae_falcon_180b",
+    ]
+
+    TASKS = [
+        "college_mathematics",
+        "miscellaneous",
+        "moral_disputes",
+        "jurisprudence",
+        "moral_scenarios",
+        "college_chemistry",
+        "professional_medicine",
+        "clinical_knowledge",
+        "abstract_algebra",
+        "nutrition",
+        "professional_psychology",
+        "high_school_government_and_politics",
+        "high_school_us_history",
+        "high_school_chemistry",
+        "high_school_macroeconomics",
+        "management",
+        "conceptual_physics",
+        "philosophy",
+        "electrical_engineering",
+        "high_school_psychology",
+        "medical_genetics",
+        "high_school_geography",
+        "high_school_statistics",
+        "international_law",
+        "elementary_mathematics",
+        "high_school_physics",
+        "world_religions",
+        "high_school_european_history",
+        "formal_logic",
+        "security_studies",
+        "sociology",
+        "high_school_biology",
+        "us_foreign_policy",
+        "high_school_microeconomics",
+        "college_medicine",
+        "college_computer_science",
+        "logical_fallacies",
+        "high_school_computer_science",
+        "anatomy",
+        "econometrics",
+        "astronomy",
+        "college_biology",
+        "virology",
+        "professional_accounting",
+        "college_physics",
+        "high_school_world_history",
+        "business_ethics",
+        "global_facts",
+        "public_relations",
+        "marketing",
+        "human_aging",
+        "professional_law",
+        "high_school_mathematics",
+        "prehistory",
+        "machine_learning",
+        "computer_security",
+        "human_sexuality",
+    ]
+
     def __init__(
         self,
         tasks: list[str] | None = None,
         models: list[str] | None = None,
         seed: int | None = None,
         propensity: float = 1.0,  # Default to 1.0 (keeping all data)
+        n_examples_per_task: int = 100,
         **kwargs: Any,
     ):
         """Initializes the PromptEval data loader.
@@ -62,65 +140,71 @@ class PromptEvalDataLoader(NNDataLoader):
             models: models that are evaluated on for each tasks. Default: None (use all models).
             seed: Random seed for reproducibility. Default: None
             propensity: Proportion of data to keep. Default: 1.0
+            n_examples_per_task: Number of examples to sample (with replacement) from each task
+                in the distributional setting. Default: 100.
             kwargs: Additional keyword arguments.
 
         """
         super().__init__(
             **kwargs,
         )
-        self.tasks = tasks
-        self.models = models
+        self.tasks = self.TASKS if tasks is None else tasks
+        self.models = self.MODELS if models is None else models
         self.propensity = propensity
-        if seed is not None:
+        self.seed = seed
+        if self.seed is not None:
             np.random.seed(
-                seed=seed
+                seed=self.seed
             )  # instantiate random seed if provided but do it only once here
+        self.n_examples_per_task = n_examples_per_task
 
-    def load_config_data(self, config_name: str) -> pd.DataFrame | None:
+    @staticmethod
+    @memory.cache
+    def load_config_data(
+        task: str, model: str, n_examples_per_task: int = 100, seed: int | None = None
+    ) -> pd.DataFrame | None:
         """Load and process data for a specific configuration.
 
         Args:
-            config_name: Name of the configuration/task to load.
+            task: Name of the task to load.
+            model: Name of the model to load.
+            n_examples_per_task: Number of examples to sample (with replacement) from each task. Default: 100.
+            seed: Random seed for reproducibility. Default: None.
 
         Returns:
             DataFrame containing the processed data or None if loading fails.
 
         """
-        try:
-            # Load the dataset with the specific config
-            dataset = load_dataset(
-                "PromptEval/PromptEval_MMLU_correctness",
-                config_name,
-                #    download_mode='force_redownload'
-            )
-            list_dfs = []
-            for key in dataset:
-                print(f"Keys in the dataset: {key}")
-                if isinstance(dataset, DatasetDict):
-                    df = dataset[key].to_pandas()
-                    if isinstance(df, pd.DataFrame):
-                        df = pd.DataFrame(df)
-                        df_reset = df.reset_index()
-                        df_long = pd.melt(
-                            df_reset,
-                            id_vars=["index"],
-                            var_name="example",
-                            value_name="correctness",
-                        )
-                        df_long["model"] = key
-                        df_long["task"] = config_name
-                        df_long = df_long.rename(columns={"index": "format"})
-
-                        list_dfs.append(df_long)
-                    else:
-                        print(f"Data for key '{key}' is not a DataFrame")
-                else:
-                    raise ValueError("Loaded dataset is not a DatasetDict")
-            df_final = pd.concat(list_dfs, ignore_index=True)
-            return df_final
-        except Exception as e:
-            print(f"Error loading config '{config_name}': {e}")
-            return None
+        # Load the dataset with the specific config
+        # NOTE: dataset is a Dataset
+        # NOTE: HF automatically downloads the dataset if it's not already downloaded
+        # and caches it in ~/.cache/huggingface/hub/
+        dataset = cast(
+            Dataset,
+            load_dataset(
+                "PromptEval/PromptEval_MMLU_correctness", name=task, split=model
+            ),
+        )
+        # rows are format templates, columns are examples
+        df_table: pd.DataFrame = cast(pd.DataFrame, dataset.to_pandas())
+        # sample columns with replacement
+        df_table = (
+            df_table.transpose()
+            .sample(n=n_examples_per_task, replace=True, random_state=seed)
+            .transpose()
+            .reset_index()
+        )
+        # melt the table into rows for every format-example pair
+        df_long = pd.melt(
+            df_table,
+            id_vars=["index"],
+            var_name="example",
+            value_name="correctness",
+        )
+        df_long["model"] = model
+        df_long["task"] = task
+        df_long = df_long.rename(columns={"index": "format"})
+        return df_long
 
     def process_data_scalar(self) -> tuple[np.ndarray, np.ndarray]:
         """Processes the data into scalar setting. This implementation is applicable when generating (template * example) matrix, while fixing model and task.
@@ -141,16 +225,17 @@ class PromptEvalDataLoader(NNDataLoader):
         task = self.tasks[0]
         propensity = self.propensity
 
-        dataset = load_dataset("PromptEval/PromptEval_MMLU_correctness", task)
-        df = pd.DataFrame(dataset[model])
-        N, T = df.shape[0], df.shape[1]
-        Masking: np.ndarray = np.zeros((N, T))
-
-        Masking = np.random.binomial(1, propensity, size=(N, T))
+        ds = cast(
+            Dataset,
+            load_dataset(
+                "PromptEval/PromptEval_MMLU_correctness", name=task, split=model
+            ),
+        )
+        df = cast(pd.DataFrame, ds.to_pandas())
+        mask = np.random.binomial(1, propensity, size=df.shape)
 
         data = df.to_numpy(dtype=float)
-        data[Masking == 0] = np.nan
-        mask = Masking
+        data[mask == 0] = np.nan
         self.data = data
         self.mask = mask
         return data, mask
@@ -172,39 +257,35 @@ class PromptEvalDataLoader(NNDataLoader):
         propensity = self.propensity
 
         # Load the data for the multiple config and model
-        final_list = []
-        for config in tasks:
-            df = self.load_config_data(config)
-            if df is not None:
-                final_list.append(df)
-            else:
-                print(f"Failed to load data for config: {config}")
+        df_list = []
+        for task in tasks:
+            for model in models:
+                df = self.load_config_data(
+                    task, model, self.n_examples_per_task, self.seed
+                )
+                df_list.append(df)
 
-        df_final = pd.concat(final_list, ignore_index=True)
+        df = pd.concat(df_list, ignore_index=True)
 
-        formats = df_final["format"].unique()
-        models = df_final["model"].unique()
-        tasks = df_final["task"].unique()
+        # compute the mean correctness across examples for each model-task-format combination
+        df = df.pivot_table(
+            index=["model", "task", "format"], values="correctness", aggfunc="mean"
+        )
+        # aggregate the correctness values into a list for each model-task combination
+        df = df.groupby(["model", "task"]).agg(list)
+        # unstack the task and model index into separate columns
+        df = df.unstack()
+        # drop the multi-index correctness columns
+        df = df.droplevel(0, axis=1)
+        # convert lists to numpy arrays of type float
+        data = np.array(
+            [np.array(x, dtype=float) for x in df.values.flatten()]  # type: ignore
+        ).reshape(df.shape + (-1,))
 
-        # data_array = np.empty((len(formats), len(models), len(tasks)))
-        data_array = np.empty((len(tasks), len(models), len(formats)))
-        for id_model, model in enumerate(models):
-            for id_task, task in enumerate(tasks):
-                df_sub = df_final[
-                    (df_final["task"] == task) & (df_final["model"] == model)
-                ]
-                format_examples = []
-                for id_format, format in enumerate(formats):
-                    df_sub_task = df_sub[df_sub["format"] == format]
-                    format_examples = df_sub_task["correctness"].to_list()
-                    data_array[id_task, id_model, id_format] = np.mean(format_examples)
+        # Simulate MCAR missingness
+        mask = np.random.binomial(1, propensity, size=data.shape[:2])
+        data[mask == 0] = np.nan
 
-        N, T = len(tasks), len(models)
-        Masking: np.ndarray = np.zeros((N, T))
-        Masking = np.reshape(np.random.binomial(1, propensity, (N * T)), (N, T))
-
-        data = df_final.to_numpy()
-        mask = Masking
         self.data = data
         self.mask = mask
         return data, mask

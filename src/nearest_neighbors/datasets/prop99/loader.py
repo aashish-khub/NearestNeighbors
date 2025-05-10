@@ -114,6 +114,13 @@ class Prop99DataLoader(NNDataLoader):
         ]
         logger.info(f"After year range filter: {df_consumption.shape}")
 
+        # Make sure we're working with a pandas DataFrame
+        df_consumption = (
+            pd.DataFrame(df_consumption)
+            if not isinstance(df_consumption, pd.DataFrame)
+            else df_consumption
+        )
+
         # Pivot the data to get states as rows and years as columns
         data_df = df_consumption.pivot(
             index="LocationAbbr", columns="Year", values="Data_Value"

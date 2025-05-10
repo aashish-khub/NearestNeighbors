@@ -38,6 +38,7 @@ dependencies = [
     "requests",
     "seaborn",
     "SyntheticControlMethods",
+    "datasets",
 ]
 
 [project.urls]

@@ -1,5 +1,6 @@
 from .nnimputer import FitMethod, DataType, NearestNeighborImputer
 from .estimation_methods import DREstimator, TSEstimator
+from .data_types import DistributionKernelMMD
 import numpy.typing as npt
 from hyperopt import hp, fmin, tpe, Trials
 from typing import cast, Union
@@ -291,4 +292,4 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a TSEstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
-        return super().fit(data_array, mask_array, imputer, ret_trials)
+        return super().fit(data_array, mask_array, imputer)

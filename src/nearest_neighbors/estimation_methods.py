@@ -560,8 +560,10 @@ class StarNNEstimator(EstimationMethod):
         """Imputes one specific value using the Star NN method."""
         n_rows, n_cols = data_array.shape
         delta = self.delta / np.sqrt(n_rows)
-        print("delta: %s" % delta)  # TODO switch to logger.log
-        print("noise_variance: %s" % self.noise_variance)  # TODO switch to logger.log
+        logger.info("delta: %s" % delta)  # TODO switch to logger.log
+        logger.info(
+            "noise_variance: %s" % self.noise_variance
+        )  # TODO switch to logger.log
         if self.noise_variance is None:
             noise_variance = np.var(data_array[mask_array == 1]) / 2
             self.noise_variance = noise_variance
@@ -622,7 +624,7 @@ class StarNNEstimator(EstimationMethod):
         n_rows, n_cols = data_array.shape
         imputed_data = np.zeros_like(data_array)
         for iter in range(self.max_iterations):
-            print("Iteration %d" % iter)  # TODO switch to logger.log
+            logger.info("Iteration %d" % iter)  # TODO switch to logger.log
             for i in range(n_rows):
                 for j in range(n_cols):
                     imputed_data[i, j] = self._impute_single_value_helper(
@@ -641,7 +643,7 @@ class StarNNEstimator(EstimationMethod):
                     / self.noise_variance
                     < self.convergence_threshold
                 ):
-                    print(
+                    logger.info(
                         f"Converged after {iter + 1} iterations and final noise variance: {new_variance_estimate}"
                     )
                     self.noise_variance = new_variance_estimate

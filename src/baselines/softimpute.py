@@ -8,7 +8,7 @@ def softimpute(X: npt.NDArray) -> npt.NDArray:
     Parameters
     ----------
     X : npt.NDArray
-        Input data matrix with missing values as np.nan.
+        N x T input data matrix with missing values as np.nan.
 
     Returns
     -------

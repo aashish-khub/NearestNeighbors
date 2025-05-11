@@ -60,7 +60,6 @@ hs_dataloader = NNData.create(
     "prompteval",
     # models=['meta_llama_llama_3_8b', 'meta_llama_llama_3_8b_instruct', 'meta_llama_llama_3_70b_instruct', 'codellama_codellama_34b_instruct', ],
     # tasks=['college_mathematics', 'miscellaneous', 'moral_disputes', 'jurisprudence', 'moral_scenarios', 'college_chemistry'],
-    # propensity=0.5,
     propensity=propensity,
     seed=seed,
 )

@@ -1,3 +1,13 @@
+"""Plot synthetic controls for each state in the output directory.
+
+TODO: figure out how to draw an arrow from the text label to the last valid value
+
+Example usage:
+```bash
+python plot_synthetic_control.py -od OUTPUT_DIR
+```
+"""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from glob import glob

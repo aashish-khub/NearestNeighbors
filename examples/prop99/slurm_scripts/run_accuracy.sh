@@ -13,7 +13,16 @@ METHODS=(
     "ts"
     "star"
 )
-for em in ${METHODS[@]};
+CONTROL_STATES=(
+    "TX" "WI" "MT" "RI" "KS" "ME" "UT" "VA" "IN" "GA"
+    "AL" "SD" "NH" "DE" "NC" "CO" "AR" "CT" "MN" "NV"
+    "LA" "IA" "NE" "SC" "OH" "TN" "WV" "KY" "ID" "MS"
+    "IL" "WY" "VT" "ND" "PA" "OK" "MO" "NM"
+)
+for state in ${CONTROL_STATES[@]};
 do
-    python run_scalar.py -od $OUTPUT_DIR -em $em -f
+    for em in ${METHODS[@]};
+    do
+        python run_scalar.py -od $OUTPUT_DIR -em $em -f --state $state --log_level ERROR
+    done
 done

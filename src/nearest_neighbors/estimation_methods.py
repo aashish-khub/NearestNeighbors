@@ -55,7 +55,8 @@ class RowRowEstimator(EstimationMethod):
             # Find the nearest neighbors indexes
             nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
             # Apply mask_array to data_array
-            masked_data_array = np.where(mask_array, data_array, np.nan)
+            masked_data_array = np.copy(data_array)
+            masked_data_array[~mask_array] = np.nan
 
         # If no neighbors found, return nan
         if len(nearest_neighbors) == 0:

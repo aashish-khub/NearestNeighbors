@@ -12,6 +12,7 @@ METHODS=(
     "dr"
     "ts"
     "star"
+    "softimpute"
 )
 CONTROL_STATES=(
     "TX" "WI" "MT" "RI" "KS" "ME" "UT" "VA" "IN" "GA"

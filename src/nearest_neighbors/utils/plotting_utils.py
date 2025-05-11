@@ -22,9 +22,10 @@ METHOD_ALIASES = {
     "dr": "DR-\nNN",
     "ts": "TS-\nNN",
     "usvt": "USVT",
-    "softimpute": "SoftImpute",
+    "softimpute": "Soft\nImpute",
     "nadaraya": "NW",
     "star": "AW-\nNN",
+    "sc": "Synth.",
 }
 
 METHOD_ALIASES_SINGLE_LINE = {
@@ -33,7 +34,7 @@ METHOD_ALIASES_SINGLE_LINE = {
     "dr": "DRNN",
     "ts": "TSNN",
     "usvt": "USVT",
-    "softimpute": "SoftImpute",
+    "softimpute": "SI",
     "nadaraya": "NW",
     "star": "AWNN",
     "sc": "Synth.",
@@ -59,6 +60,7 @@ COLORS = {
     "dr": "grey",
     "ts": "grey",
     "usvt": "lightgrey",
+    "softimpute": "lightgrey",
     "star": "grey",
     "sc": "blue",
 }

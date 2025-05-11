@@ -37,7 +37,7 @@ from hyperopt import Trials
 
 # %%
 # import baseline methods
-from baselines import usvt
+from baselines import usvt, softimpute
 
 # %%
 # import nearest neighbor methods
@@ -173,6 +173,37 @@ if estimation_method == "usvt":
 
     # Compute the synthetic control
     control_list = usvt_imputed[treatment_row]
+
+elif estimation_method == "softimpute":
+    logger.info("Using SoftImpute estimation")
+    # setup softimpute imputation
+    si_data = data.copy()
+    si_mask = mask.copy()
+    imputations = []
+    imputation_times = []
+    si_imputed = None  # Initialize outside the loop
+    for row, col in tqdm(test_block, desc="Imputing missing values"):
+        si_mask[row, col] = 0
+        si_data_test = si_data.copy()
+        si_data_test[si_mask != 1] = np.nan
+        # impute missing values simultaneously
+        start_time = time()
+        si_imputed = softimpute(si_data_test)
+        elapsed_time = time() - start_time
+        si_mask[row, col] = 1
+        imputations.append(si_imputed[row, col])
+        # set the time to the average time per imputation
+        imputation_times.append([elapsed_time / len(test_block)])
+    fit_times = [0] * len(test_block)
+
+    # Compute the synthetic control
+    # Impute missing values
+    control_list = []
+    if si_imputed is not None:  # Add null check
+        for col in range(data.shape[1]):
+            imputed_value = si_imputed[treatment_row, col]
+            control_list.append(imputed_value)
+
 elif estimation_method == "star":
     logger.info("Using star estimation")
     estimator = StarNNEstimator()

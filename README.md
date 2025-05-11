@@ -8,7 +8,7 @@
 This package requires Python 3.10.4. Please verify your Python version by running `python --version` in your terminal. If you’re not running Python 3.10.4, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10.4`).
 
 > [!NOTE]
-> To install pyenv, follow the instructions here: https://github.com/pyenv/pyenv?tab=readme-ov-file#installation.
+> To install pyenv, follow the instructions here: https://github.com/pyenv/pyenv?tab=readme-ov-file#installation, then run `eval "$(pyenv init -)"`.
 
 Dependencies are managed in `pyproject.toml`. To install the dependencies, run the following commands, based on your Operating System:
 

@@ -245,8 +245,10 @@ class PromptEvalDataLoader(NNDataLoader):
 
         Returns
         -------
-            data: task * model * template matrix of floats (in this case, each entry average of correctness across examples)
-            mask: Mask for processed data
+            data: numpy array of shape (n_tasks, n_models, n_templates, 1)
+                Entry is the average correctness across examples for a given model-task-template combination
+            mask: numpy array of shape (n_tasks, n_models, n_templates, 1)
+                Entry is 1 if the example is kept, 0 otherwise
 
         """
         if not self.tasks or not self.models:
@@ -280,7 +282,7 @@ class PromptEvalDataLoader(NNDataLoader):
         # convert lists to numpy arrays of type float
         data = np.array(
             [np.array(x, dtype=float) for x in df.values.flatten()]  # type: ignore
-        ).reshape(df.shape + (-1,))
+        ).reshape(df.shape + (-1, 1))
 
         # Simulate MCAR missingness
         mask = np.random.binomial(1, propensity, size=data.shape[:2])

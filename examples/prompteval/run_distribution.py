@@ -11,6 +11,7 @@ import logging
 import tqdm
 import numpy as np
 import pandas as pd
+from time import time
 
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
@@ -21,6 +22,8 @@ from nearest_neighbors.data_types import (
 )
 from nearest_neighbors.nnimputer import NearestNeighborImputer
 from nearest_neighbors.fit_methods import LeaveBlockOutValidation
+
+from ks import ks_distance
 
 parser = get_base_parser()
 parser.add_argument(
@@ -131,13 +134,20 @@ imputer = NearestNeighborImputer(
     data_type,
     #  distance_threshold=0.5
 )
+start_time = time()
 eta = fit_method.fit(data, mask_test, imputer)
+end_time = time()
+time_fit = end_time - start_time
 logger.info(f"Distance threshold: {eta}")
 
 # Impute the missing values using the fitted model
 imputations = []
+time_impute = []
 for i, j in tqdm.tqdm(test_block):
+    start_time = time()
     imputations.append(imputer.impute(i, j, data, mask_test))
+    end_time = time()
+    time_impute.append(end_time - start_time)
 
 ground_truth = data[test_inds_rows, test_inds_cols]
 
@@ -146,7 +156,7 @@ test_len = len(test_block)
 est_errors = []
 for t in range(test_len):
     if len(imputations[t]) > 0 and len(ground_truth[t]) > 0:
-        err = data_type.distance(imputations[t], ground_truth[t])
+        err = ks_distance(imputations[t], ground_truth[t])
     else:
         err = np.nan
     est_errors.append(err)
@@ -163,6 +173,8 @@ df = pd.DataFrame(
         "estimation_method": [args.estimation_method] * len(imputations),
         "fit_method": [args.fit_method] * len(imputations),
         "est_errors": est_errors,
+        "time_impute": time_impute,
+        "time_fit": time_fit,
         "row": test_inds_rows,
         "col": test_inds_cols,
         "data_type": [args.data_type] * len(imputations),

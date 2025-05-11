@@ -19,7 +19,7 @@ from joblib import Memory
 from datasets import load_dataset, Dataset
 
 
-memory = Memory(".joblib_cache", verbose=2)
+memory = Memory(".joblib_cache", verbose=0)
 logger = logging.getLogger(__name__)
 
 params = {

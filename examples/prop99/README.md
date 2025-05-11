@@ -4,6 +4,8 @@ To compute the estimation error for control states, please run:
 
 ```bash
 ./slurm_scripts/run_accuracy.sh OUTPUT_DIR
+# Run the baseline Synthetic Control method
+python proposal_99.py -od OUTPUT_DIR
 ```
 
 To generate box plots of the absolute error across control states, please run:

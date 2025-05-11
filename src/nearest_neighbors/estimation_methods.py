@@ -74,8 +74,14 @@ class RowRowEstimator(EstimationMethod):
             # Find the nearest neighbors indexes
             nearest_neighbors = np.where(row_dists <= eta_row)[0]
             # Apply mask_array to data_array
-            masked_data_array = np.where(mask_array, data_array, np.nan)
-
+            masked_data_array = data_array.copy()
+            if isinstance(data_type, Scalar):
+                masked_data_array = np.where(mask_array, data_array, np.nan)
+            else:
+                for i in range(data_array.shape[0]):
+                    for j in range(data_array.shape[1]):
+                        if not mask_array[i,j]:
+                            masked_data_array[i,j] = np.full(data_array[i,j].shape, np.nan)
         # If no neighbors found, return nan
         if len(nearest_neighbors) == 0:
             # return np.array(np.nan)
@@ -87,11 +93,13 @@ class RowRowEstimator(EstimationMethod):
             else:
                 # return the average of all observed outcomes corresponding
                 # to treatment 1 at time t.
-                return np.array(np.nanmean(masked_data_array[:, column]))
+                if isinstance(data_type, Scalar):
+                    return np.array(np.nanmean(masked_data_array[:, column]))
+                else:
+                    return np.full(data_array[0,0].shape, np.nan)
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
-        print(nearest_neighbors_data[3].shape)
         return data_type.average(nearest_neighbors_data)
 
     def _calculate_distances(

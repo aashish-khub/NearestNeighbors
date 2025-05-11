@@ -168,7 +168,9 @@ class DistributionWassersteinSamples(DataType):
             np.ndarray: Average of the distributions
 
         """
-        return np.mean(np.sort(object_list, axis=1), axis=0)
+        # filter out nan values
+        # All input objects should be 1-dimensional numpy arrays
+        return np.mean([np.sort(obj) for obj in object_list], axis=0)
 
 
 class DistributionWassersteinQuantile(DataType):

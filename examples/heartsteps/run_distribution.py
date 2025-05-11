@@ -167,11 +167,11 @@ mask_test[test_inds_rows, test_inds_cols] = 0
     #     )
 if estimation_method == "row-row":
     logger.info("Using row-row estimation")
-    imputer = NearestNeighborImputer(estimation_method=ColColEstimator(), data_type=data_type)
+    imputer = NearestNeighborImputer(estimation_method=RowRowEstimator(is_percentile=False), data_type=data_type)
     logger.info("Using leave-block-out validation")
     fitter = LeaveBlockOutValidation(
         block,
-        distance_threshold_range=(0, 1),
+        distance_threshold_range=(0, 100),
         n_trials=100,
         data_type=data_type
     )
@@ -206,7 +206,7 @@ else:
     #     )
 
 start_time = time()
-trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
+trials = fitter.fit(data, mask_test, imputer, ret_trials=True, verbose=True)
 end_time = time()
 fit_times = [end_time - start_time] * len(test_block)
 

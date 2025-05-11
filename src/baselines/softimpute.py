@@ -1,7 +1,8 @@
 from fancyimpute import SoftImpute, BiScaler
 import numpy.typing as npt
 
-def softimpute(X : npt.NDArray) -> npt.NDArray:
+
+def softimpute(X: npt.NDArray) -> npt.NDArray:
     """SoftImpute imputation method.
 
     Parameters

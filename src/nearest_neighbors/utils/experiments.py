@@ -46,6 +46,13 @@ def get_base_parser() -> ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Log level",
     )
+    parser.add_argument(
+        "--propensity",
+        "-p",
+        type=float,
+        default=0.5,
+        help="Propensity for the missing data",
+    )
     return parser
 
 

@@ -167,7 +167,7 @@ cython_debug/
 .joblib_cache/
 
 # output
-out/
+out*/
 
 **/data/
 *.pkl

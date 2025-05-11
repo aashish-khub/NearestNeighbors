@@ -17,7 +17,7 @@ import pandas as pd
 from hyperopt import Trials
 
 # import baseline methods
-from baselines import usvt
+from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
@@ -31,10 +31,13 @@ from nearest_neighbors.fit_methods import (
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
-
+import argparse
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
+#parser.add_argument("--allow_self_neighbor", action="store_true", help="Allow self neighbor")
+parser.add_argument("--allow_self_neighbor", action=argparse.BooleanOptionalAction, help="Allow self neighbor")
+
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
@@ -61,46 +64,93 @@ rng = np.random.default_rng(seed=seed)
 # Load the heartsteps dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-hs_dataloader = NNData.create("heartsteps")
+hs_dataloader = NNData.create("heartsteps", agg="std")
 data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
+mask[mask == 2] = 0
 elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 logger.info("Using scalar data type")
+#data_type_kernel = DistributionKernelMMD(kernel="exponential")
+#data_type_wasserstein = DistributionWassersteinSamples()
 data_type = Scalar()
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
 inds_cols = holdout_inds[1]
-range_inds = np.arange(len(inds_rows))
+#range_inds = np.arange(len(inds_rows))
 
-# randomly shuffle indices
-rng.shuffle(range_inds)
-# 20% of the indices will be used for testing
-test_size = int(0.2 * len(range_inds))
-test_inds = range_inds[:test_size]
-# 80% of the indices will be used for training
-train_inds = range_inds[test_size:]
-range_train_inds = np.arange(len(train_inds))
-rng.shuffle(range_train_inds)
-# 20% of the training indices will be used for cv holdout
-cv_size = int(0.2 * len(train_inds))
-cv_inds = range_train_inds[:cv_size]
-# get the rows and columns of the train indices
+inds_rows_cv = inds_rows[np.logical_and(inds_rows < 27, inds_cols < 150)]
+inds_cols_cv = inds_cols[np.logical_and(inds_rows < 27, inds_cols < 150)]
+cv_range_inds = np.arange(len(inds_rows_cv))
+# randomly shuffle indices for cv
+rng.shuffle(cv_range_inds)
+# 20% of the indices will be used for cv holdout
+cv_size = int(0.2 * len(cv_range_inds))
+cv_inds = cv_range_inds[:cv_size]
 
-cv_inds_rows = list(inds_rows[train_inds][cv_inds])
-cv_inds_cols = list(inds_cols[train_inds][cv_inds])
-# get the rows and columns of the test indices
-test_inds_rows = list(inds_rows[test_inds])
-test_inds_cols = list(inds_cols[test_inds])
+# est_inds = range_inds[:test_size]
+# # # 80% of the indices will be used for training
+# train_inds = range_inds[test_size:]
+# range_train_inds = np.arange(len(train_inds))
+# rng.shuffle(range_train_inds)
+# # 20% of the training indices will be used for cv holdout
+# cv_size = int(0.2 * len(train_inds))
+# cv_inds = range_train_inds[:cv_size]
+# # get the rows and columns of the train indices
+
+cv_inds_rows = list(inds_rows_cv[cv_inds])
+cv_inds_cols = list(inds_cols_cv[cv_inds])
+# get the rows and columns of the test indices (last 50 timesteps and bottom 10 users)
+test_inds_rows = list(inds_rows[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)])
+test_inds_cols = list(inds_cols[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)])
 
 block = list(zip(cv_inds_rows, cv_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
 
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
+
+# data = data[:, :200]  # only use the first 200 timesteps
+# mask = mask[:, :200]
+# elapsed_time = time() - start_time
+# logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
+
+# logger.info("Using scalar data type")
+# data_type = Scalar()
+
+# holdout_inds = np.nonzero(mask == 1)
+# inds_rows = holdout_inds[0]
+# inds_cols = holdout_inds[1]
+# range_inds = np.arange(len(inds_rows))
+
+# # randomly shuffle indices
+# rng.shuffle(range_inds)
+# # 20% of the indices will be used for testing
+# test_size = int(0.2 * len(range_inds))
+# test_inds = range_inds[:test_size]
+# # 80% of the indices will be used for training
+# train_inds = range_inds[test_size:]
+# range_train_inds = np.arange(len(train_inds))
+# rng.shuffle(range_train_inds)
+# # 20% of the training indices will be used for cv holdout
+# cv_size = int(0.2 * len(train_inds))
+# cv_inds = range_train_inds[:cv_size]
+# # get the rows and columns of the train indices
+
+# cv_inds_rows = list(inds_rows[train_inds][cv_inds])
+# cv_inds_cols = list(inds_cols[train_inds][cv_inds])
+# # get the rows and columns of the test indices
+# test_inds_rows = list(inds_rows[test_inds])
+# test_inds_cols = list(inds_cols[test_inds])
+
+# block = list(zip(cv_inds_rows, cv_inds_cols))
+# test_block = list(zip(test_inds_rows, test_inds_cols))
+
+# mask_test = mask.copy()
+# mask_test[test_inds_rows, test_inds_cols] = 0
 
 if estimation_method == "usvt":
     logger.info("Using USVT estimation")
@@ -116,6 +166,28 @@ if estimation_method == "usvt":
     imputations = usvt_imputed[test_inds_rows, test_inds_cols]
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+    fit_times = [0] * len(test_block)
+elif estimation_method == "softimpute":
+    logger.info("Using SoftImpute estimation")
+    # setup usvt imputation
+    si_data = data.copy()
+    si_mask = mask.copy()
+    imputations = []
+    imputation_times = []
+    for row, col in test_block:
+        si_mask[row, col] = 0
+        si_data_test = si_data.copy()
+        si_data_test[si_mask != 1] = np.nan
+    #si_mask[test_inds_rows, test_inds_cols] = 0
+    #si_data[si_mask != 1] = np.nan
+    # impute missing values simultaneously
+        start_time = time()
+        si_imputed = softimpute(si_data_test)
+        elapsed_time = time() - start_time
+        si_mask[row, col] = 1
+        imputations.append(si_imputed[row, col])
+    # set the time to the average time per imputation
+        imputation_times.append([elapsed_time / len(test_block)])
     fit_times = [0] * len(test_block)
 elif estimation_method == "star":
     logger.info("Using star estimation")
@@ -141,9 +213,9 @@ else:
         # Fit the imputer using leave-block-out validation
         fitter = DRLeaveBlockOutValidation(
             block,
-            distance_threshold_range_row=(0, 50),
-            distance_threshold_range_col=(0, 50),
-            n_trials=200,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            n_trials=100,
             data_type=data_type,
         )
     elif estimation_method == "row-row":
@@ -153,8 +225,8 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            distance_threshold_range=(0, 50),
-            n_trials=200,
+            distance_threshold_range=(0, 1),
+            n_trials=100,
             data_type=data_type,
         )
     elif estimation_method == "col-col":
@@ -164,8 +236,8 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            distance_threshold_range=(0, 50),
-            n_trials=200,
+            distance_threshold_range=(0, 1),
+            n_trials=100,
             data_type=data_type,
         )
     elif estimation_method == "ts":
@@ -177,9 +249,9 @@ else:
         # Fit the imputer using leave-block-out validation
         fitter = TSLeaveBlockOutValidation(
             block,
-            distance_threshold_range_row=(0, 50),
-            distance_threshold_range_col=(0, 50),
-            n_trials=200,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            n_trials=100,
             data_type=data_type,
         )
     else:

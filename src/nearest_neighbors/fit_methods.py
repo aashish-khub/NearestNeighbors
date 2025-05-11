@@ -104,7 +104,6 @@ class LeaveBlockOutValidation(FitMethod):
             float: Best distance threshold or (float, Trials): Best distance threshold and trials object if ret_trials is True.
 
         """
-
         def objective(distance_threshold: float) -> float:
             """Objective function for hyperopt.
 

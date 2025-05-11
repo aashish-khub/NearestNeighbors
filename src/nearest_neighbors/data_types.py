@@ -106,9 +106,9 @@ class DistributionKernelMMD(DataType):
             raise ValueError(f"Unknown kernel type: {self.kernel}")
 
         val = (
-            (kXX.sum() - np.diag(kXX).sum()) / (m * (m - 1))
-            + (kYY.sum() - np.diag(kYY).sum()) / (n * (n - 1))
-            - 2 * kXY.sum() / (n * m)
+            (np.nansum(kXX) - np.nansum(np.diag(kXX))) / (m * (m - 1))
+            + (np.nansum(kYY) - np.nansum(np.diag(kYY))) / (n * (n - 1))
+            - 2 * np.nansum(kXY) / (n * m)
         )
         if val < 0:
             val = 0

@@ -6,7 +6,7 @@ from typing import Union, Tuple, Any
 import logging
 import warnings
 from typing import Union, Tuple, Optional
-from .data_types import Scalar
+from .data_types import Scalar, DistributionKernelMMD, DistributionWassersteinSamples
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,7 @@ class RowRowEstimator(EstimationMethod):
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
+        print(nearest_neighbors_data[3].shape)
         return data_type.average(nearest_neighbors_data)
 
     def _calculate_distances(
@@ -121,7 +122,6 @@ class RowRowEstimator(EstimationMethod):
 
         # Calculate distances between rows
         row_dists = np.zeros((n_rows, n_cols))
-
         # Scalar optimization with vectorized operations instead of loops
         if isinstance(data_type, Scalar):
             # Determine overlap columns for any pairwise rows

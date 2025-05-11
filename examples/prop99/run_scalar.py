@@ -59,6 +59,7 @@ from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 # %%
 if True:
     parser = get_base_parser()
+    parser.add_argument("--state", type=str, default="CA")
     args = parser.parse_args()
     output_dir = args.output_dir
     estimation_method = args.estimation_method
@@ -66,6 +67,7 @@ if True:
     seed = args.seed
     log_level = args.log_level
     force = args.force
+    state = args.state
 else:
     output_dir = "out-test-0505"
     estimation_method = "row-row"
@@ -80,15 +82,15 @@ logger = logging.getLogger(__name__)
 
 # %%
 os.makedirs(output_dir, exist_ok=True)
-results_dir = os.path.join(output_dir, "results")
+results_dir = os.path.join(output_dir, "results", state)
 os.makedirs(results_dir, exist_ok=True)
 save_path = os.path.join(
-    results_dir, f"est_errors-{estimation_method}-{fit_method}.csv"
+    results_dir, f"est_errors-{state}-{estimation_method}-{fit_method}.csv"
 )
-california_dir = os.path.join(output_dir, "california")
-os.makedirs(california_dir, exist_ok=True)
-california_save_path = os.path.join(
-    california_dir, f"california-{estimation_method}-{fit_method}.csv"
+synthetic_control_dir = os.path.join(output_dir, "sc", state)
+os.makedirs(synthetic_control_dir, exist_ok=True)
+synthetic_control_path = os.path.join(
+    synthetic_control_dir, f"sc-{state}-{estimation_method}-{fit_method}.csv"
 )
 
 # %%
@@ -103,14 +105,14 @@ rng = np.random.default_rng(seed=seed)
 # Load the heartsteps dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-prop99_dataloader = NNData.create("prop99")
-# data and mask are 2D numpy arrays of shape (51, 31)
+prop99_dataloader = NNData.create("prop99", state=state)
+# data and mask are 2D numpy arrays of shape (39, 31)
 data, mask = prop99_dataloader.process_data_scalar()
 elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
-row_california = 4  # row corresponding to treated unit (California)
-print(f"Mask for row {row_california}:", mask[row_california])
+treatment_row = 0  # row corresponding to treated unit (California)
+print(f"Mask for row {treatment_row}:", mask[treatment_row])
 
 # %%
 logger.info("Using scalar data type")
@@ -170,7 +172,7 @@ if estimation_method == "usvt":
     fit_times = [0] * len(test_block)
 
     # Compute the synthetic control
-    control_list = usvt_imputed[row_california]
+    control_list = usvt_imputed[treatment_row]
 elif estimation_method == "star":
     logger.info("Using star estimation")
     estimator = StarNNEstimator()
@@ -190,7 +192,7 @@ elif estimation_method == "star":
     # Compute synthetic control
     control_list = []
     for col in tqdm(range(data.shape[1]), desc="Imputing missing values"):
-        imputed_value = imputer.impute(row_california, col, data, mask)
+        imputed_value = imputer.impute(treatment_row, col, data, mask)
         control_list.append(imputed_value)
 else:
     if estimation_method == "dr":
@@ -293,21 +295,23 @@ else:
     # Impute missing values
     control_list = []
     for col in tqdm(range(data.shape[1]), desc="Imputing missing values"):
-        imputed_value = imputer.impute(row_california, col, data, mask)
+        imputed_value = imputer.impute(treatment_row, col, data, mask)
         control_list.append(imputed_value)
 
 # save control_list and obs_list
-df_california = pd.DataFrame(
+df_synthetic_control = pd.DataFrame(
     {
         "control": control_list,
-        "obs": data[row_california],
+        "obs": data[treatment_row],
+        "est_errors": np.abs(control_list - data[treatment_row]),
         "estimation_method": estimation_method,
         "fit_method": fit_method,
+        "state": state,
     },
     index=range(1970, 2001),
 )
-print(f"Saving df_california to {california_save_path}...")
-df_california.to_csv(california_save_path)
+print(f"Saving df_synthetic_control to {synthetic_control_path}...")
+df_synthetic_control.to_csv(synthetic_control_path)
 
 # %%
 ground_truth = data[test_inds_rows, test_inds_cols]

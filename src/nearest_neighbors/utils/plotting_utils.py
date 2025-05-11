@@ -36,7 +36,7 @@ METHOD_ALIASES_SINGLE_LINE = {
     "softimpute": "SoftImpute",
     "nadaraya": "NW",
     "star": "AWNN",
-    "sc": "SC",
+    "sc": "Synth.",
 }
 
 METHOD_LINE_STYLES = {
@@ -60,4 +60,5 @@ COLORS = {
     "ts": "grey",
     "usvt": "lightgrey",
     "star": "grey",
+    "sc": "blue",
 }

@@ -58,7 +58,7 @@ for col_name, alias in [
     # NOTE: set the width to be the physical size of the figure in inches
     # The NeurIPS text is 5.5 inches wide and 9 inches long
     # If we use wrapfigure with 0.4\textwidth, then the figure needs to be 2.2 inches wide
-    fig = plt.figure(figsize=(2.2, 2))
+    fig = plt.figure(figsize=(plotting_utils.NEURIPS_TEXTWIDTH / 2, 2.5))
     # Create boxplot
     ax = fig.add_subplot(111)
     box = ax.boxplot(

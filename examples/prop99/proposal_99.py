@@ -29,9 +29,9 @@ print(sc.original_data.comparison_df)
 print(sc.original_data.pen)
 
 
-california_dir = os.path.join(output_dir, "california")
+california_dir = os.path.join(output_dir, "sc", "CA")
 os.makedirs(california_dir, exist_ok=True)
-california_save_path = os.path.join(california_dir, "california-sc-auto.csv")
+california_save_path = os.path.join(california_dir, "sc-CA-auto.csv")
 df = pd.DataFrame(
     data={
         "control": None

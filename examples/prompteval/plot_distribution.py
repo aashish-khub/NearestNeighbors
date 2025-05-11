@@ -21,12 +21,19 @@ parser.add_argument(
     default="kernel_mmd",
     choices=["kernel_mmd", "wasserstein_quantile"],
 )
+parser.add_argument(
+    "--tuning_parameter",
+    "-tp",
+    type=float,
+    default=0.5,
+)
 args = parser.parse_args()
 output_dir = args.output_dir
 propensity = args.propensity
 estimation_method = args.estimation_method
 fit_method = args.fit_method
 data_type = args.data_type
+tuning_parameter = args.tuning_parameter
 
 setup_logging(args.log_level)
 logger = logging.getLogger(__name__)
@@ -34,7 +41,7 @@ logger = logging.getLogger(__name__)
 results_dir = os.path.join(output_dir, "results")
 results_path = os.path.join(
     results_dir,
-    f"est_errors-{estimation_method}-{fit_method}-{data_type}-p{propensity}.csv",
+    f"est_errors-{estimation_method}-{fit_method}-{data_type}-p{propensity}-tp{tuning_parameter}.csv",
 )
 df = pd.read_csv(results_path)
 # Convert string representations of lists to actual lists
@@ -78,6 +85,7 @@ figures_dir = os.path.join(output_dir, "figures")
 os.makedirs(figures_dir, exist_ok=True)
 figures_path = os.path.join(
     figures_dir,
-    f"distributions-{estimation_method}-{fit_method}-{data_type}-p{propensity}.pdf",
+    f"distributions-{estimation_method}-{fit_method}-{data_type}-p{propensity}-tp{tuning_parameter}.pdf",
 )
+logger.info(f"Saving figure to {figures_path}")
 plt.savefig(figures_path, dpi=300, bbox_inches="tight")

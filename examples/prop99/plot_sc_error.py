@@ -33,7 +33,10 @@ df_list = []
 for file in files:
     df = pd.read_csv(file, index_col=0)
     df_list.append(df)
-df = pd.concat(df_list, ignore_index=True)
+df = pd.concat(df_list)
+df = df.reset_index(names=["year"])
+logger.info("Only keeping years in the post-intervention period (after 1988)")
+df = df[df["year"] > 1988]
 
 # aggregate into list by estimation method and fit method
 df_grouped = (
@@ -61,7 +64,9 @@ for col_name, alias in [
     box = ax.boxplot(
         df_grouped[col_name], patch_artist=True, widths=0.6, showfliers=False
     )
-    colors = ["orange"] * len(df_grouped)
+    colors = [
+        plotting_utils.COLORS[method] for method in df_grouped["estimation_method"]
+    ]
     for patch, color in zip(box["boxes"], colors):
         patch.set_facecolor(color)
     for median in box["medians"]:

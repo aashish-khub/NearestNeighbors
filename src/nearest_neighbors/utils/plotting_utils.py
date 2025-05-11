@@ -24,18 +24,18 @@ METHOD_ALIASES = {
     "usvt": "USVT",
     "softimpute": "SoftImpute",
     "nadaraya": "NW",
-    "star": "Star-\nNN",
+    "star": "AW-\nNN",
 }
 
 METHOD_ALIASES_SINGLE_LINE = {
-    "row-row": "Row-NN",
-    "col-col": "Col-NN",
-    "dr": "DR-NN",
-    "ts": "TS-NN",
+    "row-row": "RowNN",
+    "col-col": "ColNN",
+    "dr": "DRNN",
+    "ts": "TSNN",
     "usvt": "USVT",
     "softimpute": "SoftImpute",
     "nadaraya": "NW",
-    "star": "Star-NN",
+    "star": "AWNN",
     "sc": "SC",
 }
 
@@ -52,3 +52,12 @@ METHOD_LINE_STYLES = {
 }
 
 NEURIPS_TEXTWIDTH = 5.5
+
+COLORS = {
+    "row-row": "grey",
+    "col-col": "grey",
+    "dr": "grey",
+    "ts": "grey",
+    "usvt": "lightgrey",
+    "star": "grey",
+}

@@ -41,11 +41,12 @@ class Scalar(DataType):
 class DistributionKernelMMD(DataType):
     """Data type for distributions using Kernel MMD."""
 
-    def __init__(self, kernel: str):
+    def __init__(self, kernel: str, tuning_parameter: float = 0.5):
         """Initialize the distribution data type with a kernel.
 
         Args:
             kernel (str): Kernel to use for the MMD
+            tuning_parameter (float): Inverse bandwidth parameter for the exponential kernel
 
         """
         supported_kernels = ["linear", "square", "exponential"]
@@ -56,6 +57,7 @@ class DistributionKernelMMD(DataType):
             )
 
         self.kernel = kernel
+        self.tuning_parameter = tuning_parameter
 
     def distance(self, obj1: npt.NDArray, obj2: npt.NDArray) -> float:
         """Calculate the distance between two distributions using Kernel MMD.
@@ -99,9 +101,13 @@ class DistributionKernelMMD(DataType):
                 (np.diag(YY),) * m
             )  # m*n matrix : each row is the diagonal y_i^Ty_i
 
-            kXX = np.exp(-0.5 * (dXX_mm + dXX_mm.transpose() - 2 * XX))
-            kYY = np.exp(-0.5 * (dYY_nn + dYY_nn.transpose() - 2 * YY))
-            kXY = np.exp(-0.5 * (dXX_mn + dYY_mn - 2 * XY))
+            kXX = np.exp(
+                -self.tuning_parameter * (dXX_mm + dXX_mm.transpose() - 2 * XX)
+            )
+            kYY = np.exp(
+                -self.tuning_parameter * (dYY_nn + dYY_nn.transpose() - 2 * YY)
+            )
+            kXY = np.exp(-self.tuning_parameter * (dXX_mn + dYY_mn - 2 * XY))
         else:
             raise ValueError(f"Unknown kernel type: {self.kernel}")
 

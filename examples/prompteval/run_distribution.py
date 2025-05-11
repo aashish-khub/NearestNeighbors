@@ -29,6 +29,12 @@ parser.add_argument(
     default="kernel_mmd",
     choices=["kernel_mmd", "wasserstein_quantile"],
 )
+parser.add_argument(
+    "--tuning_parameter",
+    "-tp",
+    type=float,
+    default=0.5,
+)
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
@@ -37,6 +43,7 @@ seed = args.seed
 log_level = args.log_level
 propensity = args.propensity
 data_type = args.data_type
+tuning_parameter = args.tuning_parameter
 
 setup_logging(log_level)
 logger = logging.getLogger(__name__)
@@ -46,7 +53,7 @@ results_dir = os.path.join(output_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
 save_path = os.path.join(
     results_dir,
-    f"est_errors-{estimation_method}-{fit_method}-{data_type}-p{propensity}.csv",
+    f"est_errors-{estimation_method}-{fit_method}-{data_type}-p{propensity}-tp{tuning_parameter}.csv",
 )
 
 if os.path.exists(save_path) and not args.force:
@@ -100,7 +107,9 @@ mask_test[test_inds_rows, test_inds_cols] = 0
 
 match data_type:
     case "kernel_mmd":
-        data_type = DistributionKernelMMD(kernel="exponential")
+        data_type = DistributionKernelMMD(
+            kernel="exponential", tuning_parameter=tuning_parameter
+        )
     case "wasserstein_quantile":
         data_type = DistributionWassersteinQuantile()
     case _:
@@ -115,7 +124,7 @@ match estimation_method:
         raise ValueError(f"Estimation method {estimation_method} not supported")
 
 fit_method = LeaveBlockOutValidation(
-    block, distance_threshold_range=(0, 1.0), n_trials=10, data_type=data_type
+    block, distance_threshold_range=(0, 1.0), n_trials=10, data_type=data_type, rng=rng
 )
 imputer = NearestNeighborImputer(
     estimator,

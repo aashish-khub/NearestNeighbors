@@ -55,17 +55,13 @@ class RowRowEstimator(EstimationMethod):
             npt.NDArray: Imputed value
 
         """
-        if isinstance(distance_threshold, tuple):
-            raise ValueError(
-                "RowRowEstimator only supports a single distance threshold."
-            )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-
             # Calculate distances between rows
             self._calculate_distances(row, column, data_array, mask_array, data_type)
             all_dists = np.copy(self.row_distances[row])
             # Exclude the target column
+<<<<<<< HEAD
             if not allow_self_neighbor:
                 all_dists[:, column] = np.nan
             row_dists = np.nanmean(all_dists, axis=1)
@@ -90,6 +86,17 @@ class RowRowEstimator(EstimationMethod):
 
         # NOTE: this code block will never be called since the target row
         # is always a nearest neighbor
+=======
+            all_dists[:, column] = np.nan
+            row_dists = np.nanmean(all_dists, axis=1)
+
+            # Find the nearest neighbors indexes
+            nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
+            # Apply mask_array to data_array
+            masked_data_array = np.where(mask_array, data_array, np.nan)
+
+        # If no neighbors found, return nan
+>>>>>>> f89d193 (updated run_scalar)
         if len(nearest_neighbors) == 0:
             # return np.array(np.nan)
             # NOTE: implement the base case described by Eq. 11 in
@@ -100,10 +107,18 @@ class RowRowEstimator(EstimationMethod):
             else:
                 # return the average of all observed outcomes corresponding
                 # to treatment 1 at time t.
+<<<<<<< HEAD
                 return data_type.average(masked_data_array[:, column])
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
+=======
+                return np.array(np.nanmean(masked_data_array[:, column]))
+
+        # Calculate the average of the nearest neighbors
+        nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
+
+>>>>>>> f89d193 (updated run_scalar)
         return data_type.average(nearest_neighbors_data)
 
     def _calculate_distances(
@@ -125,7 +140,9 @@ class RowRowEstimator(EstimationMethod):
             data_type (DataType): Data type to use (e.g. scalars, distributions)
 
         """
-        n_rows, n_cols = data_array.shape
+        data_shape = data_array.shape
+        n_rows = data_shape[0]
+        n_cols = data_shape[1]
 
         if row in self.row_distances:
             return
@@ -135,11 +152,11 @@ class RowRowEstimator(EstimationMethod):
         # Scalar optimization with vectorized operations instead of loops
         if isinstance(data_type, Scalar):
             # Determine overlap columns for any pairwise rows
-            overlap_columns_mask = np.logical_and(mask_array[row], mask_array)
-            row_dists = np.power(data_array - data_array[row], 2)
-
-            if row_dists.dtype is not np.float64:
-                row_dists = row_dists.astype(np.float64)
+            overlap_columns_mask = np.logical_and(
+                np.tile(mask_array[row], (n_rows, 1)), mask_array
+            )
+            row_big_matrix = np.tile(data_array[row], (n_rows, 1))
+            row_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
             # We need the row dists as a float matrix to use np.nanmean
             row_dists[~overlap_columns_mask] = np.nan
             self.row_distances[row] = row_dists
@@ -402,11 +419,11 @@ class DREstimator(EstimationMethod):
             # Scalar optimization with vectorized operations instead of loops
             if isinstance(data_type, Scalar):
                 # Determine overlap columns for any pairwise rows
-                overlap_columns_mask = np.logical_and(mask_array[row], mask_array)
-                row_dists = np.power(data_array - data_array[row], 2)
-
-                if row_dists.dtype is not np.float64:
-                    row_dists = row_dists.astype(np.float64)
+                overlap_columns_mask = np.logical_and(
+                    np.tile(mask_array[row], (n_rows, 1)), mask_array
+                )
+                row_big_matrix = np.tile(data_array[row], (n_rows, 1))
+                row_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
                 # We need the row dists as a float matrix to use np.nanmean
                 row_dists[~overlap_columns_mask] = np.nan
             else:
@@ -689,8 +706,16 @@ class StarNNEstimator(EstimationMethod):
         row_dist_min = min(0, np.min(d))
         d = np.where(observed_rows == row, 0, d - row_dist_min)
 
+<<<<<<< HEAD
         mean_distance = np.mean(d)
         dist_diff = d - mean_distance
+=======
+        row_dist_min = min(0, np.min(row_distances))
+        row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
+
+        mean_distance = np.mean(row_distances)
+        dist_diff = row_distances - mean_distance
+>>>>>>> f89d193 (updated run_scalar)
         # print (noise_variance)
         if noise_variance != 0:
             weights = (1 / n_observed) - dist_diff / (
@@ -731,12 +756,9 @@ class StarNNEstimator(EstimationMethod):
             logger.info("Iteration %d" % iter)  # TODO switch to logger.log
             for i in range(n_rows):
                 for j in range(n_cols):
-                    if mask_array[i,j] == 0:
-                        imputed_data[i,j] = np.nan
-                    else:
-                        imputed_data[i, j] = self._impute_single_value_helper(
-                            i, j, data_array, mask_array, data_type
-                        )
+                    imputed_data[i, j] = self._impute_single_value_helper(
+                        i, j, data_array, mask_array, data_type
+                    )
             diff = imputed_data[mask_array == 1] - data_array[mask_array == 1]
             diff = diff[~np.isnan(diff)]  # Remove any NaN values
             if len(diff) > 0:

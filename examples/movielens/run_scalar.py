@@ -21,7 +21,12 @@ from baselines import usvt
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import ColColEstimator, RowRowEstimator, TSEstimator, StarNNEstimator
+from nearest_neighbors.estimation_methods import (
+    ColColEstimator,
+    RowRowEstimator,
+    TSEstimator,
+    StarNNEstimator,
+)
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -172,9 +177,9 @@ else:
             raise ValueError(
                 f"Estimation method {imputer.estimation_method} not supported for row-row"
             )
-        imputer.estimation_method._precalculate_distances(
-            data, mask, np.array(cv_inds_rows)
-        )
+        # imputer.estimation_method._precalculate_distances(
+        #     data, mask, np.array(cv_inds_rows)
+        # )
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
@@ -186,15 +191,15 @@ else:
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
         imputer = col_col()
-        
+
         if not isinstance(imputer.estimation_method, ColColEstimator):
             raise ValueError(
                 f"Estimation method {imputer.estimation_method} not supported for col-col"
             )
-        
-        imputer.estimation_method.estimator._precalculate_distances(
-            np.swapaxes(data, 0, 1), np.swapaxes(mask, 0, 1), np.array(cv_inds_cols)
-        )
+
+        # imputer.estimation_method.estimator._precalculate_distances(
+        #     np.swapaxes(data, 0, 1), np.swapaxes(mask, 0, 1), np.array(cv_inds_cols)
+        # )
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(

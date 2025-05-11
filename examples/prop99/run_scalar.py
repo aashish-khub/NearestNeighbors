@@ -179,30 +179,18 @@ elif estimation_method == "softimpute":
     # setup softimpute imputation
     si_data = data.copy()
     si_mask = mask.copy()
-    imputations = []
-    imputation_times = []
-    si_imputed = None  # Initialize outside the loop
-    for row, col in tqdm(test_block, desc="Imputing missing values"):
-        si_mask[row, col] = 0
-        si_data_test = si_data.copy()
-        si_data_test[si_mask != 1] = np.nan
-        # impute missing values simultaneously
-        start_time = time()
-        si_imputed = softimpute(si_data_test)
-        elapsed_time = time() - start_time
-        si_mask[row, col] = 1
-        imputations.append(si_imputed[row, col])
-        # set the time to the average time per imputation
-        imputation_times.append([elapsed_time / len(test_block)])
+    si_mask[test_inds_rows, test_inds_cols] = 0
+    si_data[si_mask != 1] = np.nan
+    # impute missing values simultaneously
+    start_time = time()
+    si_imputed = softimpute(si_data)
+    elapsed_time = time() - start_time
+    imputations = si_imputed[test_inds_rows, test_inds_cols]
+    imputation_times = [elapsed_time / len(test_block)] * len(test_block)
     fit_times = [0] * len(test_block)
 
     # Compute the synthetic control
-    # Impute missing values
-    control_list = []
-    if si_imputed is not None:  # Add null check
-        for col in range(data.shape[1]):
-            imputed_value = si_imputed[treatment_row, col]
-            control_list.append(imputed_value)
+    control_list = si_imputed[treatment_row]
 
 elif estimation_method == "star":
     logger.info("Using star estimation")

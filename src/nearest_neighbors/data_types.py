@@ -126,9 +126,18 @@ class DistributionKernelMMD(DataType):
             (Returns is a mixture of vectors regardless of the kernel)
 
         """
-        # Convert to list of arrays before using vstack
-        arrays_to_stack = [arr for arr in object_list.flatten()]
-        mixture = np.vstack(arrays_to_stack)
+        if False:
+            # Convert to list of arrays before using vstack
+            arrays_to_stack = [arr for arr in object_list.flatten()]
+            mixture = np.vstack(arrays_to_stack)
+        else:
+            # filter out nan values
+            arrays_to_concatenate = [
+                arr for arr in object_list if not np.any(np.isnan(arr))
+            ]
+            if len(arrays_to_concatenate) == 0:
+                return np.array([])
+            mixture = np.concatenate(arrays_to_concatenate, axis=0)
         return mixture
 
 

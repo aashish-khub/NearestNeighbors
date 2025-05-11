@@ -14,6 +14,7 @@ import logging
 
 from nearest_neighbors.utils.experiments import get_base_parser
 from nearest_neighbors.utils import plotting_utils
+from nearest_neighbors.datasets.prop99.loader import Prop99DataLoader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,17 +38,19 @@ df = pd.concat(df_list)
 df = df.reset_index(names=["year"])
 logger.info("Only keeping years in the post-intervention period (after 1988)")
 df = df[df["year"] > 1988]
+# only include control states
+df = df[df["state"].isin(Prop99DataLoader.CONTROL_STATES)]  # type: ignore
 
 # aggregate into list by estimation method and fit method
 df_grouped = (
-    df.groupby(["estimation_method", "fit_method"])
-    .agg(lambda x: list([val for val in x if pd.notna(val)]))
-    .reset_index()
+    df.groupby(["estimation_method", "fit_method"])  # type: ignore
+    .agg(lambda x: list([val for val in x if pd.notna(val)]))  # type: ignore
+    .reset_index()  # type: ignore
 )
 
 # rearrange the order of the estimation methods by
 # "usvt", "row-row", "col-col", "dr", "ts", "star"
-ORDER = ["usvt", "col-col", "row-row", "dr", "ts", "star"]
+ORDER = ["usvt", "col-col", "row-row", "dr", "ts", "star", "sc"]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )
@@ -75,8 +78,8 @@ for col_name, alias in [
     ax.set_ylim(0, None)
     # Add labels and title
     labels: list[str] = [
-        plotting_utils.METHOD_ALIASES.get(method, method)
-        for method in df_grouped["estimation_method"]
+        plotting_utils.METHOD_ALIASES.get(method, method)  # type: ignore
+        for method in df_grouped["estimation_method"]  # type: ignore
     ]
     ax.set_xticks(
         list(range(1, len(labels) + 1)), labels, fontsize=plotting_utils.TICK_FONT_SIZE

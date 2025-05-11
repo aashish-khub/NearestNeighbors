@@ -23,42 +23,60 @@ subdirs = glob(os.path.join(synthetic_control_dir, "*"))
 
 for subdir in subdirs:
     state = os.path.basename(subdir)
+    if state != "CA":
+        continue
     files = glob(os.path.join(subdir, f"sc-{state}-*.csv"))
 
     fig = plt.figure(figsize=(plotting_utils.NEURIPS_TEXTWIDTH / 2, 2))
     ax = fig.add_subplot(111)
     for i, file in enumerate(files):
         df = pd.read_csv(file, index_col=0)
+        estimation_method = df.iloc[0]["estimation_method"]
         method = plotting_utils.METHOD_ALIASES_SINGLE_LINE.get(
-            df.iloc[0]["estimation_method"], df.iloc[0]["estimation_method"]
-        )
-        line_style = plotting_utils.METHOD_LINE_STYLES.get(
-            df.iloc[0]["estimation_method"], "-"
+            estimation_method, estimation_method
         )
         ax.plot(
-            df.index, df["control"], label=f"Control ({method})", linestyle=line_style
+            df.index,
+            df["control"],
+            label=f"Control ({method})",
+            linestyle="-",  # plotting_utils.METHOD_LINE_STYLES.get(estimation_method, "-"),
+            color=plotting_utils.COLORS[estimation_method],
         )
         if i == 0:
-            ax.plot(df.index, df["obs"], label="Observed")
+            ax.plot(
+                df.index, df["obs"], label="Observed", linestyle="-", color="orange"
+            )
     # add a vertical line at 1989 called Proposal 99
     ax.axvline(x=1989, color="k", alpha=0.25)
     # add a text label at 1989 called Proposal 99
-    ax.text(1989, ax.get_ylim()[1], "Proposal 99", color="k", fontsize=12)
-    # set the xtick labels to be the years 1970 to 2000
+    ax.text(
+        1989,
+        ax.get_ylim()[1],
+        "Proposal 99",
+        color="k",
+        fontsize=plotting_utils.LABEL_FONT_SIZE,
+        ha="center",
+    )
+
+    # set the major xtick labels to be the years 1970 to 2000
     ax.set_xticks(
         range(1970, 2001, 10),
         [str(year) for year in range(1970, 2001, 10)],
         fontsize=plotting_utils.TICK_FONT_SIZE,
     )
+    # set the minor xtick labels to be every year between 1970 and 2000
+    ax.set_xticks(range(1970, 2001, 1), minor=True)
     ax.set_xlim(1970, 2000)
+    # set the x-axis label to be the year
+    ax.set_xlabel("Year", fontsize=plotting_utils.LABEL_FONT_SIZE)
+
     ax.set_ylim(40, 160)
     # set the y-axis label to be the number of cigarettes smoked per capita
     ax.set_ylabel(
         "Cigarette Consumption\n(Pack Sales Per Capita)",
         fontsize=plotting_utils.LABEL_FONT_SIZE,
     )
-    # set the x-axis label to be the year
-    ax.set_xlabel("Year", fontsize=plotting_utils.LABEL_FONT_SIZE)
+
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["bottom"].set_position(

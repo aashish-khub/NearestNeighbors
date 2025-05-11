@@ -50,3 +50,5 @@ METHOD_LINE_STYLES = {
     "star": "dashdot",
     "sc": "-",
 }
+
+NEURIPS_TEXTWIDTH = 5.5

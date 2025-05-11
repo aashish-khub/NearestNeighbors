@@ -59,7 +59,7 @@ for subdir in subdirs:
         ax.text(
             2001,
             last_valid_value,
-            method,
+            method,  # type: ignore
             fontsize=plotting_utils.TICK_FONT_SIZE,
             va=va,
         )
@@ -76,7 +76,7 @@ for subdir in subdirs:
     ax.text(
         1989,
         ax.get_ylim()[1],
-        "Proposition 99",
+        "Prop. 99 (1989)",
         color="k",
         fontsize=plotting_utils.LABEL_FONT_SIZE,
         ha="center",

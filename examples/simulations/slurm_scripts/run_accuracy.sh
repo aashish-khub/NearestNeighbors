@@ -12,6 +12,7 @@ METHODS=(
     "col-col"
     "dr"
     "ts"
+    "softimpute"
 )
 for em in ${METHODS[@]};
 do

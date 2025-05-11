@@ -17,7 +17,7 @@ import pandas as pd
 from hyperopt import Trials
 
 # import baseline methods
-from baselines import usvt
+from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
@@ -139,6 +139,26 @@ def random_trial() -> None:
             # set the time to the average time per imputation
             imputation_times = [elapsed_time / len(test_block)] * len(test_block)
             fit_times = [0] * len(test_block)
+        elif estimation_method == "softimpute":
+                logger.info("Using SoftImpute estimation")
+                # setup usvt imputation
+                si_data = data.copy()
+                si_mask = mask.copy()
+                imputations = []
+                imputation_times = []
+                for row, col in test_block:
+                    si_mask[row, col] = 0
+                    si_data_test = si_data.copy()
+                    si_data_test[si_mask != 1] = np.nan
+                # impute missing values simultaneously
+                    start_time = time()
+                    si_imputed = softimpute(si_data_test)
+                    elapsed_time = time() - start_time
+                    si_mask[row, col] = 1
+                    imputations.append(si_imputed[row, col])
+                # set the time to the average time per imputation
+                    imputation_times.append([elapsed_time / len(test_block)])
+                fit_times = [0] * len(test_block)
         else:
             if estimation_method == "dr":
                 logger.info("Using doubly robust estimation")
@@ -344,6 +364,26 @@ def last_col_trial() -> None:
                 imputations = usvt_imputed[test_inds_rows, test_inds_cols]
                 # set the time to the average time per imputation
                 imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+                fit_times = [0] * len(test_block)
+            elif estimation_method == "softimpute":
+                logger.info("Using SoftImpute estimation")
+                # setup usvt imputation
+                si_data = data.copy()
+                si_mask = mask.copy()
+                imputations = []
+                imputation_times = []
+                for row, col in test_block:
+                    si_mask[row, col] = 0
+                    si_data_test = si_data.copy()
+                    si_data_test[si_mask != 1] = np.nan
+                # impute missing values simultaneously
+                    start_time = time()
+                    si_imputed = softimpute(si_data_test)
+                    elapsed_time = time() - start_time
+                    si_mask[row, col] = 1
+                    imputations.append(si_imputed[row, col])
+                # set the time to the average time per imputation
+                    imputation_times.append([elapsed_time / len(test_block)])
                 fit_times = [0] * len(test_block)
             else:
                 if estimation_method == "dr":

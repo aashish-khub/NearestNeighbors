@@ -40,6 +40,7 @@ dependencies = [
     "SyntheticControlMethods",
     "fancyimpute",
     "datasets",
+    "tabulate",
 ]
 
 [project.urls]

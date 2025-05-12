@@ -56,9 +56,10 @@ class RowRowEstimator(EstimationMethod):
             nearest_neighbors = np.where(row_dists <= distance_threshold)[0]
             # Apply mask_array to data_array
             masked_data_array = np.copy(data_array)
-            masked_data_array[~mask_array] = np.nan
+            masked_data_array[mask_array == 0] = np.nan
 
-        # If no neighbors found, return nan
+        # NOTE: this code block will never be called since the target row
+        # is always a nearest neighbor
         if len(nearest_neighbors) == 0:
             # return np.array(np.nan)
             # NOTE: implement the base case described by Eq. 11 in
@@ -69,7 +70,7 @@ class RowRowEstimator(EstimationMethod):
             else:
                 # return the average of all observed outcomes corresponding
                 # to treatment 1 at time t.
-                return np.array(np.nanmean(masked_data_array[:, column]))
+                return data_type.average(masked_data_array[:, column])
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]

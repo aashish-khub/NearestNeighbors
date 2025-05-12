@@ -90,9 +90,7 @@ for i, row in df.head(20).iterrows():
         all_data.append(imputation)
 
     # Calculate the min and max across all data to create common bins
-    min_val = min(np.min(data) for data in all_data)
-    max_val = max(np.max(data) for data in all_data)
-    bins = list(np.linspace(0, 1, 20))  # 11 points create 10 bins
+    bins = list(np.linspace(0, 1, 40))  # 11 points create 10 bins
 
     # Plot imputation for each method
     for (est_method, fit_method, data_type), imputation in row["data"][  # type: ignore

@@ -64,3 +64,8 @@ COLORS = {
     "star": "grey",
     "sc": "blue",
 }
+
+DATA_TYPE_ALIASES = {
+    "kernel_mmd": "MMD",
+    "wasserstein_samples": "W$_2$",
+}

@@ -27,11 +27,13 @@ logger = logging.getLogger(__name__)
 parser = get_base_parser()
 args = parser.parse_args()
 output_dir = args.output_dir
+propensity = args.propensity
+
 results_dir = os.path.join(output_dir, "results")
 figures_dir = os.path.join(output_dir, "figures")
 os.makedirs(figures_dir, exist_ok=True)
 
-files = glob(os.path.join(results_dir, "est_errors-*.csv"))
+files = glob(os.path.join(results_dir, f"est_errors-*-p{propensity}-*.csv"))
 df_list = []
 for file in files:
     df = pd.read_csv(file)
@@ -40,7 +42,7 @@ df = pd.concat(df_list, ignore_index=True)
 # aggregate into list by estimation method and fit method
 # NOTE: filter out NaN values when aggregating
 df_grouped = (
-    df.groupby(["estimation_method", "fit_method"])
+    df.groupby(["estimation_method", "fit_method", "data_type"])
     .agg(lambda x: list([val for val in x if pd.notna(val)]))
     .reset_index()
 )
@@ -61,11 +63,11 @@ def mean_std_error(x: list[float]) -> str:
         str: formatted string
 
     """
-    return f"${np.mean(x):.4f} \pm {np.std(x, ddof=1) / np.sqrt(len(x)):.4f}$"
+    return f"${np.mean(x):.4f} \\pm {np.std(x, ddof=1) / np.sqrt(len(x)):.4f}$"
 
 
 df_mean_std = (
-    df.groupby(["estimation_method", "fit_method"])["est_errors"]
+    df.groupby(["estimation_method", "fit_method", "data_type"])["est_errors"]
     .agg(mean_std_error)
     .reset_index()
 )
@@ -74,14 +76,13 @@ df_mean_std = df_mean_std.drop(columns=["fit_method"])
 print(tabulate(df_mean_std, headers="keys", tablefmt="github", showindex=False))
 
 for col_name, alias in [
-    ("est_errors", "Absolute error"),
+    ("est_errors", "Kolmogorov-Smirnov distance"),
     ("time_impute", "Imputation time"),
     ("time_fit", "Fit time"),
 ]:
     # NOTE: set the width to be the physical size of the figure in inches
     # The NeurIPS text is 5.5 inches wide and 9 inches long
-    # If we use wrapfigure with 0.4\textwidth, then the figure needs to be 2.2 inches wide
-    fig = plt.figure(figsize=(2.2, 2))
+    fig = plt.figure(figsize=(5.5 / 2, 2.5))
     # Create boxplot
     ax = fig.add_subplot(111)
     box = ax.boxplot(
@@ -103,8 +104,9 @@ for col_name, alias in [
     ax.set_ylim(0, None)
     # Add labels and title
     labels: list[str] = [
-        plotting_utils.METHOD_ALIASES.get(method, method)
-        for method in df_grouped["estimation_method"]
+        f"{plotting_utils.METHOD_ALIASES.get(item.estimation_method, item.estimation_method)}"  # type: ignore
+        f"\n({plotting_utils.DATA_TYPE_ALIASES.get(item.data_type, item.data_type)})"  # type: ignore
+        for item in df_grouped.itertuples(index=False)
     ]
     ax.set_xticks(
         list(range(1, len(labels) + 1)), labels, fontsize=plotting_utils.TICK_FONT_SIZE
@@ -118,7 +120,9 @@ for col_name, alias in [
     ax.spines["left"].set_visible(False)
     ax.grid(True, alpha=0.4)
 
-    save_path = os.path.join(figures_dir, f"prompteval_{col_name}_boxplot.pdf")
+    save_path = os.path.join(
+        figures_dir, f"prompteval_{col_name}_boxplot-p{propensity}.pdf"
+    )
     logger.info(f"Saving plot to {save_path}...")
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()

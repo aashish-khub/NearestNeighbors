@@ -61,7 +61,7 @@ def mean_std_error(x: list[float]) -> str:
         str: formatted string
 
     """
-    return f"${np.mean(x):.4f} \pm {np.std(x, ddof=1) / np.sqrt(len(x)):.4f}$"
+    return f"${np.mean(x):.4f} \\pm {np.std(x, ddof=1) / np.sqrt(len(x)):.4f}$"
 
 
 df_mean_std = (

@@ -7,15 +7,13 @@ def softimpute(X: npt.NDArray) -> npt.NDArray:
 
     Parameters
     ----------
-    X : array-like, shape (n_samples, n_features)
-        The input data with missing values as np.nan.
-    kwargs : keyword arguments
-        Additional arguments to pass to the SoftImpute constructor.
+    X : npt.NDArray
+        N x T input data matrix with missing values as np.nan.
 
     Returns
     -------
-    X_imputed : array-like, shape (n_samples, n_features)
-        The imputed data.
+    X_imputed : npt.NDArray
+        The imputed data matrix.
 
     """
     # Create a SoftImpute instance with the provided arguments

@@ -14,11 +14,15 @@ import pandas as pd
 from time import time
 
 from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+from nearest_neighbors.utils.experiments import (
+    get_base_parser,
+    setup_logging,
+    serialize,
+)
 from nearest_neighbors.estimation_methods import RowRowEstimator, ColColEstimator
 from nearest_neighbors.data_types import (
     DistributionKernelMMD,
-    DistributionWassersteinQuantile,
+    DistributionWassersteinSamples,
 )
 from nearest_neighbors.nnimputer import NearestNeighborImputer
 from nearest_neighbors.fit_methods import LeaveBlockOutValidation
@@ -30,7 +34,7 @@ parser.add_argument(
     "--data_type",
     type=str,
     default="kernel_mmd",
-    choices=["kernel_mmd", "wasserstein_quantile"],
+    choices=["kernel_mmd", "wasserstein_samples"],
 )
 parser.add_argument(
     "--tuning_parameter",
@@ -66,14 +70,25 @@ if os.path.exists(save_path) and not args.force:
 
 rng = np.random.default_rng(seed=seed)
 
-hs_dataloader = NNData.create(
+match data_type:
+    case "kernel_mmd":
+        data_type = DistributionKernelMMD(
+            kernel="exponential", tuning_parameter=tuning_parameter
+        )
+    case "wasserstein_samples":
+        data_type = DistributionWassersteinSamples()
+    case _:
+        raise ValueError(f"Data type {data_type} not supported")
+
+dataloader = NNData.create(
     "prompteval",
+    # NOTE: uncomment to run on a subset of models and tasks (for debugging)
     # models=['meta_llama_llama_3_8b', 'meta_llama_llama_3_8b_instruct', 'meta_llama_llama_3_70b_instruct', 'codellama_codellama_34b_instruct', ],
     # tasks=['college_mathematics', 'miscellaneous', 'moral_disputes', 'jurisprudence', 'moral_scenarios', 'college_chemistry'],
     propensity=propensity,
     seed=seed,
 )
-data, mask = hs_dataloader.process_data_distribution()
+data, mask = dataloader.process_data_distribution(data_type)
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
@@ -108,16 +123,6 @@ test_block = list(zip(test_inds_rows, test_inds_cols))
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
-match data_type:
-    case "kernel_mmd":
-        data_type = DistributionKernelMMD(
-            kernel="exponential", tuning_parameter=tuning_parameter
-        )
-    case "wasserstein_quantile":
-        data_type = DistributionWassersteinQuantile()
-    case _:
-        raise ValueError(f"Data type {data_type} not supported")
-
 match estimation_method:
     case "row-row":
         estimator = RowRowEstimator()
@@ -132,7 +137,6 @@ fit_method = LeaveBlockOutValidation(
 imputer = NearestNeighborImputer(
     estimator,
     data_type,
-    #  distance_threshold=0.5
 )
 start_time = time()
 eta = fit_method.fit(data, mask_test, imputer)
@@ -164,12 +168,8 @@ for t in range(test_len):
 # Create DataFrame with list entries
 df = pd.DataFrame(
     {
-        "imputation": [
-            x.tolist() if isinstance(x, np.ndarray) else x for x in imputations
-        ],
-        "ground_truth": [
-            x.tolist() if isinstance(x, np.ndarray) else x for x in ground_truth
-        ],
+        "imputation": [serialize(x) for x in imputations],
+        "ground_truth": [serialize(x) for x in ground_truth],
         "estimation_method": [args.estimation_method] * len(imputations),
         "fit_method": [args.fit_method] * len(imputations),
         "est_errors": est_errors,

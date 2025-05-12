@@ -11,6 +11,12 @@ Paper Reference for transformation implementation:
 
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
+from nearest_neighbors.data_types import (
+    DataType,
+    DistributionKernelMMD,
+    DistributionWassersteinSamples,
+    DistributionWassersteinQuantile,
+)
 import numpy as np
 import pandas as pd
 from typing import Any, cast
@@ -240,12 +246,21 @@ class PromptEvalDataLoader(NNDataLoader):
         self.mask = mask
         return data, mask
 
-    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into distributional setting.
 
-        Returns
+        Args:
+        ----
+            data_type: Data type to use for the data. Default: None.
+
+        Returns:
         -------
             data: numpy array of shape (n_tasks, n_models, n_templates, 1)
+                if data_type is None or DistributionKernelMMD.
+                numpy array of shape (n_tasks, n_models, n_templates)
+                if data_type is DistributionWassersteinSamples or DistributionWassersteinQuantile.
                 Entry is the average correctness across examples for a given model-task-template combination
             mask: numpy array of shape (n_tasks, n_models, n_templates, 1)
                 Entry is 1 if the example is kept, 0 otherwise
@@ -280,9 +295,18 @@ class PromptEvalDataLoader(NNDataLoader):
         # drop the multi-index correctness columns
         df = df.droplevel(0, axis=1)
         # convert lists to numpy arrays of type float
+        if data_type is None or isinstance(data_type, DistributionKernelMMD):
+            entry_shape = (-1, 1)
+        elif isinstance(data_type, DistributionWassersteinSamples) or isinstance(
+            data_type, DistributionWassersteinQuantile
+        ):
+            entry_shape = (-1,)
+        else:
+            raise ValueError(f"Invalid data type: {data_type}")
+
         data = np.array(
             [np.array(x, dtype=float) for x in df.values.flatten()]  # type: ignore
-        ).reshape(df.shape + (-1, 1))
+        ).reshape(df.shape + entry_shape)
 
         # Simulate MCAR missingness
         mask = np.random.binomial(1, propensity, size=data.shape[:2])

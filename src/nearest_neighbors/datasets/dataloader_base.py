@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from typing import Any
+from nearest_neighbors.data_types import DataType
 
 
 class NNDataLoader(ABC):
@@ -43,7 +44,9 @@ class NNDataLoader(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Processes the data into distributional setting. Returns a tuple of ndarrays representing 4d distributional data and mask.
 
         Returns:

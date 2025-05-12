@@ -29,22 +29,22 @@ def evaluate_imputation(
         float: Average imputation error
 
     """
-    error = 0
     # Block out the test cells
     for row, col in test_cells:
         if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
+    errors = []
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
-        error += data_type.distance(imputed_value, true_value)
+        errors.append(data_type.distance(imputed_value, true_value))
 
     # Reset the mask
     for row, col in test_cells:
         mask_array[row, col] = 1
 
-    return error / len(test_cells)
+    return float(np.nanmean(errors))
 
 
 class LeaveBlockOutValidation(FitMethod):

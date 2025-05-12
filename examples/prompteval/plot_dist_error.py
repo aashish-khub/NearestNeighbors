@@ -94,7 +94,9 @@ for col_name, alias in [
         # flier.set_markerfacecolor("black")
         # flier.set_markeredgecolor("black")
         flier.set_markersize(2)
-    colors = ["orange"] * len(df_grouped)
+    colors = [
+        plotting_utils.COLORS[method] for method in df_grouped["estimation_method"]
+    ]
     for patch, color in zip(box["boxes"], colors):
         patch.set_facecolor(color)
     for median in box["medians"]:

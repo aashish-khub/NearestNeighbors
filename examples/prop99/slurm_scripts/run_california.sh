@@ -4,7 +4,6 @@
 # ./run_accuracy.sh OUTPUT_DIR
 
 OUTPUT_DIR=$1
-LOG_LEVEL=$2
 
 METHODS=(
     "usvt"
@@ -12,9 +11,10 @@ METHODS=(
     "col-col"
     "dr"
     "ts"
+    "star"
     "softimpute"
 )
 for em in ${METHODS[@]};
 do
-    python run_scalar.py -od $OUTPUT_DIR -em $em --force --log_level $LOG_LEVEL
+    python run_scalar.py -od $OUTPUT_DIR -em $em -f --state CA --log_level ERROR
 done

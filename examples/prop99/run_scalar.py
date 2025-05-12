@@ -112,7 +112,7 @@ elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 treatment_row = 0  # row corresponding to treated unit (California)
-print(f"Mask for row {treatment_row}:", mask[treatment_row])
+logger.info(f"Mask for row {treatment_row}:", mask[treatment_row])
 
 # %%
 logger.info("Using scalar data type")
@@ -329,7 +329,7 @@ df_synthetic_control = pd.DataFrame(
     },
     index=range(1970, 2001),
 )
-print(f"Saving df_synthetic_control to {synthetic_control_path}...")
+logger.info(f"Saving df_synthetic_control to {synthetic_control_path}...")
 df_synthetic_control.to_csv(synthetic_control_path)
 
 # %%

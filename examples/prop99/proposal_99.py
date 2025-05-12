@@ -9,14 +9,19 @@ Adapted from: https://github.com/OscarEngelbrektson/SyntheticControlMethods/blob
 import pandas as pd
 import os
 import numpy as np
+import logging
 
 from SyntheticControlMethods import Synth
 
-from nearest_neighbors.utils.experiments import get_base_parser
+from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 args = parser.parse_args()
 output_dir = args.output_dir
+log_level = args.log_level
+
+setup_logging(log_level)
+logger = logging.getLogger(__name__)
 
 # Import data
 data_dir = "https://raw.githubusercontent.com/OscarEngelbrektson/SyntheticControlMethods/master/examples/datasets/"
@@ -68,9 +73,9 @@ for state in df["state"].unique():
     # Fit Differenced Synthetic Control
     sc = Synth(df, "cigsale", "state", "year", 1989, state, n_optim=10, pen="auto")  # type: ignore
 
-    print(sc.original_data.weight_df)
-    print(sc.original_data.comparison_df)
-    print(sc.original_data.pen)
+    logger.info(sc.original_data.weight_df)
+    logger.info(sc.original_data.comparison_df)
+    logger.info(sc.original_data.pen)
 
     # save using the state code to ensure compatibility with the rest of the codebase
     state_dir = os.path.join(output_dir, "sc", STATE_CODES[state])
@@ -99,5 +104,5 @@ for state in df["state"].unique():
         },
         index=range(1970, 2001),
     )
-    print(f"Saving to {state_save_path}...")
+    logger.info(f"Saving to {state_save_path}...")
     df_synthetic_control.to_csv(state_save_path)

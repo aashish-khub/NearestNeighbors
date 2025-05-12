@@ -57,24 +57,16 @@ from nearest_neighbors.dr_nn import dr_nn
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 # %%
-if True:
-    parser = get_base_parser()
-    parser.add_argument("--state", type=str, default="CA")
-    args = parser.parse_args()
-    output_dir = args.output_dir
-    estimation_method = args.estimation_method
-    fit_method = args.fit_method
-    seed = args.seed
-    log_level = args.log_level
-    force = args.force
-    state = args.state
-else:
-    output_dir = "out-test-0505"
-    estimation_method = "row-row"
-    fit_method = "lbo"
-    seed = 1
-    log_level = "INFO"
-    force = True
+parser = get_base_parser()
+parser.add_argument("--state", type=str, default="CA")
+args = parser.parse_args()
+output_dir = args.output_dir
+estimation_method = args.estimation_method
+fit_method = args.fit_method
+seed = args.seed
+log_level = args.log_level
+force = args.force
+state = args.state
 
 # %%
 setup_logging(log_level)
@@ -349,6 +341,6 @@ df = pd.DataFrame(
         "time_fit": fit_times,
     }
 )
-print(df[["est_errors", "time_impute", "time_fit"]].describe())
+logger.info(df[["est_errors", "time_impute", "time_fit"]].describe())
 logger.info(f"Saving est_errors to {save_path}...")
 df.to_csv(save_path, index=False)

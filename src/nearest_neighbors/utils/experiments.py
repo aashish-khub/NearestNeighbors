@@ -15,7 +15,17 @@ def get_base_parser() -> ArgumentParser:
         "-em",
         type=str,
         default="row-row",
-        choices=["dr", "ts", "row-row", "col-col", "usvt", "softimpute", "auto", "star", "usvt"],
+        choices=[
+            "dr",
+            "ts",
+            "row-row",
+            "col-col",
+            "usvt",
+            "softimpute",
+            "auto",
+            "star",
+            "usvt",
+        ],
         help="Estimation method to use",
     )
     parser.add_argument(

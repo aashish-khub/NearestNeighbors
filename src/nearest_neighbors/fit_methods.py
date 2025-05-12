@@ -1,5 +1,5 @@
 from .nnimputer import FitMethod, DataType, NearestNeighborImputer
-from .estimation_methods import DREstimator, TSEstimator#, AutoEstimator
+from .estimation_methods import DREstimator, TSEstimator  # , AutoEstimator
 import numpy.typing as npt
 from hyperopt import hp, fmin, tpe, Trials
 from typing import cast, Union, Any
@@ -40,9 +40,11 @@ def evaluate_imputation(
         if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
-    #print(imputer.estimation_method.is_percentile)
+    # print(imputer.estimation_method.is_percentile)
     for row, col in test_cells:
-        imputed_value = imputer.impute(row, col, data_array, mask_array, allow_self_neighbor=allow_self_neighbor)
+        imputed_value = imputer.impute(
+            row, col, data_array, mask_array, allow_self_neighbor=allow_self_neighbor
+        )
         true_value = data_array[row, col]
         errors.append(data_type.distance(imputed_value, true_value))
 
@@ -104,6 +106,7 @@ class LeaveBlockOutValidation(FitMethod):
             float: Best distance threshold or (float, Trials): Best distance threshold and trials object if ret_trials is True.
 
         """
+
         def objective(distance_threshold: float) -> float:
             """Objective function for hyperopt.
 
@@ -116,7 +119,12 @@ class LeaveBlockOutValidation(FitMethod):
             """
             imputer.distance_threshold = distance_threshold
             return evaluate_imputation(
-                data_array, mask_array, imputer, self.block, self.data_type, self.allow_self_neighbor
+                data_array,
+                mask_array,
+                imputer,
+                self.block,
+                self.data_type,
+                self.allow_self_neighbor,
             )
 
         lower_bound, upper_bound = self.distance_threshold_range
@@ -204,7 +212,12 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             col_threshold = params["distance_threshold_col"]
             imputer.distance_threshold = (row_threshold, col_threshold)
             return evaluate_imputation(
-                data_array, mask_array, imputer, self.block, self.data_type, self.allow_self_neighbor
+                data_array,
+                mask_array,
+                imputer,
+                self.block,
+                self.data_type,
+                self.allow_self_neighbor,
             )
 
         lower_bound_row, upper_bound_row = self.distance_threshold_range_row

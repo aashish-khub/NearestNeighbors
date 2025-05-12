@@ -35,8 +35,12 @@ import argparse
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
-#parser.add_argument("--allow_self_neighbor", action="store_true", help="Allow self neighbor")
-parser.add_argument("--allow_self_neighbor", action=argparse.BooleanOptionalAction, help="Allow self neighbor")
+# parser.add_argument("--allow_self_neighbor", action="store_true", help="Allow self neighbor")
+parser.add_argument(
+    "--allow_self_neighbor",
+    action=argparse.BooleanOptionalAction,
+    help="Allow self neighbor",
+)
 
 args = parser.parse_args()
 output_dir = args.output_dir
@@ -73,14 +77,14 @@ elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 logger.info("Using scalar data type")
-#data_type_kernel = DistributionKernelMMD(kernel="exponential")
-#data_type_wasserstein = DistributionWassersteinSamples()
+# data_type_kernel = DistributionKernelMMD(kernel="exponential")
+# data_type_wasserstein = DistributionWassersteinSamples()
 data_type = Scalar()
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
 inds_cols = holdout_inds[1]
-#range_inds = np.arange(len(inds_rows))
+# range_inds = np.arange(len(inds_rows))
 
 inds_rows_cv = inds_rows[np.logical_and(inds_rows < 27, inds_cols < 150)]
 inds_cols_cv = inds_cols[np.logical_and(inds_rows < 27, inds_cols < 150)]
@@ -104,8 +108,12 @@ cv_inds = cv_range_inds[:cv_size]
 cv_inds_rows = list(inds_rows_cv[cv_inds])
 cv_inds_cols = list(inds_cols_cv[cv_inds])
 # get the rows and columns of the test indices (last 50 timesteps and bottom 10 users)
-test_inds_rows = list(inds_rows[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)])
-test_inds_cols = list(inds_cols[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)])
+test_inds_rows = list(
+    inds_rows[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)]
+)
+test_inds_cols = list(
+    inds_cols[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)]
+)
 
 block = list(zip(cv_inds_rows, cv_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
@@ -178,15 +186,15 @@ elif estimation_method == "softimpute":
         si_mask[row, col] = 0
         si_data_test = si_data.copy()
         si_data_test[si_mask != 1] = np.nan
-    #si_mask[test_inds_rows, test_inds_cols] = 0
-    #si_data[si_mask != 1] = np.nan
-    # impute missing values simultaneously
+        # si_mask[test_inds_rows, test_inds_cols] = 0
+        # si_data[si_mask != 1] = np.nan
+        # impute missing values simultaneously
         start_time = time()
         si_imputed = softimpute(si_data_test)
         elapsed_time = time() - start_time
         si_mask[row, col] = 1
         imputations.append(si_imputed[row, col])
-    # set the time to the average time per imputation
+        # set the time to the average time per imputation
         imputation_times.append([elapsed_time / len(test_block)])
     fit_times = [0] * len(test_block)
 elif estimation_method == "star":

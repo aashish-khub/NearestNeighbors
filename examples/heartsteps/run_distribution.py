@@ -17,20 +17,20 @@ import pandas as pd
 from hyperopt import Trials
 
 # import baseline methods
-from baselines import usvt
 
 # import nearest neighbor methods
-from nearest_neighbors.data_types import DistributionKernelMMD, DistributionWassersteinSamples
+from nearest_neighbors.data_types import (
+    DistributionKernelMMD,
+    DistributionWassersteinSamples,
+)
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
-    DRLeaveBlockOutValidation,
-    TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
 )
 from nearest_neighbors.estimation_methods import RowRowEstimator, ColColEstimator
 from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.vanilla_nn import row_row, col_col
-#from nearest_neighbors.dr_nn import dr_nn
+
+# from nearest_neighbors.dr_nn import dr_nn
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
@@ -45,7 +45,7 @@ parser.add_argument(
 args = parser.parse_args()
 if args.data_type == "kernel":
     data_type = DistributionKernelMMD(kernel="exponential")
-elif args.data_type == "wasserstein_samples": 
+elif args.data_type == "wasserstein_samples":
     data_type = DistributionWassersteinSamples()
 else:
     raise ValueError(f"Data type {args.data_type} not supported")
@@ -88,7 +88,7 @@ data_type_wasserstein = DistributionWassersteinSamples()
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
 inds_cols = holdout_inds[1]
-#range_inds = np.arange(len(inds_rows))
+# range_inds = np.arange(len(inds_rows))
 
 inds_rows_cv = inds_rows[np.logical_and(inds_rows < 27, inds_cols < 150)]
 inds_cols_cv = inds_cols[np.logical_and(inds_rows < 27, inds_cols < 150)]
@@ -112,8 +112,12 @@ cv_inds = cv_range_inds[:cv_size]
 cv_inds_rows = list(inds_rows_cv[cv_inds])
 cv_inds_cols = list(inds_cols_cv[cv_inds])
 # get the rows and columns of the test indices (last 50 timesteps and bottom 10 users)
-test_inds_rows = list(inds_rows[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)])
-test_inds_cols = list(inds_cols[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)])
+test_inds_rows = list(
+    inds_rows[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)]
+)
+test_inds_cols = list(
+    inds_cols[np.logical_and(holdout_inds[0] >= 27, holdout_inds[1] >= 150)]
+)
 
 block = list(zip(cv_inds_rows, cv_inds_cols))
 test_block = list(zip(test_inds_rows, test_inds_cols))
@@ -152,32 +156,33 @@ mask_test[test_inds_rows, test_inds_cols] = 0
 # #     imputations = np.array(imputations)
 # #     fit_times = [0] * len(test_block)
 # else:
-    # if estimation_method == "dr":
-    #     logger.info("Using doubly robust estimation")
-    #     imputer = dr_nn()
+# if estimation_method == "dr":
+#     logger.info("Using doubly robust estimation")
+#     imputer = dr_nn()
 
-    #     logger.info("Using doubly robust fit method")
-    #     # Fit the imputer using leave-block-out validation
-    #     fitter = DRLeaveBlockOutValidation(
-    #         block,
-    #         distance_threshold_range_row=(0, 50),
-    #         distance_threshold_range_col=(0, 50),
-    #         n_trials=200,
-    #         data_type=data_type,
-    #     )
+#     logger.info("Using doubly robust fit method")
+#     # Fit the imputer using leave-block-out validation
+#     fitter = DRLeaveBlockOutValidation(
+#         block,
+#         distance_threshold_range_row=(0, 50),
+#         distance_threshold_range_col=(0, 50),
+#         n_trials=200,
+#         data_type=data_type,
+#     )
 if estimation_method == "row-row":
     logger.info("Using row-row estimation")
-    imputer = NearestNeighborImputer(estimation_method=RowRowEstimator(is_percentile=False), data_type=data_type)
+    imputer = NearestNeighborImputer(
+        estimation_method=RowRowEstimator(is_percentile=False), data_type=data_type
+    )
     logger.info("Using leave-block-out validation")
     fitter = LeaveBlockOutValidation(
-        block,
-        distance_threshold_range=(0, 100),
-        n_trials=100,
-        data_type=data_type
+        block, distance_threshold_range=(0, 100), n_trials=100, data_type=data_type
     )
 elif estimation_method == "col-col":
     logger.info("Using col-col estimation")
-    imputer = NearestNeighborImputer(estimation_method=ColColEstimator(), data_type=data_type)
+    imputer = NearestNeighborImputer(
+        estimation_method=ColColEstimator(), data_type=data_type
+    )
 
     logger.info("Using leave-block-out validation")
     fitter = LeaveBlockOutValidation(
@@ -245,13 +250,13 @@ for row, col in tqdm(test_block, desc="Imputing missing values"):
     elapsed_time = time() - start_time
     imputation_times.append(elapsed_time)
     imputations.append(imputed_value)
-#imputations = np.array(imputations)
+# imputations = np.array(imputations)
 
 ground_truth = data[test_inds_rows, test_inds_cols]
 est_errors = []
 for i in range(len(imputations)):
     est_errors.append(imputer.data_type.distance(imputations[i], ground_truth[i]))
-#est_errors = np.abs(imputations - ground_truth)
+# est_errors = np.abs(imputations - ground_truth)
 logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 save_imputations = np.array(imputations, dtype=object)
 ground_truth = np.array(ground_truth, dtype=object)
@@ -271,9 +276,9 @@ np.save(ground_truth_save_path, ground_truth)
 df = pd.DataFrame(
     data={
         "estimation_method": estimation_method,
-        #"imputation": save_imputations,
-        #"ground_truth": ground_truth,
-        'data_type': args.data_type,
+        # "imputation": save_imputations,
+        # "ground_truth": ground_truth,
+        "data_type": args.data_type,
         "fit_method": fit_method,
         "est_errors": est_errors,
         "row": test_inds_rows,

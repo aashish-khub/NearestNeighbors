@@ -20,20 +20,82 @@ NNData.help("prompteval")
 # Example: Load the PromptEval dataset with default parameters.
 print("===== Loading PromptEval dataset with default params in distributional form ===")
 # Define the models and tasks
-models = ['meta_llama_llama_3_8b', 'meta_llama_llama_3_8b_instruct', 'meta_llama_llama_3_70b_instruct', 'codellama_codellama_34b_instruct', 
-          'google_flan_t5_xl', 'google_flan_t5_xxl', 'google_flan_ul2', 'ibm_mistralai_merlinite_7b', 'mistralai_mixtral_8x7b_instruct_v01', 
-          'mistralai_mistral_7b_instruct_v0_2', 'google_gemma_7b', 'google_gemma_7b_it', 'tiiuae_falcon_40b', 'mistralai_mistral_7b_v0_1', 'tiiuae_falcon_180b']
-tasks = ['college_mathematics', 'miscellaneous', 'moral_disputes', 'jurisprudence', 'moral_scenarios', 'college_chemistry',
-         'professional_medicine', 'clinical_knowledge', 'abstract_algebra', 'nutrition', 'professional_psychology', 'high_school_government_and_politics',
-         'high_school_us_history', 'high_school_chemistry', 'high_school_macroeconomics', 'management', 'conceptual_physics', 'philosophy',
-         'electrical_engineering', 'high_school_psychology', 'medical_genetics', 'high_school_geography',
-         'high_school_statistics', 'international_law', 'elementary_mathematics', 'high_school_physics', 'world_religions',
-         'high_school_european_history', 'formal_logic', 'security_studies', 'sociology', 'high_school_biology', 'us_foreign_policy',
-         'high_school_microeconomics', 'college_medicine', 'college_computer_science', 'logical_fallacies', 'high_school_computer_science',
-         'anatomy', 'econometrics', 'astronomy', 'college_biology', 'virology', 'professional_accounting',
-         'college_physics', 'high_school_world_history', 'business_ethics', 'global_facts', 'public_relations',
-         'marketing', 'human_aging', 'professional_law', 'high_school_mathematics', 'prehistory', 'machine_learning',
-         'computer_security', 'human_sexuality']
+models = [
+    "meta_llama_llama_3_8b",
+    "meta_llama_llama_3_8b_instruct",
+    "meta_llama_llama_3_70b_instruct",
+    "codellama_codellama_34b_instruct",
+    "google_flan_t5_xl",
+    "google_flan_t5_xxl",
+    "google_flan_ul2",
+    "ibm_mistralai_merlinite_7b",
+    "mistralai_mixtral_8x7b_instruct_v01",
+    "mistralai_mistral_7b_instruct_v0_2",
+    "google_gemma_7b",
+    "google_gemma_7b_it",
+    "tiiuae_falcon_40b",
+    "mistralai_mistral_7b_v0_1",
+    "tiiuae_falcon_180b",
+]
+tasks = [
+    "college_mathematics",
+    "miscellaneous",
+    "moral_disputes",
+    "jurisprudence",
+    "moral_scenarios",
+    "college_chemistry",
+    "professional_medicine",
+    "clinical_knowledge",
+    "abstract_algebra",
+    "nutrition",
+    "professional_psychology",
+    "high_school_government_and_politics",
+    "high_school_us_history",
+    "high_school_chemistry",
+    "high_school_macroeconomics",
+    "management",
+    "conceptual_physics",
+    "philosophy",
+    "electrical_engineering",
+    "high_school_psychology",
+    "medical_genetics",
+    "high_school_geography",
+    "high_school_statistics",
+    "international_law",
+    "elementary_mathematics",
+    "high_school_physics",
+    "world_religions",
+    "high_school_european_history",
+    "formal_logic",
+    "security_studies",
+    "sociology",
+    "high_school_biology",
+    "us_foreign_policy",
+    "high_school_microeconomics",
+    "college_medicine",
+    "college_computer_science",
+    "logical_fallacies",
+    "high_school_computer_science",
+    "anatomy",
+    "econometrics",
+    "astronomy",
+    "college_biology",
+    "virology",
+    "professional_accounting",
+    "college_physics",
+    "high_school_world_history",
+    "business_ethics",
+    "global_facts",
+    "public_relations",
+    "marketing",
+    "human_aging",
+    "professional_law",
+    "high_school_mathematics",
+    "prehistory",
+    "machine_learning",
+    "computer_security",
+    "human_sexuality",
+]
 
 # data_generator = NNData.create("prompteval", models=models, tasks=tasks)
 # data, mask = data_generator.process_data_distribution()
@@ -46,7 +108,7 @@ print(
 )
 
 custom_data_generator = NNData.create(
-    "prompteval", models=[model], tasks=[task], propensity=0.5, seed = 42
+    "prompteval", models=[model], tasks=[task], propensity=0.5, seed=42
 )
 data, mask = custom_data_generator.process_data_scalar()
 

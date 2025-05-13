@@ -124,51 +124,6 @@ test_block = list(zip(test_inds_rows, test_inds_cols))
 
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
-
-# if estimation_method == "usvt":
-#     logger.info("Using USVT estimation")
-#     # setup usvt imputation
-#     usvt_data = data.copy()
-#     usvt_mask = mask.copy()
-#     usvt_mask[test_inds_rows, test_inds_cols] = 0
-#     usvt_data[usvt_mask != 1] = np.nan
-#     # impute missing values simultaneously
-#     start_time = time()
-#     usvt_imputed = usvt(usvt_data)
-#     elapsed_time = time() - start_time
-#     imputations = usvt_imputed[test_inds_rows, test_inds_cols]
-#     # set the time to the average time per imputation
-#     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
-#     fit_times = [0] * len(test_block)
-# # elif estimation_method == "star":
-# #     logger.info("Using star estimation")
-# #     estimator = StarNNEstimator()
-# #     imputer = NearestNeighborImputer(estimator, data_type, distance_threshold=-1)
-# #     # Impute missing values
-# #     imputations = []
-# #     imputation_times = []
-# #     for row, col in tqdm(test_block, desc="Imputing missing values"):
-# #         start_time = time()
-# #         imputed_value = imputer.impute(row, col, data, mask_test)
-# #         elapsed_time = time() - start_time
-# #         imputation_times.append(elapsed_time)
-# #         imputations.append(imputed_value)
-# #     imputations = np.array(imputations)
-# #     fit_times = [0] * len(test_block)
-# else:
-# if estimation_method == "dr":
-#     logger.info("Using doubly robust estimation")
-#     imputer = dr_nn()
-
-#     logger.info("Using doubly robust fit method")
-#     # Fit the imputer using leave-block-out validation
-#     fitter = DRLeaveBlockOutValidation(
-#         block,
-#         distance_threshold_range_row=(0, 50),
-#         distance_threshold_range_col=(0, 50),
-#         n_trials=200,
-#         data_type=data_type,
-#     )
 if estimation_method == "row-row":
     logger.info("Using row-row estimation")
     imputer = NearestNeighborImputer(
@@ -195,20 +150,7 @@ else:
     raise ValueError(
         f"Estimation method {estimation_method} and fit method {fit_method} not supported"
     )
-    # elif estimation_method == "ts":
-    #     logger.info("Using two-sided estimation")
-    #     estimator = TSEstimator()
-    #     imputer = NearestNeighborImputer(estimator, data_type)
 
-    #     logger.info("Using two-sided fit method")
-    #     # Fit the imputer using leave-block-out validation
-    #     fitter = TSLeaveBlockOutValidation(
-    #         block,
-    #         distance_threshold_range_row=(0, 50),
-    #         distance_threshold_range_col=(0, 50),
-    #         n_trials=200,
-    #         data_type=data_type,
-    #     )
 
 start_time = time()
 trials = fitter.fit(data, mask_test, imputer, ret_trials=True, verbose=True)

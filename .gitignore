@@ -171,10 +171,10 @@ out/
 
 **/data/
 *.pkl
-*.pkl
-*.csv
-*.png
-*.pdf
-*.ipynb
-*.zip
-*.npy
+# *.pkl
+# *.csv
+# *.png
+# *.pdf
+# *.ipynb
+# *.zip
+# *.npy

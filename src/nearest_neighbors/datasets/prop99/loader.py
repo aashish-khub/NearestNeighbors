@@ -11,6 +11,7 @@ Paper Reference for Prop99:
 
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
+from nearest_neighbors.data_types import DataType
 import numpy as np
 import pandas as pd
 from typing import Any
@@ -219,8 +220,15 @@ class Prop99DataLoader(NNDataLoader):
 
         return data, mask
 
-    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
-        """Does not apply to Prop99 as it is not a distributional dataset."""
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Does not apply to Prop99 as it is not a distributional dataset.
+
+        Args:
+            data_type: Data type to process. Default: None.
+
+        """
         raise ValueError("There is no distributional data for Prop99.")
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:

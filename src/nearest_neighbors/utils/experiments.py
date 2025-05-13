@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser
 import logging
+import numpy as np
 
 
 def get_base_parser() -> ArgumentParser:
@@ -46,6 +47,13 @@ def get_base_parser() -> ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Log level",
     )
+    parser.add_argument(
+        "--propensity",
+        "-p",
+        type=float,
+        default=0.5,
+        help="Propensity for the missing data",
+    )
     return parser
 
 
@@ -64,3 +72,19 @@ def setup_logging(log_level: str) -> None:
     )
     # need to silence entrywise
     logging.getLogger("hyperopt").setLevel(logging.WARNING)  # or logging.ERROR
+
+
+def serialize(x: np.ndarray) -> list:
+    """Serialize a numpy array to a list.
+
+    Args:
+        x (np.ndarray): The numpy array to serialize.
+
+    Returns:
+        list: The serialized numpy array.
+
+    """
+    if np.any(np.isnan(x)):
+        return []
+    else:
+        return x.tolist()  # type: ignore

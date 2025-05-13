@@ -3,6 +3,7 @@ from .estimation_methods import DREstimator, TSEstimator
 import numpy.typing as npt
 from hyperopt import hp, fmin, tpe, Trials
 from typing import cast, Union
+import numpy as np
 
 
 def evaluate_imputation(
@@ -28,22 +29,22 @@ def evaluate_imputation(
         float: Average imputation error
 
     """
-    error = 0
     # Block out the test cells
     for row, col in test_cells:
         if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
+    errors = []
     for row, col in test_cells:
         imputed_value = imputer.impute(row, col, data_array, mask_array)
         true_value = data_array[row, col]
-        error += data_type.distance(imputed_value, true_value)
+        errors.append(data_type.distance(imputed_value, true_value))
 
     # Reset the mask
     for row, col in test_cells:
         mask_array[row, col] = 1
 
-    return error / len(test_cells)
+    return float(np.nanmean(errors))
 
 
 class LeaveBlockOutValidation(FitMethod):
@@ -55,6 +56,7 @@ class LeaveBlockOutValidation(FitMethod):
         distance_threshold_range: tuple[float, float],
         n_trials: int,
         data_type: DataType,
+        rng: np.random.Generator | None = None,
     ):
         """Initialize the block fit method.
 
@@ -63,12 +65,14 @@ class LeaveBlockOutValidation(FitMethod):
             distance_threshold_range (tuple[float,float]): Range of distance thresholds to test
             n_trials (int): Number of trials to run
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            rng (np.random.Generator | None, optional): Random number generator. Defaults to None.
 
         """
         self.block = block
         self.distance_threshold_range = distance_threshold_range
         self.n_trials = n_trials
         self.data_type = data_type
+        self.rng = rng
 
     def fit(
         self,
@@ -117,6 +121,7 @@ class LeaveBlockOutValidation(FitMethod):
             algo=tpe.suggest,
             max_evals=self.n_trials,
             trials=trials,
+            rstate=self.rng,
         )
         if best_distance_threshold is None:
             return float("nan")
@@ -291,4 +296,4 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a TSEstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
-        return super().fit(data_array, mask_array, imputer, ret_trials)
+        return super().fit(data_array, mask_array, imputer)

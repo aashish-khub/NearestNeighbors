@@ -38,7 +38,9 @@ dependencies = [
     "requests",
     "seaborn",
     "SyntheticControlMethods",
-    "fancyimpute"
+    "fancyimpute",
+    "datasets",
+    "tabulate",
 ]
 
 [project.urls]

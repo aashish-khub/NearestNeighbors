@@ -16,5 +16,5 @@ METHODS=(
 )
 for em in ${METHODS[@]};
 do
-    python run_scalar.py -od $OUTPUT_DIR -em $em -f --state CA --log_level ERROR
+    python run_scalar.py -od $OUTPUT_DIR -em $em --state CA --log_level ERROR --raw_threshold -s 1
 done

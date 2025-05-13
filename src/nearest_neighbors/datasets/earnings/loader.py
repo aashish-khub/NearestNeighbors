@@ -3,6 +3,7 @@ from typing import Callable
 import numpy.typing as npt
 import pandas as pd
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader
+from nearest_neighbors.data_types import DataType
 
 
 def empirical_quantile_function(samples: npt.NDArray) -> Callable:
@@ -127,8 +128,13 @@ class EarningsDataLoader(NNDataLoader):
 
         return data_matrix, mask_matrix
 
-    def process_data_distribution(self) -> tuple[npt.NDArray, npt.NDArray]:
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[npt.NDArray, npt.NDArray]:
         """Processes the data into distributional setting.
+
+        Args:
+            data_type: Data type to process. Default: None.
 
         Returns:
             tuple[npt.NDArray, npt.NDArray]: Tuple of 2D data matrix and mask.

@@ -10,6 +10,7 @@ COLS = 10
 # initialize the NN imputer
 imputer = row_row(
     distance_threshold=1,
+    is_percentile=False,
 )
 
 
@@ -17,8 +18,8 @@ def test_constant_imputation_0() -> None:
     """Sanity Check: Given a matrix with constant values,
     the imputation should be the same constant value.
     """
-    data = np.zeros((ROWS, COLS))
-    mask = np.ones((ROWS, COLS))
+    data = np.zeros((ROWS, COLS), dtype=float)
+    mask = np.ones((ROWS, COLS), dtype=bool)
 
     for r, c in np.ndindex(data.shape):
         estimated_value = imputer.impute(
@@ -34,8 +35,8 @@ def test_constant_imputation_0_5() -> None:
     """Sanity Check: Given a matrix with constant values,
     the imputation should be the same constant value.
     """
-    data = np.ones((ROWS, COLS)) * 0.5
-    mask = np.ones((ROWS, COLS))
+    data = np.ones((ROWS, COLS), dtype=float) * 0.5
+    mask = np.ones((ROWS, COLS), dtype=bool)
 
     for r, c in np.ndindex(data.shape):
         estimated_value = imputer.impute(
@@ -51,8 +52,8 @@ def test_constant_imputation_1() -> None:
     """Sanity Check: Given a matrix with constant values,
     the imputation should be the same constant value.
     """
-    data = np.ones((ROWS, COLS))
-    mask = np.ones((ROWS, COLS))
+    data = np.ones((ROWS, COLS), dtype=float)
+    mask = np.ones((ROWS, COLS), dtype=bool)
 
     for r, c in np.ndindex(data.shape):
         estimated_value = imputer.impute(
@@ -70,9 +71,9 @@ def test_half_ones_half_zeros_observed_1() -> None:
     half is observed, the imputed value should be one for the first half
     and zero for the second half.
     """
-    data = np.ones((ROWS, COLS))
+    data = np.ones((ROWS, COLS), dtype=float)
     data[:, COLS // 2 :] = 0
-    mask = np.ones((ROWS, COLS))
+    mask = np.ones((ROWS, COLS), dtype=bool)
     mask[:, COLS // 2 :] = 0
 
     for r in range(ROWS):
@@ -101,9 +102,9 @@ def test_half_ones_half_zeros_observed_2() -> None:
     half is observed, the imputed value should be one for the first half
     and zero for the second half.
     """
-    data = np.ones((ROWS, COLS))
+    data = np.ones((ROWS, COLS), dtype=float)
     data[:, COLS // 2 :] = 0
-    mask = np.ones((ROWS, COLS))
+    mask = np.ones((ROWS, COLS), dtype=bool)
     mask[:, : COLS // 2] = 0
 
     for r in range(ROWS):
@@ -134,7 +135,8 @@ def test_example_1() -> None:
             [1, 1, 0, 1],
             [1, 1, 1, 1],
             [1, 1, 0, 1],
-        ]
+        ],
+        dtype=float,
     )
     MASK = np.array(
         [
@@ -142,7 +144,8 @@ def test_example_1() -> None:
             [1, 1, 1, 1],
             [1, 1, 1, 1],
             [1, 1, 1, 1],
-        ]
+        ],
+        dtype=bool,
     )
     imputer = row_row(
         distance_threshold=0,
@@ -164,7 +167,8 @@ def test_example_2() -> None:
             [1, 1, 0, 1],
             [1, 1, 1, 1],
             [1, 1, 0, 1],
-        ]
+        ],
+        dtype=float,
     )
     MASK = np.array(
         [
@@ -172,7 +176,8 @@ def test_example_2() -> None:
             [1, 1, 0, 1],
             [1, 1, 1, 1],
             [1, 1, 1, 1],
-        ]
+        ],
+        dtype=bool,
     )
     imputer = row_row(
         distance_threshold=0,
@@ -198,7 +203,8 @@ def test_example_3() -> None:
             [1, 1, 1, 1],
             [1, 0, 1, 0],
             [1, 1, 1, 1],
-        ]
+        ],
+        dtype=float,
     )
     MASK = np.array(
         [
@@ -206,7 +212,8 @@ def test_example_3() -> None:
             [1, 1, 1, 1],
             [1, 0, 1, 1],
             [1, 1, 1, 1],
-        ]
+        ],
+        dtype=bool,
     )
     imputer = col_col(
         distance_threshold=0,

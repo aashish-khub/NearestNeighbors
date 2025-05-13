@@ -11,6 +11,7 @@ Paper Reference for Prop99:
 
 from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
+from nearest_neighbors.data_types import DataType
 import numpy as np
 import pandas as pd
 from typing import Any
@@ -53,11 +54,70 @@ class Prop99DataLoader(NNDataLoader):
         "tobacco_data": "https://data.cdc.gov/api/views/7nwe-3aj9/rows.csv?accessType=DOWNLOAD",
     }
 
+    # 12 states that implemented Prop99 or similar legislation after 1988
+    TREATED_STATES = {
+        "CA",  # California
+        "MA",  # Massachusetts
+        "AZ",  # Arizona
+        "OR",  # Oregon
+        "FL",  # Florida
+        "AK",  # Alaska
+        "HI",  # Hawaii
+        "MD",  # Maryland
+        "MI",  # Michigan
+        "NJ",  # New Jersey
+        "NY",  # New York
+        "WA",  # Washington
+    }
+    # 38 states that never implemented Prop99 or similar legislation
+    CONTROL_STATES = {
+        "TX",
+        "WI",
+        "MT",
+        "RI",
+        "KS",
+        "ME",
+        "UT",
+        "VA",
+        "IN",
+        "GA",
+        "AL",
+        "SD",
+        "NH",
+        "DE",
+        "NC",
+        "CO",
+        "AR",
+        "CT",
+        "MN",
+        "NV",
+        "LA",
+        "IA",
+        "NE",
+        "SC",
+        "OH",
+        "TN",
+        "WV",
+        "KY",
+        "ID",
+        "MS",
+        "IL",
+        "WY",
+        "VT",
+        "ND",
+        "PA",
+        "OK",
+        "MO",
+        "NM",
+    }
+    # Rows to exclude from the dataset entirely
+    EXCLUDED_STATES = {"DC"}
+
     def __init__(
         self,
         start_year: int = 1970,
         end_year: int = 2000,
-        sample_states: int | None = None,
+        state: str = "CA",
         seed: int | None = None,
         **kwargs: Any,
     ):
@@ -67,7 +127,7 @@ class Prop99DataLoader(NNDataLoader):
         ----
             start_year: Start year for the data range. Default: 1970.
             end_year: End year for the data range. Default: 2019.
-            sample_states: Number of states to sample from the dataset. Default: None (use all states).
+            state: State to impute. Default: "CA".
             seed: Random seed for reproducibility. Default: None
             kwargs: Additional keyword arguments.
 
@@ -77,7 +137,7 @@ class Prop99DataLoader(NNDataLoader):
         )
         self.start_year = start_year
         self.end_year = end_year
-        self.sample_states = sample_states
+        self.state = state
         self.data = None
         self.mask = None
         if seed is not None:
@@ -85,14 +145,10 @@ class Prop99DataLoader(NNDataLoader):
                 seed
             )  # instantiate random seed if provided but do it only once here
 
-    def process_data_scalar(self, agg: str = "mean") -> tuple[np.ndarray, np.ndarray]:
+    def process_data_scalar(self) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into scalar setting focusing on cigarette consumption in packs.
 
-        Args:
-        ----
-            agg: Aggregation method to use. Default: "mean". Options: "mean", "sum", "median", "std", "variance"
-
-        Returns:
+        Returns
         -------
             data: 2d processed data matrix of floats (states × years)
             mask: Mask for processed data
@@ -114,24 +170,43 @@ class Prop99DataLoader(NNDataLoader):
         ]
         logger.info(f"After year range filter: {df_consumption.shape}")
 
+        # Make sure we're working with a pandas DataFrame
+        df_consumption = (
+            pd.DataFrame(df_consumption)
+            if not isinstance(df_consumption, pd.DataFrame)
+            else df_consumption
+        )
+
         # Pivot the data to get states as rows and years as columns
         data_df = df_consumption.pivot(
             index="LocationAbbr", columns="Year", values="Data_Value"
         )
         logger.info(f"Pivoted data shape: {data_df.shape}")
 
-        # Sample states if specified
-        if self.sample_states is not None:
-            data_df = data_df.sample(n=self.sample_states)
-            logger.info(f"After sampling states: {data_df.shape}")
+        # Retain only the control states and the treated state
+        rows_to_drop = list(
+            self.TREATED_STATES.union(self.EXCLUDED_STATES) - {self.state}
+        )
+        data_df = data_df.drop(rows_to_drop)
+        logger.info(f"After excluding states: {data_df.shape}")
 
         # Create the mask: 0 for CA after 1988, 1 for everything else
         mask_df = pd.DataFrame(1, index=data_df.index, columns=data_df.columns)
 
-        # If 'CA' is in the data, set mask values to 0 for years after 1988
-        if "CA" in mask_df.index:
-            ca_years = [year for year in mask_df.columns if int(year) > 1988]
-            mask_df.loc["CA", ca_years] = 0
+        # If the treated state is in the data, set mask values to 0 for years after 1988
+        assert self.state in mask_df.index, (
+            f"{self.state} is not a valid state in the data"
+        )
+        # reorder the rows so that the treated state is the first row
+        data_df = data_df.reindex(
+            [self.state] + [state for state in data_df.index if state != self.state]
+        )
+        mask_df = mask_df.reindex(
+            [self.state] + [state for state in mask_df.index if state != self.state]
+        )
+
+        ca_years = [year for year in mask_df.columns if int(year) > 1988]
+        mask_df.loc[self.state, ca_years] = 0
 
         # Convert to numpy arrays
         data = data_df.to_numpy()
@@ -145,8 +220,15 @@ class Prop99DataLoader(NNDataLoader):
 
         return data, mask
 
-    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
-        """Does not apply to Prop99 as it is not a distributional dataset."""
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Does not apply to Prop99 as it is not a distributional dataset.
+
+        Args:
+            data_type: Data type to process. Default: None.
+
+        """
         raise ValueError("There is no distributional data for Prop99.")
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
@@ -164,7 +246,6 @@ class Prop99DataLoader(NNDataLoader):
             "custom_params": {
                 "start_year": self.start_year,
                 "end_year": self.end_year,
-                "sample_states": self.sample_states,
             },
         }
 
@@ -173,8 +254,6 @@ class Prop99DataLoader(NNDataLoader):
                 "state_names": self.state_names,
                 "years": self.years,
                 "data_description": "Cigarette Consumption (Per Capita in packs)",
-                "agg": self.agg,
-                "save_processed": self.save_processed,
             }
 
         return full_state

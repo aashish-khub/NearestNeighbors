@@ -12,6 +12,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
+import numpy as np
+from scipy.stats import linregress
 
 # Setup logging
 logging.basicConfig(
@@ -74,18 +76,17 @@ if os.path.exists(data_file):
     logger.info(f"Saved summary statistics: {summary_stats_filename}")
 
     # Plot mean error with regression lines
-    import numpy as np
-    from scipy.stats import linregress
-
     plt.figure(figsize=(14, 8))
     ymins = []
     ymaxs = []
     for idx, method in enumerate(summary_stats["estimation_method"].unique()):
         subset = summary_stats[summary_stats["estimation_method"] == method]
         # Perform linear regression of log(mean) on size
-        slope, intercept, r_value, p_value, std_err = linregress(
-            subset["size"], np.log(subset["mean"])
-        )
+        # Convert pandas Series to lists to avoid type issues
+        x_data = subset["size"].tolist()
+        y_data = np.log(subset["mean"]).tolist()
+        slope, intercept, r_value, p_value, std_err = linregress(x_data, y_data)
+
         label_with_slope = f"{method} (n^{{{slope:.3f}}})"
         color_code = sns.color_palette(
             "husl", len(summary_stats["estimation_method"].unique())
@@ -101,11 +102,12 @@ if os.path.exists(data_file):
         )
         # Plot the regression line
         x_vals = np.linspace(subset["size"].min(), subset["size"].max(), 100)
-        y_vals = np.exp(intercept + slope * x_vals)
+        y_vals = np.exp(intercept + slope * x_vals)  # type: ignore
         plt.plot(x_vals, y_vals, linestyle="--", alpha=0.7, color=color_code)
         # Track y-axis limits
-        ymins.extend(subset["mean"] - subset["std"])
-        ymaxs.extend(subset["mean"] + subset["std"])
+        # Convert pandas Series to lists before extending
+        ymins.extend((subset["mean"] - subset["std"]).tolist())
+        ymaxs.extend((subset["mean"] + subset["std"]).tolist())
 
     # Add more ticks to the y-axis
     y_ticks = np.logspace(

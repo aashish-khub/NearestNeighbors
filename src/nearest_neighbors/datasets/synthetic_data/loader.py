@@ -2,6 +2,7 @@ from nearest_neighbors.datasets.dataloader_base import NNDataLoader
 from nearest_neighbors.datasets.dataloader_factory import register_dataset
 import numpy as np
 from typing import Any
+from nearest_neighbors.data_types import DataType
 
 params = {
     "num_rows": (int, 100, "Number of rows in the dataset"),
@@ -247,8 +248,15 @@ class SyntheticDataLoader(NNDataLoader):
         availability_mask = state_dict["observed_entries"]
         return (observed_data, availability_mask)
 
-    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
-        """Method not yet implemented for synthetic data"""
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Method not yet implemented for synthetic data
+
+        Args:
+            data_type: Data type to process. Default: None.
+
+        """
         # TODO Caleb, Kyuesong: is this even well-defined for synthetic data?
         raise NotImplementedError(
             "Distributional setting not yet implemented for synthetic data"

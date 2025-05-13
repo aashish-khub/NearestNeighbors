@@ -1,23 +1,20 @@
-"""Script to plot the MSE as a boxplot
-
-NOTE: imputation time is per imputation, fit time is for the entire fitting procedure
-TODO: change fit time to be a bar plot
+"""Script to plot error of the synthetic control vs the observed value for control states.
 
 Example usage:
 ```bash
-python plot_error_and_time.py -od OUTPUT_DIR
+python plot_sc_error.py -od OUTPUT_DIR
 ```
 """
 
-import os
-
+import pandas as pd
 import matplotlib.pyplot as plt
 from glob import glob
-import pandas as pd
+import os
 import logging
 
 from nearest_neighbors.utils.experiments import get_base_parser
 from nearest_neighbors.utils import plotting_utils
+from nearest_neighbors.datasets.prop99.loader import Prop99DataLoader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,39 +22,45 @@ logger = logging.getLogger(__name__)
 parser = get_base_parser()
 args = parser.parse_args()
 output_dir = args.output_dir
-results_dir = os.path.join(output_dir, "results")
+
 figures_dir = os.path.join(output_dir, "figures")
 os.makedirs(figures_dir, exist_ok=True)
 
-files = glob(os.path.join(results_dir, "est_errors-*.csv"))
+# get the subdirectories in the synthetic control directory
+sc_dir = os.path.join(output_dir, "sc", "*", "sc-*.csv")
+files = glob(sc_dir)
+logger.info(f"Found {len(files)} files in {sc_dir}")
 df_list = []
 for file in files:
-    df = pd.read_csv(file)
+    df = pd.read_csv(file, index_col=0)
     df_list.append(df)
-df = pd.concat(df_list, ignore_index=True)
+df = pd.concat(df_list)
+df = df.reset_index(names=["year"])
+logger.info("Only keeping years in the post-intervention period (after 1988)")
+df = df[df["year"] > 1988]
+# only include control states
+df = df[df["state"].isin(Prop99DataLoader.CONTROL_STATES)]  # type: ignore
+
 # aggregate into list by estimation method and fit method
-# NOTE: filter out NaN values when aggregating
 df_grouped = (
-    df.groupby(["estimation_method", "fit_method"])
-    .agg(lambda x: list([val for val in x if pd.notna(val)]))
-    .reset_index()
+    df.groupby(["estimation_method", "fit_method"])  # type: ignore
+    .agg(lambda x: list([val for val in x if pd.notna(val)]))  # type: ignore
+    .reset_index()  # type: ignore
 )
-# rearrange the order of the estimation methods by
-# "usvt", "row-row", "col-col", "dr", "ts", "star"
-ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "star"]
+
+# rearrange the order of the estimation methods
+ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "star", "sc"]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )
 
 for col_name, alias in [
     ("est_errors", "Absolute error"),
-    ("time_impute", "Imputation time"),
-    ("time_fit", "Fit time"),
 ]:
     # NOTE: set the width to be the physical size of the figure in inches
     # The NeurIPS text is 5.5 inches wide and 9 inches long
     # If we use wrapfigure with 0.4\textwidth, then the figure needs to be 2.2 inches wide
-    fig = plt.figure(figsize=(2.2, 2))
+    fig = plt.figure(figsize=(plotting_utils.NEURIPS_TEXTWIDTH / 2, 2.5))
     # Create boxplot
     ax = fig.add_subplot(111)
     box = ax.boxplot(
@@ -71,12 +74,11 @@ for col_name, alias in [
     for median in box["medians"]:
         median.set_color("black")
     # Set y-axis limit
-    # plt.ylim(0, 0.4)
     ax.set_ylim(0, None)
     # Add labels and title
     labels: list[str] = [
-        str(plotting_utils.METHOD_ALIASES.get(method, method) or "")
-        for method in df_grouped["estimation_method"]
+        plotting_utils.METHOD_ALIASES.get(method, method)  # type: ignore
+        for method in df_grouped["estimation_method"]  # type: ignore
     ]
     ax.set_xticks(
         list(range(1, len(labels) + 1)), labels, fontsize=plotting_utils.TICK_FONT_SIZE
@@ -90,7 +92,7 @@ for col_name, alias in [
     ax.spines["left"].set_visible(False)
     ax.grid(True, alpha=0.4)
 
-    save_path = os.path.join(figures_dir, f"hs_{col_name}_boxplot.pdf")
+    save_path = os.path.join(figures_dir, f"sc_{col_name}_boxplot.pdf")
     logger.info(f"Saving plot to {save_path}...")
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()

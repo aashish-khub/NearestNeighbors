@@ -167,7 +167,14 @@ cython_debug/
 .joblib_cache/
 
 # output
-out/
+out*/
 
 **/data/
 *.pkl
+# *.pkl
+# *.csv
+# *.png
+# *.pdf
+# *.ipynb
+# *.zip
+# *.npy

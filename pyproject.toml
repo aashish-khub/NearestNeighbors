@@ -36,7 +36,11 @@ dependencies = [
     "joblib",
     "wrds",
     "requests",
-    "fancyimpute"
+    "seaborn",
+    "SyntheticControlMethods",
+    "fancyimpute",
+    "datasets",
+    "tabulate",
 ]
 
 [project.urls]

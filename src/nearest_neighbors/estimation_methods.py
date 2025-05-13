@@ -5,7 +5,7 @@ import numpy as np
 from typing import Union, Tuple, Any
 import logging
 import warnings
-from typing import Union, Tuple, Optional
+from typing import Optional
 from .data_types import Scalar
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,6 @@ class RowRowEstimator(EstimationMethod):
         """
         super().__init__(is_percentile)
         self.row_distances = dict()
-
 
     def __str__(self):
         return "RowRowEstimator"
@@ -66,17 +65,25 @@ class RowRowEstimator(EstimationMethod):
             row_dists = np.nanmean(all_dists, axis=1)
             if self.is_percentile:
                 # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
-                quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
-                eta_row = np.quantile(quantile_row_dists, distance_threshold)
+                quantile_row_dists = row_dists[
+                    ~np.isnan(row_dists) & (row_dists != np.inf)
+                ]
+                if quantile_row_dists.size == 0:
+                    # No valid distances, return np.nan
+                    eta_row = np.nan
+                else:
+                    eta_row = np.quantile(quantile_row_dists, distance_threshold)
             else:
                 eta_row = distance_threshold
 
             # Find the nearest neighbors indexes
             nearest_neighbors = np.where(row_dists <= eta_row)[0]
             # Apply mask_array to data_array
-            masked_data_array = np.where(mask_array, data_array, np.nan)
+            masked_data_array = np.copy(data_array)
+            masked_data_array[mask_array == 0] = np.nan
 
-        # If no neighbors found, return nan
+        # NOTE: this code block will never be called since the target row
+        # is always a nearest neighbor
         if len(nearest_neighbors) == 0:
             # return np.array(np.nan)
             # NOTE: implement the base case described by Eq. 11 in
@@ -87,7 +94,7 @@ class RowRowEstimator(EstimationMethod):
             else:
                 # return the average of all observed outcomes corresponding
                 # to treatment 1 at time t.
-                return np.array(np.nanmean(masked_data_array[:, column]))
+                return data_type.average(masked_data_array[:, column])
 
         # Calculate the average of the nearest neighbors
         nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
@@ -121,7 +128,6 @@ class RowRowEstimator(EstimationMethod):
 
         # Calculate distances between rows
         row_dists = np.zeros((n_rows, n_cols))
-
         # Scalar optimization with vectorized operations instead of loops
         if isinstance(data_type, Scalar):
             # Determine overlap columns for any pairwise rows
@@ -164,7 +170,7 @@ class ColColEstimator(EstimationMethod):
             is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
 
         """
-        self.estimator = RowRowEstimator()
+        self.estimator = RowRowEstimator(is_percentile=is_percentile)
         # use the same logic as RowRowEstimator but transposed
         # save the distances
 
@@ -202,7 +208,13 @@ class ColColEstimator(EstimationMethod):
         mask_transposed = np.swapaxes(mask_array, 0, 1)
 
         return self.estimator.impute(
-            column, row, data_transposed, mask_transposed, distance_threshold, data_type, allow_self_neighbor
+            column,
+            row,
+            data_transposed,
+            mask_transposed,
+            distance_threshold,
+            data_type,
+            allow_self_neighbor,
         )
 
     def _calculate_distances(
@@ -285,7 +297,7 @@ class DREstimator(EstimationMethod):
             col_dists = np.nanmean(all_dists, axis=0)
             if not mask_array[row, column] and not allow_self_neighbor:
                 col_dists[column] = np.inf  # Exclude the target col
-        
+
         if isinstance(distance_threshold, tuple):
             eta_row = distance_threshold[0]
             eta_col = distance_threshold[1]
@@ -296,8 +308,16 @@ class DREstimator(EstimationMethod):
             # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
             quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
             quantile_col_dists = col_dists[~np.isnan(col_dists) & (col_dists != np.inf)]
-            eta_row = np.quantile(quantile_row_dists, eta_row)
-            eta_col = np.quantile(quantile_col_dists, eta_col)
+            if quantile_row_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_row = np.nan
+            else:
+                eta_row = np.quantile(quantile_row_dists, eta_row)
+            if quantile_col_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_col = np.nan
+            else:
+                eta_col = np.quantile(quantile_col_dists, eta_col)
 
         # Find the row nearest neighbors indexes
         row_nearest_neighbors = np.nonzero(row_dists <= eta_row)[0]
@@ -477,7 +497,7 @@ class TSEstimator(EstimationMethod):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
-        allow_self_neighbor: bool = False,
+        allow_self_neighbor: bool = True,
         **kwargs: Any,
     ) -> npt.NDArray:
         r"""Impute the missing value at the given row and column using two-sided NN.
@@ -513,7 +533,7 @@ class TSEstimator(EstimationMethod):
             col_dists = np.nanmean(all_dists, axis=0)
             if not mask_array[row, column] and not allow_self_neighbor:
                 col_dists[column] = np.inf  # Exclude the target col
-        
+
         if isinstance(distance_threshold, tuple):
             eta_row, eta_col = distance_threshold
         else:
@@ -523,8 +543,16 @@ class TSEstimator(EstimationMethod):
             # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
             quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
             quantile_col_dists = col_dists[~np.isnan(col_dists) & (col_dists != np.inf)]
-            eta_row = np.quantile(quantile_row_dists, eta_row)
-            eta_col = np.quantile(quantile_col_dists, eta_col)
+            if quantile_row_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_row = np.nan
+            else:
+                eta_row = np.quantile(quantile_row_dists, eta_row)
+            if quantile_col_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_col = np.nan
+            else:
+                eta_col = np.quantile(quantile_col_dists, eta_col)
 
         # Establish the neighborhoods subject to the distance thresholds
         row_nearest_neighbors = np.where(row_dists <= eta_row)[0]
@@ -582,6 +610,7 @@ class TSEstimator(EstimationMethod):
         # We use the DREstimator class to calculate the distances
         # because it is the same as the two-sided estimator
 
+
 class StarNNEstimator(EstimationMethod):
     """Estimate the missing value using Star NN."""
 
@@ -594,6 +623,16 @@ class StarNNEstimator(EstimationMethod):
         convergence_threshold: float = 1e-4,
         max_iterations: int = 10,
     ):
+        """Initialize the Star NN estimator."""
+        # sanity checks:
+        if delta < 0 or delta > 1:
+            raise ValueError("Delta must be between 0 and 1.")
+        if convergence_threshold < 0:
+            raise ValueError("Convergence threshold must be non-negative.")
+        if max_iterations <= 0:
+            raise ValueError("Max iterations must be positive.")
+        if noise_variance is not None and noise_variance < 0:
+            raise ValueError("Noise variance must be non-negative.")
         self.row_distances = np.array([])
         self.noise_variance = noise_variance
         self.convergence_threshold = convergence_threshold
@@ -604,16 +643,6 @@ class StarNNEstimator(EstimationMethod):
 
     def __str__(self):
         return "StarNNEstimator"
-
-    def get_estimated_signal_matrix(self) -> npt.NDArray | None:
-        """Get the estimated signal matrix."""
-        sig_mat = self.estimated_signal_matrix
-        if sig_mat is not None:
-            return sig_mat
-        else:
-            raise ValueError(
-                "Estimated signal matrix is None. Please call impute first."
-            )
 
     def _impute_single_value_helper(
         self,
@@ -626,8 +655,10 @@ class StarNNEstimator(EstimationMethod):
         """Imputes one specific value using the Star NN method."""
         n_rows, n_cols = data_array.shape
         delta = self.delta / np.sqrt(n_rows)
-        print("delta: %s" % delta)  # TODO switch to logger.log
-        print("noise_variance: %s" % self.noise_variance)  # TODO switch to logger.log
+        logger.info("delta: %s" % delta)  # TODO switch to logger.log
+        logger.info(
+            "noise_variance: %s" % self.noise_variance
+        )  # TODO switch to logger.log
         if self.noise_variance is None:
             noise_variance = np.var(data_array[mask_array == 1]) / 2
             self.noise_variance = noise_variance
@@ -649,11 +680,13 @@ class StarNNEstimator(EstimationMethod):
             row_distances = np.copy(self.row_distances)
 
         row_distances = row_distances[row, observed_rows]
-        row_distances = np.where(observed_rows == row, 0, row_distances - 2 * noise_variance)
-        
+        row_distances = np.where(
+            observed_rows == row, 0, row_distances - 2 * noise_variance
+        )
+
         row_dist_min = min(0, np.min(row_distances))
         row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
-        
+
         mean_distance = np.mean(row_distances)
         dist_diff = row_distances - mean_distance
         # print (noise_variance)
@@ -686,7 +719,7 @@ class StarNNEstimator(EstimationMethod):
         n_rows, n_cols = data_array.shape
         imputed_data = np.zeros_like(data_array)
         for iter in range(self.max_iterations):
-            print("Iteration %d" % iter)  # TODO switch to logger.log
+            logger.info("Iteration %d" % iter)  # TODO switch to logger.log
             for i in range(n_rows):
                 for j in range(n_cols):
                     imputed_data[i, j] = self._impute_single_value_helper(
@@ -705,12 +738,13 @@ class StarNNEstimator(EstimationMethod):
                     / self.noise_variance
                     < self.convergence_threshold
                 ):
-                    print(
+                    logger.info(
                         f"Converged after {iter + 1} iterations and final noise variance: {new_variance_estimate}"
                     )
                     self.noise_variance = new_variance_estimate
                     break
                 self.noise_variance = new_variance_estimate
+        self.estimated_signal_matrix = imputed_data
         return imputed_data
 
     def impute(
@@ -722,7 +756,7 @@ class StarNNEstimator(EstimationMethod):
         distance_threshold: Union[float, Tuple[float, float]],  # unused
         data_type: DataType,
         allow_self_neighbor: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
 
@@ -736,32 +770,50 @@ class StarNNEstimator(EstimationMethod):
             data_type (DataType): Data type providing methods for distance calculation and averaging.
             allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False. (unused in this method)
             **kwargs (Any): Additional keyword arguments.
-        
+
         Returns:
             npt.NDArray: Imputed value for the specified row and column.
 
         """
-        # full_converged_theta_hat = self.fit_full_matrix(data_array, mask_array, data_type, distance_threshold)
-        # cache it for this value of distance
-        # if (
-        #     self.estimated_signal_matrix is None
-        #     or self.delta_value_for_signal_matrix != distance_threshold
-        # ):
+        full_matrix = self.impute_all(
+            data_array,
+            mask_array,
+            distance_threshold,
+            data_type,
+        )
+        val_at_index = full_matrix[row, column]
+        return val_at_index
+
+    def impute_all(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        distance_threshold: Union[float, Tuple[float, float]],
+        data_type: DataType,
+    ) -> npt.NDArray:
+        """Impute all missing values in the data array.
+
+        Args:
+            data_array (npt.NDArray): Data matrix containing observed and missing values.
+            mask_array (npt.NDArray): Boolean mask matrix indicating observed values.
+            distance_threshold (Union[float, Tuple[float, float]]): Distance threshold for nearest neighbors.
+            data_type (DataType): Data type providing methods for distance calculation and averaging.
+
+        Returns:
+            npt.NDArray: Imputed value for the specified row and column.
+
+        """
         if self.estimated_signal_matrix is None:
-            estimated_signal_matrix = self._fit_full_matrix(
+            full_mat = self._fit_full_matrix(
                 data_array,
                 mask_array,
                 data_type,
             )
-            self.estimated_signal_matrix = estimated_signal_matrix
+            self.estimated_signal_matrix = full_mat  # cache it
         else:
-            estimated_signal_matrix = self.estimated_signal_matrix
-            # self.c_value_for_full_converged_theta_hat = distance_threshold
-        # else:
-        #     estimated_signal_matrix = self.estimated_signal_matrix
+            full_mat = self.estimated_signal_matrix
 
-        ret_val = estimated_signal_matrix[row, column]
-        return ret_val
+        return full_mat
 
     def _calculate_distances(
         self,
@@ -774,7 +826,7 @@ class StarNNEstimator(EstimationMethod):
         """Computes distances, caches them."""
         # TODO add validation checks here
         n_rows, n_cols = data_array.shape
-        row_distances = np.zeros((n_rows, n_cols))
+        row_distances = np.zeros((n_rows, n_rows))
 
         for i in range(n_rows):
             for j in range(i + 1, n_rows):
@@ -783,14 +835,22 @@ class StarNNEstimator(EstimationMethod):
                     row_distances[i, j] = np.inf
                     row_distances[j, i] = np.inf
                     continue
-                for k in range(n_cols):
-                    if not overlap_cols[k]:
-                        continue
-                    row_distances[i, j] += data_type.distance(
-                        data_array[i, k], data_array[j, k]
+                if isinstance(data_type, Scalar):
+                    row_distances[i, j] = np.sum(
+                        np.square(
+                            data_array[i, overlap_cols] - data_array[j, overlap_cols]
+                        )
                     )
+                else:
+                    for k in range(n_cols):
+                        if not overlap_cols[k]:
+                            continue
+                        row_distances[i, j] += data_type.distance(
+                            data_array[i, k], data_array[j, k]
+                        )
                 row_distances[i, j] /= np.sum(overlap_cols)
                 row_distances[j, i] = row_distances[i, j]
+
         self.row_distances = row_distances
 
 

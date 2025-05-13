@@ -12,6 +12,7 @@ from typing import Optional
 def dr_nn(
     distance_threshold_row: Optional[float] = None,
     distance_threshold_col: Optional[float] = None,
+    is_percentile: bool = True,
 ) -> NearestNeighborImputer:
     """Create a doubly robust nearest neighbor imputer.
 
@@ -21,6 +22,7 @@ def dr_nn(
     Args:
         distance_threshold_row (float): [Optional] Distance threshold for row-row nearest neighbors.
         distance_threshold_col (float): [Optional] Distance threshold for column-column nearest neighbors.
+        is_percentile (bool): [Optional] Whether to use percentile-based distance threshold. Defaults to True.
 
     Returns:
         NearestNeighborImputer: A doubly robust nearest neighbor imputer.
@@ -29,7 +31,7 @@ def dr_nn(
     from .estimation_methods import DREstimator
     from .data_types import Scalar
 
-    estimator = DREstimator()
+    estimator = DREstimator(is_percentile=is_percentile)
     data_type = Scalar()
     # note that the default value of distance_threshold is np.inf -> distance threshold is unused for DRNN
     if distance_threshold_row is None or distance_threshold_col is None:

@@ -114,6 +114,7 @@ test_block = list(zip(test_inds_rows, test_inds_cols))
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
+# NOTE: different experiemnt setup
 # data = data[:, :200]  # only use the first 200 timesteps
 # mask = mask[:, :200]
 # elapsed_time = time() - start_time

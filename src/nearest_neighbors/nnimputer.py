@@ -97,6 +97,42 @@ class EstimationMethod(ABC):
         """
         pass
 
+    def impute_all(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        distance_threshold: Union[float, Tuple[float, float]],
+        data_type: DataType,
+    ) -> npt.NDArray:
+        """Impute all missing values in the data array.
+        Note that this is not an abstract method, but a default implementation.
+        This method can be overridden by subclasses if needed.
+
+        Args:
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            distance_threshold (float): Distance threshold for nearest neighbors
+            data_type (DataType): Data type to use (e.g. scalars, distributions)
+
+        Returns:
+            npt.NDArray: Imputed value
+
+        """
+        # by default, just call impute for each missing value
+        n_rows, n_cols = data_array.shape
+        imputed_data = data_array.copy()
+        for i in range(n_rows):
+            for j in range(n_cols):
+                imputed_data[i, j] = self.impute(
+                    i,
+                    j,
+                    data_array,
+                    mask_array,
+                    distance_threshold,
+                    data_type,
+                )
+        return imputed_data
+
 
 class NearestNeighborImputer:
     """Nearest neighbor composed of different kinds of methods."""
@@ -160,9 +196,33 @@ class NearestNeighborImputer:
             **kwargs,
         )
 
+    def impute_all(
+        self,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+    ) -> npt.NDArray:
+        """Impute all missing values in the data array.
+
+        Args:
+            data_array (npt.NDArray): Data matrix
+            mask_array (npt.NDArray): Mask matrix
+            distance_threshold (float): Distance threshold for nearest neighbors
+
+        Returns:
+            npt.NDArray: Imputed value
+
+        """
+        if self.distance_threshold is None:
+            raise ValueError(
+                "Distance threshold is not set. Call a FitMethod on this imputer or manually set it."
+            )
+        return self.estimation_method.impute_all(
+            data_array, mask_array, self.distance_threshold, self.data_type
+        )
+
 
 class FitMethod(ABC):
-    """Abstract class for fiting methods.
+    """Abstract class for fitting methods.
     Examples include cross validation methods.
     """
 

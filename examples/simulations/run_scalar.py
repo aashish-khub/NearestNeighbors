@@ -144,15 +144,20 @@ def random_trial() -> None:
             # setup usvt imputation
             si_data = data.copy()
             si_mask = mask.copy()
-            si_mask[test_inds_rows, test_inds_cols] = 0
-            si_data[si_mask != 1] = np.nan
-            # impute missing values simultaneously
-            start_time = time()
-            si_imputed = softimpute(si_data)
-            elapsed_time = time() - start_time
-            imputations = si_imputed[test_inds_rows, test_inds_cols]
-            # set the time to the average time per imputation
-            imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+            imputations = []
+            imputation_times = []
+            for row, col in test_block:
+                si_mask[row, col] = 0
+                si_data_test = si_data.copy()
+                si_data_test[si_mask != 1] = np.nan
+                # impute missing values simultaneously
+                start_time = time()
+                si_imputed = softimpute(si_data_test)
+                elapsed_time = time() - start_time
+                si_mask[row, col] = 1
+                imputations.append(si_imputed[row, col])
+                # set the time to the average time per imputation
+                imputation_times.append([elapsed_time / len(test_block)])
             fit_times = [0] * len(test_block)
         else:
             if estimation_method == "dr":
@@ -382,8 +387,6 @@ def last_col_trial() -> None:
                     si_mask[row, col] = 0
                     si_data_test = si_data.copy()
                     si_data_test[si_mask != 1] = np.nan
-                    # si_mask[test_inds_rows, test_inds_cols] = 0
-                    # si_data[si_mask != 1] = np.nan
                     # impute missing values simultaneously
                     start_time = time()
                     si_imputed = softimpute(si_data_test)

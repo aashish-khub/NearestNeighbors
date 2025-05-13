@@ -22,7 +22,45 @@ METHOD_ALIASES = {
     "dr": "DR-\nNN",
     "ts": "TS-\nNN",
     "usvt": "USVT",
-    "softimpute": "SoftImpute",
+    "softimpute": "Soft\nImpute",
     "nadaraya": "NW",
-    "star": "Star-\nNN",
+    "star": "AW-\nNN",
+    "sc": "Synth.",
+}
+
+METHOD_ALIASES_SINGLE_LINE = {
+    "row-row": "RowNN",
+    "col-col": "ColNN",
+    "dr": "DRNN",
+    "ts": "TSNN",
+    "usvt": "USVT",
+    "softimpute": "SI",
+    "nadaraya": "NW",
+    "star": "AWNN",
+    "sc": "Synth.",
+}
+
+METHOD_LINE_STYLES = {
+    "row-row": "--",
+    "col-col": "--",
+    "dr": "dotted",
+    "ts": "dotted",
+    "usvt": "-",
+    "softimpute": "-",
+    "nadaraya": "-",
+    "star": "dashdot",
+    "sc": "-",
+}
+
+NEURIPS_TEXTWIDTH = 5.5
+
+COLORS = {
+    "row-row": "grey",
+    "col-col": "grey",
+    "dr": "grey",
+    "ts": "grey",
+    "usvt": "lightgrey",
+    "softimpute": "lightgrey",
+    "star": "grey",
+    "sc": "blue",
 }

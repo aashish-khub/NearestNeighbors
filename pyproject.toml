@@ -35,7 +35,10 @@ dependencies = [
     "pytest",
     "joblib",
     "wrds",
-    "requests"
+    "requests",
+    "seaborn",
+    "SyntheticControlMethods",
+    "fancyimpute"
 ]
 
 [project.urls]

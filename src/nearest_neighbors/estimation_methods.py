@@ -166,7 +166,7 @@ class ColColEstimator(EstimationMethod):
             is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
 
         """
-        self.estimator = RowRowEstimator()
+        self.estimator = RowRowEstimator(is_percentile=is_percentile)
         # use the same logic as RowRowEstimator but transposed
         # save the distances
 

@@ -33,24 +33,17 @@ from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
 
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
-import argparse
 
 parser = get_base_parser()
-parser.add_argument(
-    "--allow_self_neighbor",
-    action=argparse.BooleanOptionalAction,
-    help="Allow self neighbor",
-)
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
 seed = args.seed
 log_level = args.log_level
-allow_self_neighbor = args.allow_self_neighbor
+is_percentile = not args.raw_threshold
 setup_logging(log_level)
 logger = logging.getLogger(__name__)
-print(args.allow_self_neighbor)
 os.makedirs(output_dir, exist_ok=True)
 results_dir = os.path.join(output_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
@@ -67,11 +60,12 @@ rng = np.random.default_rng(seed=seed)
 # Load the simulated data dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 m_size = [2**4, 2**5, 2**6, 2**7]
-num_trials = 30
+num_trials = 15
 
 
 def random_trial() -> None:
     """Run the random trial experiment (20% of observed is test set)."""
+    allow_self_neighbor = args.allow_self_neighbor
     sizes_data = []
     for i, size in enumerate(m_size):
         logger.info(f"Simulating data with size {size}x{size}")
@@ -163,83 +157,66 @@ def random_trial() -> None:
         else:
             if estimation_method == "dr":
                 logger.info("Using doubly robust estimation")
-                imputer = dr_nn()
+                imputer = dr_nn(is_percentile=is_percentile)
 
                 logger.info("Using doubly robust fit method")
                 # Fit the imputer using leave-block-out validation
                 fitter = DRLeaveBlockOutValidation(
                     block,
-                    distance_threshold_range_row=(0, 50),
-                    distance_threshold_range_col=(0, 50),
-                    n_trials=200,
+                    distance_threshold_range_row=(0, 1),
+                    distance_threshold_range_col=(0, 1),
+                    n_trials=100,
                     data_type=data_type,
-                    allow_self_neighbor=args.allow_self_neighbor,
+                    allow_self_neighbor=False,
                 )
+                allow_self_neighbor = False
             elif estimation_method == "row-row":
                 logger.info("Using row-row estimation")
-                imputer = row_row()
+                imputer = row_row(is_percentile=is_percentile)
 
                 logger.info("Using leave-block-out validation")
                 fitter = LeaveBlockOutValidation(
                     block,
-                    distance_threshold_range=(0, 50),
-                    n_trials=200,
+                    distance_threshold_range=(0, 1),
+                    n_trials=100,
                     data_type=data_type,
-                    allow_self_neighbor=args.allow_self_neighbor,
+                    allow_self_neighbor=allow_self_neighbor,
                 )
             elif estimation_method == "col-col":
                 logger.info("Using col-col estimation")
-                imputer = col_col()
+                imputer = col_col(is_percentile=is_percentile)
 
                 logger.info("Using leave-block-out validation")
                 fitter = LeaveBlockOutValidation(
                     block,
-                    distance_threshold_range=(0, 50),
-                    n_trials=200,
+                    distance_threshold_range=(0, 1),
+                    n_trials=100,
                     data_type=data_type,
-                    allow_self_neighbor=args.allow_self_neighbor,
+                    allow_self_neighbor=allow_self_neighbor,
                 )
             elif estimation_method == "ts":
                 logger.info("Using two-sided estimation")
-                estimator = TSEstimator()
+                estimator = TSEstimator(is_percentile=is_percentile)
                 imputer = NearestNeighborImputer(estimator, data_type)
 
                 logger.info("Using two-sided fit method")
                 # Fit the imputer using leave-block-out validation
                 fitter = TSLeaveBlockOutValidation(
                     block,
-                    distance_threshold_range_row=(0, 50),
-                    distance_threshold_range_col=(0, 50),
-                    n_trials=200,
+                    distance_threshold_range_row=(0, 1),
+                    distance_threshold_range_col=(0, 1),
+                    n_trials=100,
                     data_type=data_type,
-                    allow_self_neighbor=args.allow_self_neighbor,
+                    allow_self_neighbor=True,
                 )
-            # elif estimation_method == "autonn":
-            #     logger.info("AutoNN Incomplete")
-            # logger.info("Using AutoNN estimation")
-            # estimator = AutoEstimator()
-            # imputer = NearestNeighborImputer(
-            #     estimator, data_type
-            # )
-
-            # logger.info("Using AutoNN fit method")
-            # # Fit the imputer using leave-block-out validation
-            # fitter = AutoDRTSLeaveBlockOutValidation(
-            #     block,
-            #     distance_threshold_range_row=(0, 50),
-            #     distance_threshold_range_col=(0, 50),
-            #     gamma_range=(-1, 1),
-            #     n_trials=200,
-            #     data_type=data_type,
-            #     allow_self_neighbor=args.allow_self_neighbor,
-            # )
+                allow_self_neighbor = True
             else:
                 raise ValueError(
                     f"Estimation method {estimation_method} and fit method {fit_method} not supported"
                 )
 
             start_time = time()
-            trials = fitter.fit(data, mask_test, imputer, ret_trials=False)
+            fitter.fit(data, mask_test, imputer, ret_trials=False)
             end_time = time()
             fit_times = [end_time - start_time] * len(test_block)
 
@@ -273,15 +250,13 @@ def random_trial() -> None:
             imputations = []
             imputation_times = []
             for row, col in tqdm(test_block, desc="Imputing missing values"):
-                # mask[row, col] = 0
+                mask[row, col] = 0
                 start_time = time()
-                imputed_value = imputer.impute(
-                    row, col, data, mask, allow_self_neighbor=args.allow_self_neighbor
-                )
+                imputed_value = imputer.impute(row, col, data, mask, allow_self_neighbor=allow_self_neighbor)
                 elapsed_time = time() - start_time
                 imputation_times.append(elapsed_time)
                 imputations.append(imputed_value)
-                # mask[row, col] = 1
+                mask[row, col] = 1
                 # restore the mask for next ind
             imputations = np.array(imputations)
 
@@ -315,6 +290,7 @@ def cantor(x: int, y: int) -> int:
 
 def last_col_trial() -> None:
     """Run the last column trial experiment (last column is test set)."""
+    allow_self_neighbor = args.allow_self_neighbor
     all_data = []
     for i, size in enumerate(m_size):
         df_size = []
@@ -330,6 +306,7 @@ def last_col_trial() -> None:
                 seed=cantor(i, j),
                 miss_prob=0.5,
                 stddev_noise=0.001,
+                latent_factor_combination_model="multiplicative",
             )
             data, mask = sim_dataloader.process_data_scalar()
             data_state = sim_dataloader.get_full_state_as_dict()
@@ -419,7 +396,7 @@ def last_col_trial() -> None:
             else:
                 if estimation_method == "dr":
                     logger.info("Using doubly robust estimation")
-                    imputer = dr_nn()
+                    imputer = dr_nn(is_percentile=is_percentile)
 
                     logger.info("Using doubly robust fit method")
                     # Fit the imputer using leave-block-out validation
@@ -429,10 +406,12 @@ def last_col_trial() -> None:
                         distance_threshold_range_col=(0, 1),
                         n_trials=100,
                         data_type=data_type,
+                        allow_self_neighbor=False,
                     )
+                    allow_self_neighbor = False
                 elif estimation_method == "row-row":
                     logger.info("Using row-row estimation")
-                    imputer = row_row()
+                    imputer = row_row(is_percentile=is_percentile)
 
                     logger.info("Using leave-block-out validation")
                     fitter = LeaveBlockOutValidation(
@@ -440,10 +419,11 @@ def last_col_trial() -> None:
                         distance_threshold_range=(0, 1),
                         n_trials=100,
                         data_type=data_type,
+                        allow_self_neighbor=allow_self_neighbor
                     )
                 elif estimation_method == "col-col":
                     logger.info("Using col-col estimation")
-                    imputer = col_col()
+                    imputer = col_col(is_percentile=is_percentile)
 
                     logger.info("Using leave-block-out validation")
                     fitter = LeaveBlockOutValidation(
@@ -451,10 +431,11 @@ def last_col_trial() -> None:
                         distance_threshold_range=(0, 1),
                         n_trials=100,
                         data_type=data_type,
+                        allow_self_neighbor=allow_self_neighbor,
                     )
                 elif estimation_method == "ts":
                     logger.info("Using two-sided estimation")
-                    estimator = TSEstimator()
+                    estimator = TSEstimator(is_percentile=is_percentile)
                     imputer = NearestNeighborImputer(estimator, data_type)
 
                     logger.info("Using two-sided fit method")
@@ -467,24 +448,7 @@ def last_col_trial() -> None:
                         data_type=data_type,
                         allow_self_neighbor=True,
                     )
-                #     elif estimation_method == "autonn":
-                #         logger.info("Using AutoNN estimation")
-                #         estimator = AutoEstimator()
-                #         imputer = NearestNeighborImputer(
-                #             estimator, data_type
-                #         )
-
-                #         logger.info("Using AutoNN fit method")
-                #         # Fit the imputer using leave-block-out validation
-                #         fitter = AutoDRTSLeaveBlockOutValidation(
-                #             block,
-                #             distance_threshold_range_row=(0, 1),
-                #             distance_threshold_range_col=(0, 1),
-                #             gamma_range=(-1, 1),
-                #             n_trials=200,
-                #             data_type=data_type,
-                #             allow_self_neighbor=args.allow_self_neighbor,
-                #         )
+                    allow_self_neighbor = True
                 else:
                     raise ValueError(
                         f"Estimation method {estimation_method} and fit method {fit_method} not supported"
@@ -528,13 +492,7 @@ def last_col_trial() -> None:
                 ) in test_block:
                     mask[row, col] = 0
                     start_time = time()
-                    imputed_value = imputer.impute(
-                        row,
-                        col,
-                        data,
-                        mask,
-                        allow_self_neighbor=args.allow_self_neighbor,
-                    )
+                    imputed_value = imputer.impute(row, col, data, mask, allow_self_neighbor=allow_self_neighbor)
                     elapsed_time = time() - start_time
                     imputation_times.append(elapsed_time)
                     imputations.append(imputed_value)

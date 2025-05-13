@@ -56,6 +56,17 @@ def get_base_parser() -> ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Log level",
     )
+    parser.add_argument(
+        "--allow_self_neighbor", 
+        action="store_true", 
+        help="Allow self neighbor"
+    )
+    parser.add_argument(
+        "--raw_threshold",
+        action="store_true",
+        help="Use raw (not percentile-based) for distance threshold",
+    )
+    
     return parser
 
 

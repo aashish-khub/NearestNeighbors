@@ -35,19 +35,13 @@ import argparse
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
-# parser.add_argument("--allow_self_neighbor", action="store_true", help="Allow self neighbor")
-parser.add_argument(
-    "--allow_self_neighbor",
-    action=argparse.BooleanOptionalAction,
-    help="Allow self neighbor",
-)
-
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
 seed = args.seed
 log_level = args.log_level
+allow_self_neighbor = args.allow_self_neighbor
 
 setup_logging(log_level)
 logger = logging.getLogger(__name__)
@@ -260,8 +254,10 @@ else:
             distance_threshold_range_row=(0, 1),
             distance_threshold_range_col=(0, 1),
             n_trials=100,
-            data_type=data_type,
+            data_type=data_type
         )
+        # for TSNN, self neighbor is necessary (for now)
+        allow_self_neighbor = True
     else:
         raise ValueError(
             f"Estimation method {estimation_method} and fit method {fit_method} not supported"
@@ -303,7 +299,7 @@ else:
     imputation_times = []
     for row, col in tqdm(test_block, desc="Imputing missing values"):
         start_time = time()
-        imputed_value = imputer.impute(row, col, data, mask_test)
+        imputed_value = imputer.impute(row, col, data, mask_test, allow_self_neighbor=allow_self_neighbor)
         elapsed_time = time() - start_time
         imputation_times.append(elapsed_time)
         imputations.append(imputed_value)

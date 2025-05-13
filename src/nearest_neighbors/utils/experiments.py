@@ -16,7 +16,17 @@ def get_base_parser() -> ArgumentParser:
         "-em",
         type=str,
         default="row-row",
-        choices=["dr", "ts", "row-row", "col-col", "usvt", "star", "softimpute"],
+        choices=[
+            "dr",
+            "ts",
+            "row-row",
+            "col-col",
+            "usvt",
+            "softimpute",
+            "auto",
+            "star",
+            "usvt",
+        ],
         help="Estimation method to use",
     )
     parser.add_argument(
@@ -47,6 +57,15 @@ def get_base_parser() -> ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Log level",
     )
+    parser.add_argument(
+        "--allow_self_neighbor", action="store_true", help="Allow self neighbor"
+    )
+    parser.add_argument(
+        "--raw_threshold",
+        action="store_true",
+        help="Use raw (not percentile-based) for distance threshold",
+    )
+
     parser.add_argument(
         "--propensity",
         "-p",

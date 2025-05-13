@@ -36,6 +36,15 @@ class EstimationMethod(ABC):
     Examples include row-row, col-col, two-sided, and doubly-robust.
     """
 
+    def __init__(self, is_percentile: bool = True):
+        """Initialize the estimation method.
+
+        Args:
+            is_percentile (bool): Whether to use percentile-based threshold. Defaults to True.
+
+        """
+        self.is_percentile = is_percentile
+
     @abstractmethod
     def impute(
         self,
@@ -45,6 +54,8 @@ class EstimationMethod(ABC):
         mask_array: npt.NDArray,
         distance_threshold: Union[float, Tuple[float, float]],
         data_type: DataType,
+        allow_self_neighbor: bool = False,
+        **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
 
@@ -55,6 +66,8 @@ class EstimationMethod(ABC):
             mask_array (npt.NDArray): Mask matrix
             distance_threshold (float): Distance threshold for nearest neighbors
             data_type (DataType): Data type to use (e.g. scalars, distributions)
+            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
+            **kwargs (Any): Additional arguments for the imputer
 
         Returns:
             npt.NDArray: Imputed value
@@ -146,7 +159,12 @@ class NearestNeighborImputer:
         return f"NearestNeighborImputer(estimation_method={self.estimation_method}, data_type={self.data_type})"
 
     def impute(
-        self, row: int, column: int, data_array: npt.NDArray, mask_array: npt.NDArray
+        self,
+        row: int,
+        column: int,
+        data_array: npt.NDArray,
+        mask_array: npt.NDArray,
+        **kwargs: Any,
     ) -> npt.NDArray:
         """Impute the missing value at the given row and column.
 
@@ -155,6 +173,7 @@ class NearestNeighborImputer:
             column (int): Column index
             data_array (npt.NDArray): Data matrix
             mask_array (npt.NDArray): Mask matrix
+            **kwargs (Any): Additional keyword arguments
 
         Raises:
             ValueError: If distance threshold is not set
@@ -168,7 +187,13 @@ class NearestNeighborImputer:
                 "Distance threshold is not set. Call a FitMethod on this imputer or manually set it."
             )
         return self.estimation_method.impute(
-            row, column, data_array, mask_array, self.distance_threshold, self.data_type
+            row,
+            column,
+            data_array,
+            mask_array,
+            self.distance_threshold,
+            self.data_type,
+            **kwargs,
         )
 
     def impute_all(

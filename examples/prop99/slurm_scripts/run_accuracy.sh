@@ -24,6 +24,6 @@ for state in ${CONTROL_STATES[@]};
 do
     for em in ${METHODS[@]};
     do
-        python run_scalar.py -od $OUTPUT_DIR -em $em -f --state $state --log_level ERROR
+        python run_scalar.py -od $OUTPUT_DIR -em $em --state $state --log_level ERROR --raw_threshold -s 1
     done
 done

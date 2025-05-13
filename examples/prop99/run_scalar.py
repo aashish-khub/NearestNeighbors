@@ -67,6 +67,8 @@ seed = args.seed
 log_level = args.log_level
 force = args.force
 state = args.state
+is_percentile = not args.raw_threshold
+allow_self_neighbor = args.allow_self_neighbor
 
 # %%
 setup_logging(log_level)
@@ -208,7 +210,7 @@ elif estimation_method == "star":
 else:
     if estimation_method == "dr":
         logger.info("Using doubly robust estimation")
-        imputer = dr_nn()
+        imputer = dr_nn(is_percentile=is_percentile)
 
         logger.info("Using doubly robust fit method")
         # Fit the imputer using leave-block-out validation
@@ -218,10 +220,12 @@ else:
             distance_threshold_range_col=(0, 300**2),
             n_trials=400,
             data_type=data_type,
+            allow_self_neighbor=False,
         )
+        allow_self_neighbor = False
     elif estimation_method == "row-row":
         logger.info("Using row-row estimation")
-        imputer = row_row()
+        imputer = row_row(is_percentile=is_percentile)
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
@@ -230,10 +234,11 @@ else:
             distance_threshold_range=(0, 300**2),
             n_trials=200,
             data_type=data_type,
+            allow_self_neighbor=allow_self_neighbor,
         )
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
-        imputer = col_col()
+        imputer = col_col(is_percentile=is_percentile)
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
@@ -241,10 +246,11 @@ else:
             distance_threshold_range=(0, 1000**2),
             n_trials=200,
             data_type=data_type,
+            allow_self_neighbor=allow_self_neighbor,
         )
     elif estimation_method == "ts":
         logger.info("Using two-sided estimation")
-        estimator = TSEstimator()
+        estimator = TSEstimator(is_percentile=is_percentile)
         imputer = NearestNeighborImputer(estimator, data_type)
 
         logger.info("Using two-sided fit method")
@@ -255,7 +261,9 @@ else:
             distance_threshold_range_col=(0, 300**2),
             n_trials=500,
             data_type=data_type,
+            allow_self_neighbor=True,
         )
+        allow_self_neighbor = True
     else:
         raise ValueError(
             f"Estimation method {estimation_method} and fit method {fit_method} not supported"
@@ -297,7 +305,9 @@ else:
     imputation_times = []
     for row, col in tqdm(test_block, desc="Imputing missing values"):
         start_time = time()
-        imputed_value = imputer.impute(row, col, data, mask_test)
+        imputed_value = imputer.impute(
+            row, col, data, mask_test, allow_self_neighbor=allow_self_neighbor
+        )
         elapsed_time = time() - start_time
         imputation_times.append(elapsed_time)
         imputations.append(imputed_value)
@@ -306,7 +316,9 @@ else:
     # Impute missing values
     control_list = []
     for col in tqdm(range(data.shape[1]), desc="Imputing missing values"):
-        imputed_value = imputer.impute(treatment_row, col, data, mask)
+        imputed_value = imputer.impute(
+            treatment_row, col, data, mask, allow_self_neighbor=allow_self_neighbor
+        )
         control_list.append(imputed_value)
 
 # save control_list and obs_list

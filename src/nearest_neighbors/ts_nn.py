@@ -12,6 +12,7 @@ from typing import Optional
 def ts_nn(
     distance_threshold_row: Optional[float] = None,
     distance_threshold_col: Optional[float] = None,
+    is_percentile: bool = True,
 ) -> NearestNeighborImputer:
     """Create a two-sided nearest neighbor imputer.
 
@@ -20,6 +21,7 @@ def ts_nn(
     Args:
         distance_threshold_row (float): [Optional] Distance threshold for row-row nearest neighbors.
         distance_threshold_col (float): [Optional] Distance threshold for column-column nearest neighbors.
+        is_percentile (bool): [Optional] Whether to use percentile-based distance threshold. Defaults to False.
 
     Returns:
         NearestNeighborImputer: A two-sided nearest neighbor imputer.
@@ -28,7 +30,7 @@ def ts_nn(
     from .estimation_methods import TSEstimator
     from .data_types import Scalar
 
-    estimator = TSEstimator()
+    estimator = TSEstimator(is_percentile=is_percentile)
     data_type = Scalar()
     if distance_threshold_row is None or distance_threshold_col is None:
         distance_threshold = None

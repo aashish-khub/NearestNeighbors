@@ -114,9 +114,9 @@ class DistributionKernelMMD(DataType):
             raise ValueError(f"Unknown kernel type: {self.kernel}")
 
         val = (
-            (kXX.sum() - np.diag(kXX).sum()) / (m * (m - 1))
-            + (kYY.sum() - np.diag(kYY).sum()) / (n * (n - 1))
-            - 2 * kXY.sum() / (n * m)
+            (np.nansum(kXX) - np.nansum(np.diag(kXX))) / (m * (m - 1))
+            + (np.nansum(kYY) - np.nansum(np.diag(kYY))) / (n * (n - 1))
+            - 2 * np.nansum(kXY) / (n * m)
         )
         if val < 0:
             val = 0
@@ -181,7 +181,9 @@ class DistributionWassersteinSamples(DataType):
             np.ndarray: Average of the distributions
 
         """
-        return np.mean(np.sort(object_list, axis=1), axis=0)
+        # filter out nan values
+        # All input objects should be 1-dimensional numpy arrays
+        return np.mean([np.sort(obj) for obj in object_list], axis=0)
 
 
 class DistributionWassersteinQuantile(DataType):

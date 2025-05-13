@@ -10,6 +10,7 @@ COLS = 10
 # initialize the NN imputer
 imputer = row_row(
     distance_threshold=1,
+    is_percentile=False,
 )
 
 

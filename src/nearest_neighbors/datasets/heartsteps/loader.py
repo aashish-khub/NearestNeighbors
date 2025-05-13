@@ -454,5 +454,5 @@ class HeartStepsDataLoader(NNDataLoader):
 
         for i in range(N):
             for j in range(T):
-                data2d[i, j] = data[i, j]
+                data2d[i, j] = data[i, j].flatten()
         return data, data2d, mask

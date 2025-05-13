@@ -13,8 +13,12 @@ def test_full_neighborhood() -> None:
     # Make (2,2) missing.
     A[2, 2] = 0
     # With very high thresholds, neighbors are all rows (except row 2) and all columns (except col 2).
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=2, column=2, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=2, column=2, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: rows {0,1,3} and cols {0,1,3}
     vals = [
         X[0, 0],
@@ -42,8 +46,12 @@ def test_single_neighbor() -> None:
     X = np.array([[5, 5], [5, 0]], dtype=float)
     A = np.array([[1, 1], [1, 0]])
     # With high thresholds, row neighbor of row 1 is {0} and column neighbor of col 1 is {0}.
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     expected = X[0, 0]  # 5
     assert np.isclose(estimated_value, expected), (
         f"Expected {expected}, got {estimated_value}"
@@ -60,8 +68,12 @@ def test_partial_neighborhood() -> None:
     A = np.ones_like(X)
     # Make (1,1) missing.
     A[1, 1] = 0
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: rows {0,2}, cols {0,2}
     vals = [X[0, 0], X[0, 2], X[2, 0], X[2, 2]]
     expected = np.mean(vals)
@@ -78,8 +90,12 @@ def test_no_neighbors_fallback() -> None:
     """
     X = np.array([[20, 20], [30, 40]])
     A = np.array([[0, 1], [1, 1]])
-    imputer = ts_nn(distance_threshold_row=0, distance_threshold_col=0)
-    estimated_value = imputer.impute(row=0, column=0, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=0, distance_threshold_col=0, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=0, column=0, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     assert np.isnan(estimated_value), f"Expected NaN, got {estimated_value}"
 
 
@@ -94,8 +110,12 @@ def test_multiple_missing_in_neighborhood() -> None:
     # Make target (1,1) missing and also (0,0) missing.
     A[1, 1] = 0
     A[0, 0] = 0
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: rows {0,2}, cols {0,2} → cross product = {(0,0), (0,2), (2,0), (2,2)}
     # (0,0) is missing, so use (0,2), (2,0), (2,2)
     vals = [X[0, 2], X[2, 0], X[2, 2]]
@@ -114,9 +134,15 @@ def test_imputation_stability() -> None:
     A = np.ones((5, 5))
     # Make target (2,2) missing.
     A[2, 2] = 0
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    val1 = imputer.impute(row=2, column=2, data_array=X, mask_array=A)
-    val2 = imputer.impute(row=2, column=2, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    val1 = imputer.impute(
+        row=2, column=2, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
+    val2 = imputer.impute(
+        row=2, column=2, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     print(val1)
     assert np.isclose(val1, val2), f"Imputation not stable: {val1} vs {val2}"
 
@@ -132,8 +158,12 @@ def test_random_noise_imputation() -> None:
     # Introduce missingness at a few random locations.
     A[1, 3] = 0
     A[4, 2] = 0
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=3, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=3, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     assert np.isfinite(estimated_value), (
         f"Imputed value is not finite: {estimated_value}"
     )
@@ -143,9 +173,13 @@ def test_edge_case_empty_matrix() -> None:
     """Test imputation on an empty matrix (no rows or columns)."""
     X = np.empty((0, 0))
     A = np.empty((0, 0))
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
     try:
-        imputer.impute(row=0, column=0, data_array=X, mask_array=A)
+        imputer.impute(
+            row=0, column=0, data_array=X, mask_array=A, allow_self_neighbor=False
+        )
     except IndexError:
         pass  # Expect an IndexError due to the empty matrix
     else:
@@ -158,8 +192,12 @@ def test_single_row_missing() -> None:
     A = np.ones_like(X)
     # Make row 1 entirely missing.
     A[1, :] = 0
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # nan because N_row is the empty set, and the cross product of an empty set with any set is empty.
     assert np.isnan(estimated_value), f"Expected NaN, got {estimated_value}"
 
@@ -170,8 +208,12 @@ def test_single_column_missing() -> None:
     A = np.ones_like(X)
     # Make column 1 entirely missing.
     A[:, 1] = 0
-    imputer = ts_nn(distance_threshold_row=1e9, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1e9, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # nan because N_col is the empty set, and the cross product of any set with an empty set is empty.
     assert np.isnan(estimated_value), f"Expected NaN, got {estimated_value}"
 
@@ -182,8 +224,12 @@ def test_multiple_neighbors_with_finite_thresholds() -> None:
     A = np.ones_like(X)
     # Make (1,1) missing, and rows 0 and 2 should be considered as neighbors.
     A[1, 1] = 0
-    imputer = ts_nn(distance_threshold_row=1000, distance_threshold_col=10000)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1000, distance_threshold_col=10000, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: rows {0, 2}, cols {0, 2}
     vals = [X[0, 0], X[0, 2], X[2, 0], X[2, 2]]
     expected = np.mean(vals)
@@ -197,8 +243,12 @@ def test_find_one_neighbor() -> None:
     X = np.array([[1, 2, 30], [4, 5, 6], [7, 8, 9e99]], dtype=float)
     A = np.ones_like(X)
     A[1, 1] = 0
-    imputer = ts_nn(distance_threshold_row=1000, distance_threshold_col=1000)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1000, distance_threshold_col=1000, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: rows {0}, cols {0}
     vals = [X[0, 0]]
     expected = np.mean(vals)
@@ -217,8 +267,12 @@ def test_low_row_high_col_threshold() -> None:
     A = np.ones_like(X)
     # Make (1,1) missing.
     A[1, 1] = 0
-    imputer = ts_nn(distance_threshold_row=1000, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1000, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: row {0}, cols {0, 1, 2} → cross product = {(0,0), (0,1), (0,2)}
     vals = [X[0, 0], X[0, 1], X[0, 2]]
     expected = np.mean(vals)
@@ -237,8 +291,12 @@ def test_low_col_high_row_threshold() -> None:
     A = np.ones_like(X)
     # Make (1,1) missing.
     A[1, 1] = 0
-    imputer = ts_nn(distance_threshold_row=1000, distance_threshold_col=1e9)
-    estimated_value = imputer.impute(row=1, column=1, data_array=X, mask_array=A)
+    imputer = ts_nn(
+        distance_threshold_row=1000, distance_threshold_col=1e9, is_percentile=False
+    )
+    estimated_value = imputer.impute(
+        row=1, column=1, data_array=X, mask_array=A, allow_self_neighbor=False
+    )
     # Neighbors: row {0}, cols {0, 1, 2} → cross product = {(0,0), (0,1), (0,2)}
     vals = [X[0, 0], X[0, 1], X[0, 2]]
     expected = np.mean(vals)

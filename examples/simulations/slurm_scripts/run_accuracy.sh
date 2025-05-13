@@ -7,7 +7,8 @@ OUTPUT_DIR=$1
 LOG_LEVEL=$2
 
 METHODS=(
-    "usvt"
+    # "softimpute"
+    # "usvt"
     "row-row"
     "col-col"
     "dr"

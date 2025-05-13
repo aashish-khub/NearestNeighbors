@@ -18,6 +18,8 @@ from datetime import timedelta
 import warnings
 import logging
 from joblib import Memory
+from nearest_neighbors.data_types import DataType
+
 
 memory = Memory(".joblib_cache", verbose=2)
 
@@ -115,8 +117,13 @@ class HeartStepsDataLoader(NNDataLoader):
         self.mask = mask
         return data, mask
 
-    def process_data_distribution(self) -> tuple[np.ndarray, np.ndarray]:
+    def process_data_distribution(
+        self, data_type: DataType | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Process the data into distribution setting. Note that this implementation is specific to HeartSteps as it calls upon functions that do specific HeartSteps data processing.
+
+        Args:
+            data_type: Data type to process. Default: None.
 
         Returns:
             data: 4d processed data tensor of floats

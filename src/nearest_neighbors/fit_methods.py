@@ -34,13 +34,12 @@ def evaluate_imputation(
         float: Average imputation error
 
     """
-    errors = []
     # Block out the test cells
     for row, col in test_cells:
         if mask_array[row, col] == 0 or data_array[row, col] is None:
             raise ValueError("Validation cell is missing.")
         mask_array[row, col] = 0  # Set the mask to missing
-    # print(imputer.estimation_method.is_percentile)
+    errors = []
     for row, col in test_cells:
         imputed_value = imputer.impute(
             row, col, data_array, mask_array, allow_self_neighbor=allow_self_neighbor
@@ -51,10 +50,8 @@ def evaluate_imputation(
     # Reset the mask
     for row, col in test_cells:
         mask_array[row, col] = 1
-    # Calculate the average error
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=RuntimeWarning)
-        return np.nanmean(errors).astype(float)
+
+    return float(np.nanmean(errors))
 
 
 class LeaveBlockOutValidation(FitMethod):
@@ -67,6 +64,7 @@ class LeaveBlockOutValidation(FitMethod):
         n_trials: int,
         data_type: DataType,
         allow_self_neighbor: bool = False,
+        rng: np.random.Generator | None = None,
     ):
         """Initialize the block fit method.
 
@@ -76,6 +74,7 @@ class LeaveBlockOutValidation(FitMethod):
             n_trials (int): Number of trials to run
             data_type (DataType): Data type to use (e.g. scalars, distributions)
             allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
+            rng (np.random.Generator | None, optional): Random number generator. Defaults to None.
 
         """
         self.block = block
@@ -83,6 +82,7 @@ class LeaveBlockOutValidation(FitMethod):
         self.n_trials = n_trials
         self.data_type = data_type
         self.allow_self_neighbor = allow_self_neighbor
+        self.rng = rng
 
     def fit(
         self,
@@ -136,6 +136,7 @@ class LeaveBlockOutValidation(FitMethod):
             algo=tpe.suggest,
             max_evals=self.n_trials,
             trials=trials,
+            rstate=self.rng,
         )
         if best_distance_threshold is None:
             return float("nan")
@@ -318,4 +319,4 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a TSEstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
-        return super().fit(data_array, mask_array, imputer, ret_trials)
+        return super().fit(data_array, mask_array, imputer)

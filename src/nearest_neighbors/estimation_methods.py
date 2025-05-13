@@ -68,7 +68,11 @@ class RowRowEstimator(EstimationMethod):
                 quantile_row_dists = row_dists[
                     ~np.isnan(row_dists) & (row_dists != np.inf)
                 ]
-                eta_row = np.quantile(quantile_row_dists, distance_threshold)
+                if quantile_row_dists.size == 0:
+                    # No valid distances, return np.nan
+                    eta_row = np.nan
+                else:
+                    eta_row = np.quantile(quantile_row_dists, distance_threshold)
             else:
                 eta_row = distance_threshold
 
@@ -304,8 +308,16 @@ class DREstimator(EstimationMethod):
             # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
             quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
             quantile_col_dists = col_dists[~np.isnan(col_dists) & (col_dists != np.inf)]
-            eta_row = np.quantile(quantile_row_dists, eta_row)
-            eta_col = np.quantile(quantile_col_dists, eta_col)
+            if quantile_row_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_row = np.nan
+            else:
+                eta_row = np.quantile(quantile_row_dists, eta_row)
+            if quantile_col_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_col = np.nan
+            else:
+                eta_col = np.quantile(quantile_col_dists, eta_col)
 
         # Find the row nearest neighbors indexes
         row_nearest_neighbors = np.nonzero(row_dists <= eta_row)[0]
@@ -531,8 +543,16 @@ class TSEstimator(EstimationMethod):
             # NOTE: we assume eta_row and eta_col are in [0, 1] in this case
             quantile_row_dists = row_dists[~np.isnan(row_dists) & (row_dists != np.inf)]
             quantile_col_dists = col_dists[~np.isnan(col_dists) & (col_dists != np.inf)]
-            eta_row = np.quantile(quantile_row_dists, eta_row)
-            eta_col = np.quantile(quantile_col_dists, eta_col)
+            if quantile_row_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_row = np.nan
+            else:
+                eta_row = np.quantile(quantile_row_dists, eta_row)
+            if quantile_col_dists.size == 0:
+                # No valid distances, return np.nan
+                eta_col = np.nan
+            else:
+                eta_col = np.quantile(quantile_col_dists, eta_col)
 
         # Establish the neighborhoods subject to the distance thresholds
         row_nearest_neighbors = np.where(row_dists <= eta_row)[0]

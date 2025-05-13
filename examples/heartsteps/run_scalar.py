@@ -174,9 +174,23 @@ elif estimation_method == "softimpute":
     # setup usvt imputation
     si_data = data.copy()
     si_mask = mask.copy()
+    si_data = si_data[:, 1:]
+    si_mask = si_mask[:, 1:]
     imputations = []
     imputation_times = []
+    is_nan_array = np.isnan(data)
+    print("\nIs NaN array:")
+    print(is_nan_array)
+
+    # Step 2: Check which columns are entirely NaN
+    all_nan_columns_mask = is_nan_array.all(axis=0)
+
+    # Step 3: Get the indices of these columns
+    nan_column_indices = np.where(all_nan_columns_mask)[0]
+    print(nan_column_indices)
+
     for row, col in test_block:
+        col = col - 1
         si_mask[row, col] = 0
         si_data_test = si_data.copy()
         si_data_test[si_mask != 1] = np.nan
@@ -189,7 +203,7 @@ elif estimation_method == "softimpute":
         si_mask[row, col] = 1
         imputations.append(si_imputed[row, col])
         # set the time to the average time per imputation
-        imputation_times.append([elapsed_time / len(test_block)])
+        imputation_times.append(elapsed_time / len(test_block))
     fit_times = [0] * len(test_block)
 elif estimation_method == "star":
     logger.info("Using star estimation")

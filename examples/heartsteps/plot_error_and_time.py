@@ -63,7 +63,9 @@ for col_name, alias in [
     box = ax.boxplot(
         df_grouped[col_name], patch_artist=True, widths=0.6, showfliers=False
     )
-    colors = ["orange"] * len(df_grouped)
+    colors = [
+        plotting_utils.COLORS[method] for method in df_grouped["estimation_method"]
+    ]
     for patch, color in zip(box["boxes"], colors):
         patch.set_facecolor(color)
     for median in box["medians"]:

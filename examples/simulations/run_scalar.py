@@ -257,7 +257,9 @@ def random_trial() -> None:
             for row, col in tqdm(test_block, desc="Imputing missing values"):
                 mask[row, col] = 0
                 start_time = time()
-                imputed_value = imputer.impute(row, col, data, mask, allow_self_neighbor=allow_self_neighbor)
+                imputed_value = imputer.impute(
+                    row, col, data, mask, allow_self_neighbor=allow_self_neighbor
+                )
                 elapsed_time = time() - start_time
                 imputation_times.append(elapsed_time)
                 imputations.append(imputed_value)
@@ -422,7 +424,7 @@ def last_col_trial() -> None:
                         distance_threshold_range=(0, 1),
                         n_trials=100,
                         data_type=data_type,
-                        allow_self_neighbor=allow_self_neighbor
+                        allow_self_neighbor=allow_self_neighbor,
                     )
                 elif estimation_method == "col-col":
                     logger.info("Using col-col estimation")
@@ -495,7 +497,9 @@ def last_col_trial() -> None:
                 ) in test_block:
                     mask[row, col] = 0
                     start_time = time()
-                    imputed_value = imputer.impute(row, col, data, mask, allow_self_neighbor=allow_self_neighbor)
+                    imputed_value = imputer.impute(
+                        row, col, data, mask, allow_self_neighbor=allow_self_neighbor
+                    )
                     elapsed_time = time() - start_time
                     imputation_times.append(elapsed_time)
                     imputations.append(imputed_value)

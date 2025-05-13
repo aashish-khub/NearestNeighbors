@@ -31,7 +31,6 @@ from nearest_neighbors.fit_methods import (
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
-import argparse
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
@@ -254,7 +253,7 @@ else:
             distance_threshold_range_row=(0, 1),
             distance_threshold_range_col=(0, 1),
             n_trials=100,
-            data_type=data_type
+            data_type=data_type,
         )
         # for TSNN, self neighbor is necessary (for now)
         allow_self_neighbor = True
@@ -299,7 +298,9 @@ else:
     imputation_times = []
     for row, col in tqdm(test_block, desc="Imputing missing values"):
         start_time = time()
-        imputed_value = imputer.impute(row, col, data, mask_test, allow_self_neighbor=allow_self_neighbor)
+        imputed_value = imputer.impute(
+            row, col, data, mask_test, allow_self_neighbor=allow_self_neighbor
+        )
         elapsed_time = time() - start_time
         imputation_times.append(elapsed_time)
         imputations.append(imputed_value)

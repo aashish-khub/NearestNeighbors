@@ -11,7 +11,9 @@ from .estimation_methods import RowRowEstimator, ColColEstimator
 from typing import Optional
 
 
-def row_row(distance_threshold: Optional[float] = None, is_percentile: bool = True) -> NearestNeighborImputer:
+def row_row(
+    distance_threshold: Optional[float] = None, is_percentile: bool = True
+) -> NearestNeighborImputer:
     """Create a row-row nearest neighbor imputer.
 
     Args:
@@ -27,7 +29,9 @@ def row_row(distance_threshold: Optional[float] = None, is_percentile: bool = Tr
     return NearestNeighborImputer(estimator, data_type, distance_threshold)
 
 
-def col_col(distance_threshold: Optional[float] = None, is_percentile: bool = True) -> NearestNeighborImputer:
+def col_col(
+    distance_threshold: Optional[float] = None, is_percentile: bool = True
+) -> NearestNeighborImputer:
     """Create a column-column nearest neighbor imputer.
 
     Args:

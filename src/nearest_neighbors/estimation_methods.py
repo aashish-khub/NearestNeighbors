@@ -399,11 +399,11 @@ class DREstimator(EstimationMethod):
             # Scalar optimization with vectorized operations instead of loops
             if isinstance(data_type, Scalar):
                 # Determine overlap columns for any pairwise rows
-                overlap_columns_mask = np.logical_and(mask_array[row], mask_array)
-                row_dists = np.power(data_array - data_array[row], 2)
-
-                if row_dists.dtype is not np.float64:
-                    row_dists = row_dists.astype(np.float64)
+                overlap_columns_mask = np.logical_and(
+                    np.tile(mask_array[row], (n_rows, 1)), mask_array
+                )
+                row_big_matrix = np.tile(data_array[row], (n_rows, 1))
+                row_dists = np.power(data_array - row_big_matrix, 2).astype(np.float64)
                 # We need the row dists as a float matrix to use np.nanmean
                 row_dists[~overlap_columns_mask] = np.nan
             else:
@@ -517,16 +517,6 @@ class TSEstimator(EstimationMethod):
             npt.NDArray: Imputed value.
 
         """
-<<<<<<< HEAD
-=======
-        if isinstance(distance_threshold, tuple):
-            eta_row, eta_col = distance_threshold
-        else:
-            eta_row = distance_threshold
-            eta_col = distance_threshold
-        # import pdb; pdb.set_trace()
-
->>>>>>> 8076463 (bug fix in StarNNEstimator._calculate_distances)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             self._calculate_distances(row, column, data_array, mask_array, data_type)
@@ -738,12 +728,9 @@ class StarNNEstimator(EstimationMethod):
             logger.info("Iteration %d" % iter)  # TODO switch to logger.log
             for i in range(n_rows):
                 for j in range(n_cols):
-                    if mask_array[i,j] == 0:
-                        imputed_data[i,j] = np.nan
-                    else:
-                        imputed_data[i, j] = self._impute_single_value_helper(
-                            i, j, data_array, mask_array, data_type
-                        )
+                    imputed_data[i, j] = self._impute_single_value_helper(
+                        i, j, data_array, mask_array, data_type
+                    )
             diff = imputed_data[mask_array == 1] - data_array[mask_array == 1]
             diff = diff[~np.isnan(diff)]  # Remove any NaN values
             if len(diff) > 0:

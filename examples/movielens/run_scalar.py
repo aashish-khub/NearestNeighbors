@@ -191,6 +191,15 @@ else:
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
         imputer = col_col()
+        
+        if not isinstance(imputer.estimation_method, ColColEstimator):
+            raise ValueError(
+                f"Estimation method {imputer.estimation_method} not supported for col-col"
+            )
+        
+        imputer.estimation_method.estimator._precalculate_distances(
+            np.swapaxes(data, 0, 1), np.swapaxes(mask, 0, 1), np.array(cv_inds_cols)
+        )
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(

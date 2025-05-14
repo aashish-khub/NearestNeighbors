@@ -75,7 +75,7 @@ for col_name, alias in [
     labels: list[str] = [
         plotting_utils.METHOD_ALIASES.get(method, method)
         for method in df_grouped["estimation_method"]
-    ]
+    ]  # type: ignore[assignment]
     ax.set_xticks(
         list(range(1, len(labels) + 1)), labels, fontsize=plotting_utils.TICK_FONT_SIZE
     )

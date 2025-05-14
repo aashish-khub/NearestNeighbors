@@ -44,7 +44,7 @@ df_grouped = (
 )
 # rearrange the order of the estimation methods by
 # "usvt", "row-row", "col-col", "dr", "ts", "star"
-ORDER = ["usvt", "col-col", "row-row", "dr", "ts", "star"]
+ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "star"]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )
@@ -63,7 +63,9 @@ for col_name, alias in [
     box = ax.boxplot(
         df_grouped[col_name], patch_artist=True, widths=0.6, showfliers=False
     )
-    colors = ["orange"] * len(df_grouped)
+    colors = [
+        plotting_utils.COLORS[method] for method in df_grouped["estimation_method"]
+    ]
     for patch, color in zip(box["boxes"], colors):
         patch.set_facecolor(color)
     for median in box["medians"]:
@@ -75,7 +77,7 @@ for col_name, alias in [
     labels: list[str] = [
         plotting_utils.METHOD_ALIASES.get(method, method)
         for method in df_grouped["estimation_method"]
-    ]
+    ]  # type ignore
     ax.set_xticks(
         list(range(1, len(labels) + 1)), labels, fontsize=plotting_utils.TICK_FONT_SIZE
     )

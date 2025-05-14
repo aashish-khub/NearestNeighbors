@@ -17,7 +17,7 @@ import pandas as pd
 from hyperopt import Trials
 
 # import baseline methods
-from baselines import usvt
+from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
@@ -87,6 +87,7 @@ data_type = Scalar()
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
 inds_cols = holdout_inds[1]
+
 range_inds = np.arange(len(inds_rows))
 
 # randomly shuffle indices
@@ -138,6 +139,21 @@ if estimation_method == "usvt":
     usvt_imputed = usvt(usvt_data)
     elapsed_time = time() - start_time
     imputations = usvt_imputed[test_inds_rows, test_inds_cols]
+    # set the time to the average time per imputation
+    imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+    fit_times = [0] * len(test_block)
+elif estimation_method == "softimpute":
+    logger.info("Using SoftImpute estimation")
+    # setup softimpute imputation
+    si_data = data.copy()
+    si_mask = mask.copy()
+    si_mask[test_inds_rows, test_inds_cols] = 0
+    si_data[si_mask != 1] = np.nan
+    # impute missing values simultaneously
+    start_time = time()
+    si_imputed = softimpute(si_data)
+    elapsed_time = time() - start_time
+    imputations = si_imputed[test_inds_rows, test_inds_cols]
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
     fit_times = [0] * len(test_block)

@@ -9,11 +9,13 @@ LOG_LEVEL=$2
 METHODS=(
     # "softimpute"
     # "usvt"
+    "auto"
     "row-row"
     "col-col"
     "dr"
     "ts"
     "softimpute"
+    
 )
 for em in ${METHODS[@]};
 do

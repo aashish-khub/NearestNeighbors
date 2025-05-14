@@ -457,9 +457,7 @@ def last_col_trial() -> None:
                 elif estimation_method == "auto":
                     logger.info("Using AutoNN estimation")
                     estimator = AutoEstimator()
-                    imputer = NearestNeighborImputer(
-                        estimator, data_type
-                    )
+                    imputer = NearestNeighborImputer(estimator, data_type)
                     logger.info("Using AutoNN fit method")
                     # Fit the imputer using leave-block-out validation
                     fitter = AutoDRTSLeaveBlockOutValidation(

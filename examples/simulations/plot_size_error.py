@@ -47,7 +47,7 @@ row_err = _process_csv(f"{output_dir}/results/est_errors-row-row-lbo.csv")
 drnn_err = _process_csv(f"{output_dir}/results/est_errors-dr-lbo.csv")
 tsnn_err = _process_csv(f"{output_dir}/results/est_errors-ts-lbo.csv")
 auto_err = _process_csv(f"{output_dir}/results/est_errors-auto-lbo.csv")
-#softimpute_err = process_csv("cvrange_30sims/results/est_errors-softimpute-lbo.csv")
+# softimpute_err = process_csv("cvrange_30sims/results/est_errors-softimpute-lbo.csv")
 
 # Extract errors for each method as a numpy array 4 x 30
 

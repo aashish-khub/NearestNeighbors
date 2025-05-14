@@ -320,6 +320,7 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
         return super().fit(data_array, mask_array, imputer)
 
+
 class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
     """Fit method by leaving out a block of cells using separate thresholds for rows and columns with a AutoEstimator."""
 
@@ -402,7 +403,12 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 )
             imputer.estimation_method.alpha = alpha
             return evaluate_imputation(
-                data_array, mask_array, imputer, self.block, self.data_type, self.allow_self_neighbor
+                data_array,
+                mask_array,
+                imputer,
+                self.block,
+                self.data_type,
+                self.allow_self_neighbor,
             )
 
         lower_bound_row, upper_bound_row = self.distance_threshold_range_row

@@ -157,7 +157,7 @@ class DistributionWassersteinSamples(DataType):
 
     def __init__(self, num_samples: int):
         """Initialize the distribution data type with Wasserstein distance.
-        
+
         Args:
             num_samples (int): Number of samples in the distributions (n)
 
@@ -204,7 +204,6 @@ class DistributionWassersteinSamples(DataType):
         else:
             # if avg is a float then it must (?) be a nan, so return an array of nans
             return np.full((self.num_samples,), np.nan)
-
 
 
 class DistributionWassersteinQuantile(DataType):

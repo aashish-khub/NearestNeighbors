@@ -679,7 +679,7 @@ class StarNNEstimator(EstimationMethod):
                 self._calculate_distances(
                     row, column, data_array, mask_array, data_type
                 )
-            row_distances = np.copy(self.row_distances)
+            row_distances = self.row_distances
 
         d = row_distances[row, observed_rows]
         d = np.where(observed_rows == row, 0, d - 2 * noise_variance)

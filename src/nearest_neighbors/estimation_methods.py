@@ -848,6 +848,7 @@ class StarNNEstimator(EstimationMethod):
             with np.errstate(divide="ignore", invalid="ignore"):
                 row_distances = D / counts
             row_distances[counts == 0] = np.inf
+            np.fill_diagonal(row_distances, 0)
         else:
             n_rows, n_cols = data_array.shape
             row_distances = np.zeros((n_rows, n_rows))

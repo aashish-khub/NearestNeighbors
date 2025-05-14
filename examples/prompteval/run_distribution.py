@@ -70,16 +70,6 @@ if os.path.exists(save_path) and not args.force:
 
 rng = np.random.default_rng(seed=seed)
 
-match data_type:
-    case "kernel_mmd":
-        data_type = DistributionKernelMMD(
-            kernel="exponential", tuning_parameter=tuning_parameter
-        )
-    case "wasserstein_samples":
-        data_type = DistributionWassersteinSamples()
-    case _:
-        raise ValueError(f"Data type {data_type} not supported")
-
 dataloader = NNData.create(
     "prompteval",
     # NOTE: uncomment to run on a subset of models and tasks (for debugging)
@@ -89,6 +79,17 @@ dataloader = NNData.create(
     seed=seed,
 )
 data, mask = dataloader.process_data_distribution(data_type)
+
+match data_type:
+    case "kernel_mmd":
+        data_type = DistributionKernelMMD(
+            kernel="exponential", tuning_parameter=tuning_parameter
+        )
+    case "wasserstein_samples":
+        n = data[0, 0].shape[0]
+        data_type = DistributionWassersteinSamples(num_samples=n)
+    case _:
+        raise ValueError(f"Data type {data_type} not supported")
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]

@@ -75,6 +75,11 @@ class DistributionKernelMMD(DataType):
         m = obj1.shape[0]
         n = obj2.shape[0]
 
+        if len(obj1.shape) == 1:
+            obj1 = obj1[:, np.newaxis]
+        if len(obj2.shape) == 1:
+            obj2 = obj2[:, np.newaxis]
+
         assert obj1.shape[1] == obj2.shape[1]
 
         XX = np.matmul(obj1, np.transpose(obj1))  # m by m matrix with x_i^Tx_j
@@ -114,9 +119,9 @@ class DistributionKernelMMD(DataType):
             raise ValueError(f"Unknown kernel type: {self.kernel}")
 
         val = (
-            (np.nansum(kXX) - np.nansum(np.diag(kXX))) / (m * (m - 1))
-            + (np.nansum(kYY) - np.nansum(np.diag(kYY))) / (n * (n - 1))
-            - 2 * np.nansum(kXY) / (n * m)
+            (np.sum(kXX) - np.sum(np.diag(kXX))) / (m * (m - 1))
+            + (np.sum(kYY) - np.sum(np.diag(kYY))) / (n * (n - 1))
+            - 2 * np.sum(kXY) / (n * m)
         )
         if val < 0:
             val = 0
@@ -149,6 +154,15 @@ class DistributionWassersteinSamples(DataType):
     """Data type for distributions using Wasserstein distance
     where distributions are made with samples with the same number of samples.
     """
+
+    def __init__(self, num_samples: int):
+        """Initialize the distribution data type with Wasserstein distance.
+        
+        Args:
+            num_samples (int): Number of samples in the distributions (n)
+
+        """
+        self.num_samples = num_samples
 
     def distance(self, obj1: npt.NDArray, obj2: npt.NDArray) -> float:
         """Calculate the Wasserstein distance between two distributions
@@ -183,7 +197,14 @@ class DistributionWassersteinSamples(DataType):
         """
         # filter out nan values
         # All input objects should be 1-dimensional numpy arrays
-        return np.mean([np.sort(obj) for obj in object_list], axis=0)
+        avg = np.nanmean([np.sort(obj) for obj in object_list], axis=0)
+        if not isinstance(avg, float):
+            # if avg is an array then return avg
+            return avg
+        else:
+            # if avg is a float then it must (?) be a nan, so return an array of nans
+            return np.full((self.num_samples,), np.nan)
+
 
 
 class DistributionWassersteinQuantile(DataType):

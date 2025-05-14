@@ -6,7 +6,7 @@ from typing import Union, Tuple, Any
 import logging
 import warnings
 from typing import Optional
-from .data_types import Scalar
+from .data_types import Scalar, DistributionWassersteinSamples
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +78,7 @@ class RowRowEstimator(EstimationMethod):
 
             # Find the nearest neighbors indexes
             nearest_neighbors = np.where(row_dists <= eta_row)[0]
-            # Apply mask_array to data_array
-            masked_data_array = np.copy(data_array)
-            masked_data_array[mask_array == 0] = np.nan
-
+           
         # NOTE: this code block will never be called since the target row
         # is always a nearest neighbor
         if len(nearest_neighbors) == 0:
@@ -94,10 +91,14 @@ class RowRowEstimator(EstimationMethod):
             else:
                 # return the average of all observed outcomes corresponding
                 # to treatment 1 at time t.
-                return data_type.average(masked_data_array[:, column])
+                return data_type.average(data_array[:, column])
 
         # Calculate the average of the nearest neighbors
-        nearest_neighbors_data = masked_data_array[nearest_neighbors, column]
+        nearest_neighbors_data = data_array[nearest_neighbors, column]
+        nearest_neighbors_mask = mask_array[nearest_neighbors, column]
+        nearest_neighbors_data = nearest_neighbors_data[
+            nearest_neighbors_mask == 1
+        ]
         return data_type.average(nearest_neighbors_data)
 
     def _calculate_distances(
@@ -154,6 +155,12 @@ class RowRowEstimator(EstimationMethod):
                 if not overlap_columns[j]:  # Skip missing values and the target column
                     row_dists[i, j] = np.nan
                 else:
+                    # if data_array[row, j].dtype == np.float64:
+                    #     print (f"Row {row}, Column {j} is NaN")
+                    #     exit()
+                    # if isinstance(data_array[i, j], np.float64):
+                    #     print (f"Row {i}, Column {j} is NaN")
+                    #     exit()
                     row_dists[i, j] = data_type.distance(
                         data_array[row, j], data_array[i, j]
                     )

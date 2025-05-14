@@ -7,6 +7,7 @@ import logging
 import warnings
 from typing import Optional
 from .data_types import Scalar
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -656,6 +657,7 @@ class StarNNEstimator(EstimationMethod):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         data_type: DataType,
+        vectorize: bool = True,
     ) -> npt.NDArray:
         """Imputes one specific value using the Star NN method."""
         n_rows, n_cols = data_array.shape
@@ -682,18 +684,15 @@ class StarNNEstimator(EstimationMethod):
                 self._calculate_distances(
                     row, column, data_array, mask_array, data_type
                 )
-            row_distances = np.copy(self.row_distances)
+            row_distances = self.row_distances
 
-        row_distances = row_distances[row, observed_rows]
-        row_distances = np.where(
-            observed_rows == row, 0, row_distances - 2 * noise_variance
-        )
+        d = row_distances[row, observed_rows]
+        d = np.where(observed_rows == row, 0, d - 2 * noise_variance)
+        row_dist_min = min(0, np.min(d))
+        d = np.where(observed_rows == row, 0, d - row_dist_min)
 
-        row_dist_min = min(0, np.min(row_distances))
-        row_distances = np.where(observed_rows == row, 0, row_distances - row_dist_min)
-
-        mean_distance = np.mean(row_distances)
-        dist_diff = row_distances - mean_distance
+        mean_distance = np.mean(d)
+        dist_diff = d - mean_distance
         # print (noise_variance)
         if noise_variance != 0:
             weights = (1 / n_observed) - dist_diff / (
@@ -702,16 +701,23 @@ class StarNNEstimator(EstimationMethod):
         else:
             weights = (1 / n_observed) - dist_diff / (8 * np.log(1 / delta))
         sorted_weights = np.sort(weights)[::-1]
-        weight_sum = 0
-        u = 0
-        for k in range(n_observed):
-            weight_sum += sorted_weights[k]
-            u_new = (weight_sum - 1) / (k + 1)
-            if k == n_observed - 1 or sorted_weights[k + 1] <= u_new:
-                u = u_new
-                break
-        weights = np.maximum(0, weights - u)
-        # print("weights for row %d, column %d: %s" % (row, column, weights))
+        if vectorize:  # datatype-independent optimization!
+            cumsum_weights = np.cumsum(sorted_weights)
+            threshold = (cumsum_weights - 1) / np.arange(1, n_observed + 1)
+            masker = sorted_weights > threshold
+            u = threshold[masker][-1] if masker.any() else 0
+            weights = np.maximum(0, weights - u)
+        else:
+            weight_sum = 0
+            u = 0
+            for k in range(n_observed):
+                weight_sum += sorted_weights[k]
+                u_new = (weight_sum - 1) / (k + 1)
+                if k == n_observed - 1 or sorted_weights[k + 1] <= u_new:
+                    u = u_new
+                    break
+            weights = np.maximum(0, weights - u)
+            # print("weights for row %d, column %d: %s" % (row, column, weights))
         ret_val = np.sum(weights * data_array[observed_rows, column])
         return ret_val
 
@@ -827,34 +833,55 @@ class StarNNEstimator(EstimationMethod):
         data_array: npt.NDArray,
         mask_array: npt.NDArray,
         data_type: DataType,
+        vectorize: bool = True,
     ) -> None:
-        """Computes distances, caches them."""
-        # TODO add validation checks here
-        n_rows, n_cols = data_array.shape
-        row_distances = np.zeros((n_rows, n_rows))
+        """Computes distances, caches them. Vectorized version, tested for equivalence."""
+        if vectorize and isinstance(data_type, Scalar):
+            X = data_array
+            M = mask_array.astype(float)
+            X_masked = X * M
 
-        for i in range(n_rows):
-            for j in range(i + 1, n_rows):
-                overlap_cols = np.logical_and(mask_array[i, :], mask_array[j, :])
-                if not np.any(overlap_cols):
-                    row_distances[i, j] = np.inf
-                    row_distances[j, i] = np.inf
-                    continue
-                if isinstance(data_type, Scalar):
-                    row_distances[i, j] = np.sum(
-                        np.square(
-                            data_array[i, overlap_cols] - data_array[j, overlap_cols]
+            # count of overlapping columns for each pair
+            counts = M @ M.T
+
+            # A[i,j] = Σₖ Mᵢₖ·Mⱼₖ·Xᵢₖ²
+            A = (X_masked**2) @ M.T
+            # C[i,j] = Σₖ Mᵢₖ·Mⱼₖ·Xᵢₖ·Xⱼₖ
+            C = X_masked @ X_masked.T
+
+            D = A + A.T - 2 * C
+            # normalize, inf where no overlap
+            with np.errstate(divide="ignore", invalid="ignore"):
+                row_distances = D / counts
+            row_distances[counts == 0] = np.inf
+            np.fill_diagonal(row_distances, 0)
+        else:
+            n_rows, n_cols = data_array.shape
+            row_distances = np.zeros((n_rows, n_rows))
+
+            for i in tqdm(range(n_rows)):
+                for j in range(i + 1, n_rows):
+                    overlap_cols = np.logical_and(mask_array[i, :], mask_array[j, :])
+                    if not np.any(overlap_cols):
+                        row_distances[i, j] = np.inf
+                        row_distances[j, i] = np.inf
+                        continue
+                    if isinstance(data_type, Scalar):
+                        row_distances[i, j] = np.sum(
+                            np.square(
+                                data_array[i, overlap_cols]
+                                - data_array[j, overlap_cols]
+                            )
                         )
-                    )
-                else:
-                    for k in range(n_cols):
-                        if not overlap_cols[k]:
-                            continue
-                        row_distances[i, j] += data_type.distance(
-                            data_array[i, k], data_array[j, k]
-                        )
-                row_distances[i, j] /= np.sum(overlap_cols)
-                row_distances[j, i] = row_distances[i, j]
+                    else:
+                        for k in range(n_cols):
+                            if not overlap_cols[k]:
+                                continue
+                            row_distances[i, j] += data_type.distance(
+                                data_array[i, k], data_array[j, k]
+                            )
+                    row_distances[i, j] /= np.sum(overlap_cols)
+                    row_distances[j, i] = row_distances[i, j]
 
         self.row_distances = row_distances
 

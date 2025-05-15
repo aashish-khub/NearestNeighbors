@@ -80,6 +80,8 @@ df = (
 COLORS = {
     ("row-row", "lbo", "kernel_mmd"): "teal",
     ("col-col", "lbo", "kernel_mmd"): "blue",
+    ("row-row", "lbo", "wasserstein_samples"): "green",
+    ("col-col", "lbo", "wasserstein_samples"): "gray",
 }
 
 for i, row in df.head(20).iterrows():
@@ -111,7 +113,7 @@ for i, row in df.head(20).iterrows():
         row["data"]["ground_truth"],
         bins=bins,
         alpha=0.5,
-        label="Ground Truth",
+        label="Ground\nTruth",
         edgecolor="black",
         density=True,
         color="yellow",
@@ -130,7 +132,7 @@ for i, row in df.head(20).iterrows():
     )  # Move y-axis outward
 
     # Only add legend to the first subplot to avoid clutter
-    ax.legend()
+    ax.legend(loc='upper left', fontsize=plotting_utils.LEGEND_FONT_SIZE)
 
     figures_path = os.path.join(
         figures_dir,

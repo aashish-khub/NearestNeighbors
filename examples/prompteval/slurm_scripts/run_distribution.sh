@@ -9,12 +9,28 @@ METHODS=(
     "row-row"
     "col-col"
 )
-for em in ${METHODS[@]};
+
+DATA_TYPE=(
+    "wasserstein_samples"
+    "kernel_mmd"
+)
+
+ps=(
+    "0.1"
+    "0.5"
+    "0.9"
+)
+
+for data_type in ${DATA_TYPE[@]};
 do
-    for p in $(seq 0.1 0.1 1.0);
+    for em in ${METHODS[@]};
     do
-        CMD="python run_distribution.py -od $OUTPUT_DIR -em $em -p $p -tp 4 -s 1 -f"
-        echo $CMD
-        eval $CMD
+        for p in ${ps[@]};
+        do
+            echo $data_type
+            CMD="python run_distribution.py -em $em -p $p -tp 4.0 --data_type $data_type -s 1 --force"
+            echo $CMD
+            eval $CMD
+        done
     done
 done

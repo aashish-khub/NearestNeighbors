@@ -78,7 +78,6 @@ dataloader = NNData.create(
     propensity=propensity,
     seed=seed,
 )
-data, mask = dataloader.process_data_distribution(data_type)
 
 match data_type:
     case "kernel_mmd":
@@ -86,10 +85,12 @@ match data_type:
             kernel="exponential", tuning_parameter=tuning_parameter
         )
     case "wasserstein_samples":
-        n = data[0, 0].shape[0]
+        n = 100
         data_type = DistributionWassersteinSamples(num_samples=n)
     case _:
         raise ValueError(f"Data type {data_type} not supported")
+
+data, mask = dataloader.process_data_distribution(data_type)
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]

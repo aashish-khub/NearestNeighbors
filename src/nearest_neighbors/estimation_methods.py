@@ -1,5 +1,4 @@
 # from numpy._core.numerictypes import float
-from matplotlib.layout_engine import ConstrainedLayoutEngine
 from .nnimputer import EstimationMethod, DataType
 import numpy.typing as npt
 import numpy as np
@@ -683,11 +682,13 @@ class StarNNEstimator(EstimationMethod):
             row_distances = self.row_distances
 
         d = row_distances[row, observed_rows]
+
         d = np.where(observed_rows == row, 0, d - 2 * noise_variance)
         row_dist_min = min(0, np.min(d))
         d = np.where(observed_rows == row, 0, d - row_dist_min)
 
         mean_distance = np.mean(d)
+
         dist_diff = d - mean_distance
         # print (noise_variance)
         if noise_variance != 0:
@@ -714,6 +715,7 @@ class StarNNEstimator(EstimationMethod):
                     break
             weights = np.maximum(0, weights - u)
             # print("weights for row %d, column %d: %s" % (row, column, weights))
+
         ret_val = np.sum(weights * data_array[observed_rows, column])
         return ret_val
 
@@ -725,25 +727,18 @@ class StarNNEstimator(EstimationMethod):
     ) -> np.ndarray:
         n_rows, n_cols = data_array.shape
         imputed_data = np.zeros_like(data_array)
-        
-        # Observed values
-        holdout_inds = np.nonzero(mask_array == 1)
-        inds_rows = holdout_inds[0]
-        inds_cols = holdout_inds[1]
-        
-        # Use first 500
-        inds_rows = inds_rows[:100]
-        inds_cols = inds_cols[:100]
-        
+        # imputed_data = np.full_like(data_array, np.nan, dtype=data_array.dtype)
+
         for iter in tqdm(range(self.max_iterations)):
             # logger.info("Iteration %d" % iter)  # TODO switch to logger.log
-            for i in inds_rows:
-                for j in inds_cols:
+            for i in tqdm(range(n_rows)):
+                for j in range(n_cols):
                     imputed_data[i, j] = self._impute_single_value_helper(
-                        i, j, data_array, mask_array, data_type
+                        i, j, data_array, mask_array, data_type, vectorize=True
                     )
             diff = imputed_data[mask_array == 1] - data_array[mask_array == 1]
             diff = diff[~np.isnan(diff)]  # Remove any NaN values
+
             if len(diff) > 0:
                 new_variance_estimate = np.var(diff)
                 if self.noise_variance is None:
@@ -753,8 +748,7 @@ class StarNNEstimator(EstimationMethod):
                 if (
                     abs(new_variance_estimate - self.noise_variance)
                     / self.noise_variance
-                    < self.convergence_threshold
-                ):
+                ) < self.convergence_threshold:
                     logger.info(
                         f"Converged after {iter + 1} iterations and final noise variance: {new_variance_estimate}"
                     )
@@ -843,22 +837,61 @@ class StarNNEstimator(EstimationMethod):
         """Computes distances, caches them. Vectorized version, tested for equivalence."""
         if vectorize and isinstance(data_type, Scalar):
             X = data_array
-            M = mask_array.astype(float)
-            X_masked = X * M
+            # # count of overlapping columns for each pair
+            # counts = M @ M.T
 
-            # count of overlapping columns for each pair
-            counts = M @ M.T
+            # # A[i,j] = Σₖ Mᵢₖ·Mⱼₖ·Xᵢₖ²
+            # A = (X_masked**2) @ M.T
+            # # C[i,j] = Σₖ Mᵢₖ·Mⱼₖ·Xᵢₖ·Xⱼₖ
+            # C = X_masked @ X_masked.T
 
-            # A[i,j] = Σₖ Mᵢₖ·Mⱼₖ·Xᵢₖ²
-            A = (X_masked**2) @ M.T
-            # C[i,j] = Σₖ Mᵢₖ·Mⱼₖ·Xᵢₖ·Xⱼₖ
-            C = X_masked @ X_masked.T
+            # D = A + A.T - 2 * C
+            # # normalize, inf where no overlap
+            # with np.errstate(divide="ignore", invalid="ignore"):
+            #     row_distances = D / counts
+            # row_distances[counts == 0] = np.inf
+            # np.fill_diagonal(row_distances, 0)
+            # Mask of valid (non-NaN) entries
+            valid_mask = np.logical_and(~np.isnan(X), mask_array)
+            valid_mask = valid_mask.astype(float)
 
-            D = A + A.T - 2 * C
-            # normalize, inf where no overlap
-            with np.errstate(divide="ignore", invalid="ignore"):
-                row_distances = D / counts
-            row_distances[counts == 0] = np.inf
+            # Replace NaNs with 0 for computation (they'll be ignored via valid_mask)
+            X_filled = np.nan_to_num(X, nan=0.0)
+            X_filled = X_filled * valid_mask
+
+            # Compute dot product between rows (X_filled @ X_filled.T)
+            gram_matrix = X_filled @ X_filled.T
+
+            # Compute counts of overlapping valid (non-NaN) elements for each pair (n x n)
+            overlap_counts = valid_mask @ valid_mask.T
+
+            # Compute row-wise squared norms (ignoring NaNs)
+            row_norms_squared = np.einsum("ij,ij->i", X_filled, X_filled)
+
+            # Compute unnormalized squared distances
+            dists_squared = (
+                row_norms_squared[:, None]
+                + row_norms_squared[None, :]
+                - 2 * gram_matrix
+            )
+
+            # Divide by the number of overlapping elements
+            # Avoid division by zero: for zero-overlap pairs, set distance to NaN
+            with np.errstate(invalid="ignore", divide="ignore"):
+                dists_squared_normalized = dists_squared / overlap_counts
+
+            # Clip small negatives due to floating point errors
+            dists_squared_normalized = np.where(
+                dists_squared_normalized < 0, 0, dists_squared_normalized
+            )
+
+            # Compute final normalized Euclidean distances
+            dists = np.sqrt(dists_squared_normalized)
+
+            # For pairs with no overlap, distance should be NaN
+            row_distances = np.where(overlap_counts > 0, dists, np.nan)
+
+            # Set diagonal to 0 (distance to self)
             np.fill_diagonal(row_distances, 0)
         else:
             n_rows, n_cols = data_array.shape
@@ -887,5 +920,4 @@ class StarNNEstimator(EstimationMethod):
                             )
                     row_distances[i, j] /= np.sum(overlap_cols)
                     row_distances[j, i] = row_distances[i, j]
-
         self.row_distances = row_distances

@@ -46,6 +46,7 @@ row_err = _process_csv(f"{output_dir}/results/est_errors-row-row-lbo.csv")
 # usvt_err = process_csv(f"{output_dir}/results/est_errors-usvt-lbo.csv")
 drnn_err = _process_csv(f"{output_dir}/results/est_errors-dr-lbo.csv")
 tsnn_err = _process_csv(f"{output_dir}/results/est_errors-ts-lbo.csv")
+auto_err = _process_csv(f"{output_dir}/results/est_errors-auto-lbo.csv")
 # softimpute_err = process_csv("cvrange_30sims/results/est_errors-softimpute-lbo.csv")
 
 # Extract errors for each method as a numpy array 4 x 30
@@ -57,6 +58,7 @@ DRNN_errors = np.nanmean(drnn_err, axis=1)
 # USVT_errors = np.nanmean(usvt_err, axis = 1)
 TSNN_errors = np.nanmean(tsnn_err, axis=1)
 # Softimpute_errors = np.nanmean(softimpute_err, axis = 1)
+Auto_errors = np.nanmean(auto_err, axis=1)
 
 
 unn_stderr = np.nanstd(row_err, axis=1) / np.sqrt(row_err.shape[1])
@@ -64,6 +66,7 @@ tnn_stderr = np.nanstd(col_err, axis=1) / np.sqrt(col_err.shape[1])
 drnn_stderr = np.nanstd(drnn_err, axis=1) / np.sqrt(drnn_err.shape[1])
 # usvt_stderr = np.nanstd(usvt_err, axis = 1) / np.sqrt(usvt_err.shape[1])
 tsnn_stderr = np.nanstd(tsnn_err, axis=1) / np.sqrt(tsnn_err.shape[1])
+auto_stderr = np.nanstd(auto_err, axis=1) / np.sqrt(auto_err.shape[1])
 # softimpute_stderr = np.nanstd(softimpute_err, axis = 1) / np.sqrt(softimpute_err.shape[1])
 
 
@@ -89,6 +92,7 @@ unn_slope = _add_regression_line(T_values, UserNN_errors, "green", "User-NN", ":
 tnn_slope = _add_regression_line(T_values, TimeNN_errors, "orange", "Time-NN", ":")
 drnn_slope = _add_regression_line(T_values, DRNN_errors, "blue", "DR-NN", "--")
 tsnn_slope = _add_regression_line(T_values, TSNN_errors, "purple", "Time-NN", ":")
+auto_slope = _add_regression_line(T_values, Auto_errors, "orange", "Auto", ":")
 # softimpute_slope = add_regression_line(T_values, Softimpute_errors, 'black', 'SoftImpute', ':')
 
 # Plot each method with corresponding markers, colors, and line styles
@@ -131,6 +135,15 @@ plt.errorbar(
     markersize=12,
     linestyle="None",
     label=rf"TS-NN: $T^{{{tsnn_slope:.2f}}}$",
+)
+plt.errorbar(
+    T_values,
+    Auto_errors,
+    fmt="o",
+    yerr=auto_stderr,
+    markersize=12,
+    linestyle="None",
+    label=rf"Auto-NN: $T^{{{auto_slope:.2f}}}$",
 )
 # plt.errorbar(T_values, Softimpute_errors, fmt='k^', yerr=softimpute_stderr, markersize=12, linestyle="None", label=rf'SoftImpute: $T^{{{softimpute_slope:.2f}}}$')
 # Logarithmic scale for both axes

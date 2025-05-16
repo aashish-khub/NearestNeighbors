@@ -17,5 +17,5 @@ def softimpute(X: npt.NDArray) -> npt.NDArray:
 
     """
     # Create a SoftImpute instance with the provided arguments
-    softimpute = SoftImpute(normalizer=BiScaler())
+    softimpute = SoftImpute(normalizer=BiScaler(), verbose=False)
     return softimpute.fit_transform(X)

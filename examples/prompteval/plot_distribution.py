@@ -132,7 +132,7 @@ for i, row in df.head(20).iterrows():
     )  # Move y-axis outward
 
     # Only add legend to the first subplot to avoid clutter
-    ax.legend(loc='upper left', fontsize=plotting_utils.LEGEND_FONT_SIZE)
+    ax.legend(loc="upper left", fontsize=plotting_utils.LEGEND_FONT_SIZE)
 
     figures_path = os.path.join(
         figures_dir,

@@ -164,7 +164,7 @@ class PromptEvalDataLoader(NNDataLoader):
                 seed=self.seed
             )  # instantiate random seed if provided but do it only once here
         self.n_examples_per_task = n_examples_per_task
-        
+
         # print('Loading dataset')
         # for task in tqdm(self.tasks):
         #     # Download the dataset to cache
@@ -194,7 +194,11 @@ class PromptEvalDataLoader(NNDataLoader):
         dataset = cast(
             Dataset,
             load_dataset(
-                "PromptEval/PromptEval_MMLU_correctness", name=task, split=model, num_proc=12, keep_in_memory=True
+                "PromptEval/PromptEval_MMLU_correctness",
+                name=task,
+                split=model,
+                num_proc=12,
+                keep_in_memory=True,
             ),
         )
         # rows are format templates, columns are examples
@@ -240,7 +244,11 @@ class PromptEvalDataLoader(NNDataLoader):
         ds = cast(
             Dataset,
             load_dataset(
-                "PromptEval/PromptEval_MMLU_correctness", name=task, split=model, keep_in_memory=True, num_proc=8
+                "PromptEval/PromptEval_MMLU_correctness",
+                name=task,
+                split=model,
+                keep_in_memory=True,
+                num_proc=8,
             ),
         )
         df = cast(pd.DataFrame, ds.to_pandas())

@@ -15,13 +15,18 @@ import os
 from time import time
 import pandas as pd
 from hyperopt import Trials
+import warnings
 
 # import baseline methods
 from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import StarNNEstimator, TSEstimator, AutoEstimator
+from nearest_neighbors.estimation_methods import (
+    StarNNEstimator,
+    TSEstimator,
+    AutoEstimator,
+)
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -155,7 +160,56 @@ mask_test[test_inds_rows, test_inds_cols] = 0
 # mask_test = mask.copy()
 # mask_test[test_inds_rows, test_inds_cols] = 0
 
-if estimation_method == "usvt":
+if estimation_method == 'tabpfn' :
+    logger.info("Using TabPFN estimator")
+    
+    from tabpfn import TabPFNRegressor
+
+    test_cols = set(test_inds_cols)
+
+    imputations = []
+    
+    train_rows = np.unique(inds_rows_cv)
+    test_rows = np.unique(test_inds_rows)
+    
+    fitting_time = 0
+    imputing_time = 0
+
+    for col in tqdm(list(test_cols)):
+        model = TabPFNRegressor()
+        # for each observed 
+        X = data[train_rows, :col]
+        y = data[train_rows, col]
+        
+        # remove nan values in y
+        X = X[~np.isnan(y)]
+        y = y[~np.isnan(y)]
+        
+        X_test = data[test_rows, :col]
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            start_time = time()
+            # fit the model
+            model.fit(X, y)
+            end_time = time()
+            fitting_time += end_time - start_time
+            
+            start_time = time()
+            # make predictions
+            y_pred = model.predict(X_test)
+            y_pred = y_pred[mask[test_rows, col] == 1]
+            end_time = time()
+            imputing_time += end_time - start_time
+        
+            for val in y_pred:
+                imputations.append(val)
+        
+    imputations = np.array(imputations)
+    imputation_times = [imputing_time / len(test_block)] * len(test_block)
+    fit_times = [fitting_time / len(test_block)] * len(test_block)
+
+elif estimation_method == "usvt":
     logger.info("Using USVT estimation")
     # setup usvt imputation
     usvt_data = data.copy()

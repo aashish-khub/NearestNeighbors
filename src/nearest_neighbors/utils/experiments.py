@@ -26,6 +26,7 @@ def get_base_parser() -> ArgumentParser:
             "auto",
             "star",
             "usvt",
+            "tabpfn"
         ],
         help="Estimation method to use",
     )

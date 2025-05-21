@@ -7,6 +7,7 @@ python run_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD
 ```
 """
 
+# %%
 # standard imports
 import numpy as np
 from tqdm import tqdm
@@ -26,18 +27,22 @@ from nearest_neighbors.estimation_methods import (
     RowRowEstimator,
     TSEstimator,
     StarNNEstimator,
+    AutoEstimator,
 )
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
 from nearest_neighbors.dr_nn import dr_nn
 
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+
+#%%
 
 parser = get_base_parser()
 args = parser.parse_args()
@@ -126,7 +131,9 @@ test_block = list(zip(test_inds_rows, test_inds_cols))
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
-num_trials = 50
+# %%
+
+num_trials = 10
 if estimation_method == "usvt":
     logger.info("Using USVT estimation")
     # setup usvt imputation
@@ -237,6 +244,21 @@ else:
             distance_threshold_range_col=(0, 50),
             n_trials=num_trials,
             data_type=data_type,
+        )
+    elif estimation_method == "auto":
+        logger.info("Using AutoNN estimation")
+        estimator = AutoEstimator(is_percentile=True)
+        imputer = NearestNeighborImputer(estimator, data_type)
+        logger.info("Using AutoNN fit method")
+        # Fit the imputer using leave-block-out validation
+        fitter = AutoDRTSLeaveBlockOutValidation(
+            block,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            alpha_range=(0, 1),
+            n_trials=num_trials,
+            data_type=data_type,
+            allow_self_neighbor=args.allow_self_neighbor,
         )
     else:
         raise ValueError(

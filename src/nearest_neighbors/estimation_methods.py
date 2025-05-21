@@ -984,6 +984,10 @@ class AutoEstimator(EstimationMethod):
             data_type,
             allow_self_neighbor=False,
         )
+        # Reuse the distances from the drnn imputer
+        self.ts_imputer.estimator.row_distances = self.drnn_imputer.row_distances
+        self.ts_imputer.estimator.col_distances = self.drnn_imputer.col_distances
+
         ts_impute = self.ts_imputer.impute(
             row,
             column,

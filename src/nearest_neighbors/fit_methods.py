@@ -376,6 +376,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         mask_array: npt.NDArray,
         imputer: NearestNeighborImputer,
         ret_trials: bool = False,
+        verbose: bool = False,
     ) -> Union[tuple[float, float], tuple[tuple[float, float], Trials]]:
         """Find the best distance thresholds for rows and columns by leaving out a block of cells and testing imputation.
 
@@ -384,6 +385,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             mask_array (npt.NDArray): Mask matrix.
             imputer (NearestNeighborImputer): Imputer object.
             ret_trials (bool): If True, return the trials object which contains metadata on hyperparameter search.
+            verbose (bool): If True, print the progress.
 
         Returns:
             tuple[float, float]: Best distance thresholds for rows and columns.
@@ -440,7 +442,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             },
             algo=tpe.suggest,
             max_evals=self.n_trials,
-            verbose=False,
+            verbose=verbose,
             trials=trials,
         )
 

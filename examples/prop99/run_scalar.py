@@ -42,13 +42,17 @@ from baselines import usvt, softimpute
 # %%
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import StarNNEstimator, TSEstimator, AutoEstimator
+from nearest_neighbors.estimation_methods import (
+    StarNNEstimator,
+    TSEstimator,
+    AutoEstimator,
+)
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
-    AutoDRTSLeaveBlockOutValidation
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col

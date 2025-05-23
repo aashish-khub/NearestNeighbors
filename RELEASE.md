@@ -10,8 +10,8 @@ This project uses GitHub Actions and trusted publishing to automatically deploy 
    ```toml
    version = "1.x.y"
    ```
-   > [!NOTE]
-   > Follow [Semantic Versioning](https://semver.org/) for versioning.
+> [!NOTE]
+> Follow [Semantic Versioning](https://semver.org/) for versioning.
 2. **Commit and push** the change:
    ```bash
    git add pyproject.toml

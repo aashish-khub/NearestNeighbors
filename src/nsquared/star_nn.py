@@ -2,10 +2,10 @@
 
 from typing import Optional
 
-# from nearest_neighbors.weighted_estimation_methods import StarNNEstimator
-from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.nnimputer import NearestNeighborImputer
-from nearest_neighbors.estimation_methods import StarNNEstimator
+# from nsquared.weighted_estimation_methods import StarNNEstimator
+from nsquared.data_types import Scalar
+from nsquared.nnimputer import NearestNeighborImputer
+from nsquared.estimation_methods import StarNNEstimator
 
 
 def star_nn(

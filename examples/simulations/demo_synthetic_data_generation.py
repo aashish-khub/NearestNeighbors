@@ -10,7 +10,7 @@ To run this script, ensure you're in the root directory of the package and run:
 ```
 """
 
-from nearest_neighbors.datasets.dataloader_factory import NNData
+from nsquared.datasets.dataloader_factory import NNData
 
 print("====== Synthetic Data Demo: Exploring Parameters and Full State Keys ======")
 print("\nDataset Help Information:")

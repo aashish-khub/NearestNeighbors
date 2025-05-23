@@ -17,14 +17,14 @@ from hyperopt import Trials
 from baselines import usvt
 
 # import nearest neighbor methods
-from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.fit_methods import (
+from nsquared.data_types import Scalar
+from nsquared.fit_methods import (
     LeaveBlockOutValidation,
 )
-from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.vanilla_nn import row_row
-from nearest_neighbors.star_nn import star_nn, StarNNEstimator
-from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+from nsquared.datasets.dataloader_factory import NNData
+from nsquared.vanilla_nn import row_row
+from nsquared.star_nn import star_nn, StarNNEstimator
+from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 args = parser.parse_args()

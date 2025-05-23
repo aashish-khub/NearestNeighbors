@@ -12,9 +12,9 @@ from glob import glob
 import os
 import logging
 
-from nearest_neighbors.utils.experiments import get_base_parser
-from nearest_neighbors.utils import plotting_utils
-from nearest_neighbors.datasets.prop99.loader import Prop99DataLoader
+from nsquared.utils.experiments import get_base_parser
+from nsquared.utils import plotting_utils
+from nsquared.datasets.prop99.loader import Prop99DataLoader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

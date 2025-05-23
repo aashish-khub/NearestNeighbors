@@ -9,16 +9,16 @@ Paper Reference:
     https://doi.org/10.1093/abm/kay067
 """
 
-from nearest_neighbors.datasets.dataloader_base import NNDataLoader
-from nearest_neighbors.datasets.dataloader_factory import register_dataset
+from nsquared.datasets.dataloader_base import NNDataLoader
+from nsquared.datasets.dataloader_factory import register_dataset
+from datetime import timedelta
 import numpy as np
 import pandas as pd
 from typing import Any
-from datetime import timedelta
 import warnings
 import logging
 from joblib import Memory
-from nearest_neighbors.data_types import DataType
+from nsquared.data_types import DataType
 
 
 memory = Memory(".joblib_cache", verbose=2)

@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nearest_neighbors"
-requires-python = "==3.10.4"
-description = ""
-version = "0.1.0"
+name = "nsquared"
+requires-python = ">=3.10"
+description = "A comprehensive nearest neighbors library for matrix completion with scalar and distributional entries"
+version = "1.0.0"
 authors = [
     {name="Aashish Khubchandani", email="akk223@cornell.edu"},
     {name="Albert Gong", email="agong@cs.cornell.edu"},
@@ -19,10 +19,20 @@ authors = [
     {name="Tathagata Sadhukhan", email="ts767@cornell.edu"},
 ]
 readme = "README.md"
+license = "MIT"
+keywords = ["machine learning", "matrix completion", "nearest neighbors", "imputation", "causal inference"]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 dependencies = [
@@ -30,11 +40,7 @@ dependencies = [
     "pandas",
     "matplotlib",
     "hyperopt",
-    "pre-commit",
-    "ruff",
-    "pytest",
     "joblib",
-    "wrds",
     "requests",
     "seaborn",
     "SyntheticControlMethods",
@@ -42,12 +48,27 @@ dependencies = [
     "datasets",
     "tabulate",
     "tqdm",
+    "wrds",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+    "pytest",
 ]
 
 [project.urls]
 Homepage = "https://github.com/aashish-khub/NearestNeighbors"
-Issues = "https://github.com/aashish-khub/NearestNeighbors/issues"
+Documentation = "https://github.com/aashish-khub/NearestNeighbors/blob/main/README.md"
 Repository = "https://github.com/aashish-khub/NearestNeighbors.git"
+Issues = "https://github.com/aashish-khub/NearestNeighbors/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
 
 [tool.ruff]
 
@@ -137,4 +158,4 @@ lint.unfixable = []
 venv = ".venv"
 venvPath = "."
 include = ["src"]
-pythonVersion = "3.10.4"
+pythonVersion = "3.10"

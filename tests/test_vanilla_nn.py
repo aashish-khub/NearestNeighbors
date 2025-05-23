@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from nearest_neighbors.vanilla_nn import row_row, col_col
+from nsquared.vanilla_nn import row_row, col_col
 
 # initialize the number of rows and columns
 ROWS = 10

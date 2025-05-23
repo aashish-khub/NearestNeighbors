@@ -1,11 +1,11 @@
-# NearestNeighbors
+# $N^2$
 
 <!-- Given an incomplete matrix, where the entries in the matrix could correpsond to either scalars or distributions, the goal is to fill in the rest of the matrix. See [examples](./examples/) on how matrix completion can be applied to problems in personalized healthcare, LLM evaluation, and more.  -->
 
 <!-- We leverage nearest neighbor methods due to their simplicity and scalability. These algorithms estimate a missing entry by finding "similar" rows or columns and then use their average as the estimate for a missing entry. -->
 
 ## Setup
-This package requires Python 3.10.4. Please verify your Python version by running `python --version` in your terminal. If you’re not running Python 3.10.4, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10.4`).
+This package requires Python 3.10 or later. Please verify your Python version by running `python --version` in your terminal. If you're not running Python 3.10+, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10` or any later version like `pyenv local 3.11`).
 
 > [!NOTE]
 > To install pyenv, follow the instructions here: https://github.com/pyenv/pyenv?tab=readme-ov-file#installation, then run `eval "$(pyenv init -)"`.
@@ -14,7 +14,7 @@ Dependencies are managed in `pyproject.toml`. To install the dependencies, run t
 
 **POSIX Systems (MacOS/Linux):**
 ```bash
-python --version   # Ensure this outputs Python 3.10.4
+python --version   # Ensure this outputs Python 3.10 or later
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
@@ -22,11 +22,16 @@ pip install -e . # Install in editable mode
 ```
 **Windows Systems:**
 ```powershell
-python --version   # Ensure this outputs Python 3.10.4
+python --version   # Ensure this outputs Python 3.10 or later
 python -m venv .venv
 .venv\Scripts\activate
 pip install -U pip
 pip install -e . # Install in editable mode
+```
+
+Once installed, you can use the package with:
+```python
+import nsquared as nsq
 ```
 
 > [!NOTE]

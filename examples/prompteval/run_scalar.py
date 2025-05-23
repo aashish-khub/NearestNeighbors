@@ -20,18 +20,18 @@ from hyperopt import Trials
 from baselines import usvt
 
 # import nearest neighbor methods
-from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import StarNNEstimator, TSEstimator
-from nearest_neighbors import NearestNeighborImputer
-from nearest_neighbors.fit_methods import (
+from nsquared.data_types import Scalar
+from nsquared.estimation_methods import StarNNEstimator, TSEstimator
+from nsquared import NearestNeighborImputer
+from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
 )
-from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.vanilla_nn import row_row, col_col
-from nearest_neighbors.dr_nn import dr_nn
-from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+from nsquared.datasets.dataloader_factory import NNData
+from nsquared.vanilla_nn import row_row, col_col
+from nsquared.dr_nn import dr_nn
+from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 args = parser.parse_args()

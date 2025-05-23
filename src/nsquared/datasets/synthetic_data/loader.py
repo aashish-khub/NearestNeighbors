@@ -1,8 +1,8 @@
-from nearest_neighbors.datasets.dataloader_base import NNDataLoader
-from nearest_neighbors.datasets.dataloader_factory import register_dataset
+from nsquared.datasets.dataloader_base import NNDataLoader
+from nsquared.datasets.dataloader_factory import register_dataset
 import numpy as np
 from typing import Any
-from nearest_neighbors.data_types import DataType
+from nsquared.data_types import DataType
 
 params = {
     "num_rows": (int, 100, "Number of rows in the dataset"),

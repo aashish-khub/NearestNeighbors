@@ -2,11 +2,11 @@ import pickle
 from typing import Callable
 import numpy as np
 import pandas as pd
-from nearest_neighbors.datasets.earnings.loader import EarningsDataLoader
-from nearest_neighbors.estimation_methods import ColColEstimator
-from nearest_neighbors.nnimputer import NearestNeighborImputer
-from nearest_neighbors.fit_methods import LeaveBlockOutValidation
-from nearest_neighbors.data_types import DistributionWassersteinQuantile
+from nsquared.datasets.earnings.loader import EarningsDataLoader
+from nsquared.estimation_methods import ColColEstimator
+from nsquared.nnimputer import NearestNeighborImputer
+from nsquared.fit_methods import LeaveBlockOutValidation
+from nsquared.data_types import DistributionWassersteinQuantile
 
 print("Loading downloaded files...")
 

@@ -1,0 +1,54 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Install package and test dependencies
+        run: |
+          pip install -e .[dev]
+
+      - name: Run tests
+        run: |
+          pytest
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Publish to Test PyPI
+        if: github.event.release.prerelease
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          verbose: true
+
+      - name: Publish to PyPI
+        if: !github.event.release.prerelease
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true

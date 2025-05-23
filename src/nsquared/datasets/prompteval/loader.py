@@ -9,9 +9,9 @@ Paper Reference for transformation implementation:
     https://arxiv.org/pdf/2405.17202
 """
 
-from nearest_neighbors.datasets.dataloader_base import NNDataLoader
-from nearest_neighbors.datasets.dataloader_factory import register_dataset
-from nearest_neighbors.data_types import (
+from nsquared.datasets.dataloader_base import NNDataLoader
+from nsquared.datasets.dataloader_factory import register_dataset
+from nsquared.data_types import (
     DataType,
     DistributionKernelMMD,
     DistributionWassersteinSamples,

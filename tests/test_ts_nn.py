@@ -1,5 +1,5 @@
 import numpy as np
-from nearest_neighbors.ts_nn import ts_nn
+from nsquared.ts_nn import ts_nn
 
 
 def test_full_neighborhood() -> None:

@@ -2,8 +2,8 @@ import numpy as np
 from typing import Callable
 import numpy.typing as npt
 import pandas as pd
-from nearest_neighbors.datasets.dataloader_base import NNDataLoader
-from nearest_neighbors.data_types import DataType
+from nsquared.datasets.dataloader_base import NNDataLoader
+from nsquared.data_types import DataType
 
 
 def empirical_quantile_function(samples: npt.NDArray) -> Callable:

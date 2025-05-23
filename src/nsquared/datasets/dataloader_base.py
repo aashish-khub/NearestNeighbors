@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from typing import Any
-from nearest_neighbors.data_types import DataType
+from nsquared.data_types import DataType
 
 
 class NNDataLoader(ABC):

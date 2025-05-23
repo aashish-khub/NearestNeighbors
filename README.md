@@ -4,15 +4,39 @@
 
 <!-- We leverage nearest neighbor methods due to their simplicity and scalability. These algorithms estimate a missing entry by finding "similar" rows or columns and then use their average as the estimate for a missing entry. -->
 
-## Setup
 This package requires Python 3.10 or later. Please verify your Python version by running `python --version` in your terminal. If you're not running Python 3.10+, please adjust your environment accordingly (for example, if you use pyenv: `pyenv local 3.10` or any later version like `pyenv local 3.11`).
 
 > [!NOTE]
 > To install pyenv, follow the instructions here: https://github.com/pyenv/pyenv?tab=readme-ov-file#installation, then run `eval "$(pyenv init -)"`.
 
+## Setup for production usage
+
+To install the package in production, run the following command:
+```bash
+pip install nsquared
+```
+This will install the package and all its dependencies. You can then use the package with:
+```python
+import nsquared as nsq
+```
+
+## Setup for Development
+
+### If using last release
+If you want to use the last release with development functionality enabled, you can install the package with the following command:
+```bash
+pip install nsquared[dev]
+```
+This will install the package and all its dependencies, including the development dependencies. You can then use the package with:
+```python
+import nsquared as nsq
+```
+
+### If using latest code (not yet tagged and released)
 Dependencies are managed in `pyproject.toml`. To install the dependencies, run the following commands, based on your Operating System:
 
 **POSIX Systems (MacOS/Linux):**
+
 ```bash
 python --version   # Ensure this outputs Python 3.10 or later
 python -m venv .venv
@@ -37,6 +61,8 @@ import nsquared as nsq
 > [!NOTE]
 > If using VSCode, make sure to set the interpreter to the .venv environment using `Cmd + Shift + P` -> `Python: Select Interpreter`.
 
+
+
 ## Submitting Changes
 ### Linting
 Before submitting changes, please run pre-commit hooks to ensure that the code is formatted correctly. To do so, run the following command:
@@ -51,7 +77,17 @@ Please ensure that all tests pass before submitting your changes. To run the tes
 ```bash
 pytest
 ```
-Once all tests pass, you can submit your changes.
+Once all tests pass, you may submit your changes.
+
+### Tagging and Releasing a New Version
+Detailed instructions for releasing a new version of the package can be found in the [Release Instructions](RELEASE.md) file. This includes instructions for updating the version number, creating a new release branch, and tagging the release.
+
+
+## Contributing
+We welcome contributions to this package! If you have any ideas for new features, bug fixes, or improvements, please feel free to open an issue or a pull request. We appreciate your help in making this package better!
+
+## License
+This package is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
 ## Examples
 
@@ -106,16 +142,3 @@ This repository implements the methods from the following papers:
   year={2024}
 }
 ```
-
-[Synthetic Nearest Neighbors (Syn-NN)](https://arxiv.org/abs/2109.15154)
-```bibtex
-@inproceedings{agarwal2023causal,
-  title={Causal matrix completion},
-  author={Agarwal, Anish and Dahleh, Munther and Shah, Devavrat and Shen, Dennis},
-  booktitle={The thirty sixth annual conference on learning theory},
-  pages={3821--3826},
-  year={2023},
-  organization={PMLR}
-}
-```
-Code: [Syn-NN implementation](https://github.com/AbdullahO/What-If/blob/main/algorithms/snn_biclustering.py)

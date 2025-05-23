@@ -48,7 +48,7 @@ jobs:
           verbose: true
 
       - name: Publish to PyPI
-        if: !github.event.release.prerelease
+        if: github.event.release.prerelease == false
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verbose: true

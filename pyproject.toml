@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nsquared"
-requires-python = "==3.10.4"
+requires-python = ">=3.10"
 description = ""
 version = "0.1.0"
 authors = [
@@ -137,4 +137,4 @@ lint.unfixable = []
 venv = ".venv"
 venvPath = "."
 include = ["src"]
-pythonVersion = "3.10.4"
+pythonVersion = "3.10"

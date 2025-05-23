@@ -1,5 +1,5 @@
 import numpy as np
-from nearest_neighbors.dr_nn import dr_nn
+from nsquared.dr_nn import dr_nn
 import pytest
 
 ROWS = 10

@@ -9,9 +9,9 @@ Paper Reference for transformation implementation:
     https://doi.org/10.1109/TIT.2019.2950299
 """
 
-from nearest_neighbors.datasets.dataloader_base import NNDataLoader
-from nearest_neighbors.datasets.dataloader_factory import register_dataset
-from nearest_neighbors.data_types import DataType
+from nsquared.datasets.dataloader_base import NNDataLoader
+from nsquared.datasets.dataloader_factory import register_dataset
+from nsquared.data_types import DataType
 
 import numpy as np
 import pandas as pd

@@ -23,16 +23,16 @@ from typing import Tuple
 from joblib import Memory, Parallel, delayed
 
 from baselines import usvt
-from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import DREstimator, TSEstimator
-from nearest_neighbors import NearestNeighborImputer
-from nearest_neighbors.fit_methods import (
+from nsquared.data_types import Scalar
+from nsquared.estimation_methods import DREstimator, TSEstimator
+from nsquared import NearestNeighborImputer
+from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
 )
-from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.vanilla_nn import row_row
+from nsquared.datasets.dataloader_factory import NNData
+from nsquared.vanilla_nn import row_row
 
 SIMULATION_PARAMS = {
     "dimension_size": 100,

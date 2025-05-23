@@ -4,7 +4,7 @@ Run this script from the root of the repository with:
     python examples/demo_prop99_data_loading.py
 """
 
-from nearest_neighbors.datasets.dataloader_factory import NNData
+from nsquared.datasets.dataloader_factory import NNData
 
 print("====== Tax Burden on Tobacco Data Demo ======")
 

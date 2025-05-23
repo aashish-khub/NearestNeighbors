@@ -1,6 +1,6 @@
 # TODO these should be maintained as this __init__.py file is used to expose the classes and functions when the package itself is imported. Task owner: Aashish
-# For example: `from nearest_neighbors import NearestNeighborImputer`
-# is easier to read than from `nearest_neighbors.nnimputer import NearestNeighborImputer`
+# For example: `from nsquared import NearestNeighborImputer`
+# is easier to read than from `nsquared.nnimputer import NearestNeighborImputer`
 
 # TODO @ALL: please uncomment the following lines when the code is ready in each file
 

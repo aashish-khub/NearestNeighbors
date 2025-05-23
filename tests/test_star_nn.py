@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from nearest_neighbors.star_nn import star_nn
+from nsquared.star_nn import star_nn
 
 # Initialize constants
 ROWS = 16

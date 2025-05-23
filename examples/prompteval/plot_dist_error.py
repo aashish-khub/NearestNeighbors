@@ -18,8 +18,8 @@ import logging
 from tabulate import tabulate
 import numpy as np
 
-from nearest_neighbors.utils.experiments import get_base_parser
-from nearest_neighbors.utils import plotting_utils
+from nsquared.utils.experiments import get_base_parser
+from nsquared.utils import plotting_utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

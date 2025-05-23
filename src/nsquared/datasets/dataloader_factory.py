@@ -49,7 +49,7 @@ class NNData:
         """
         if dataset_name not in _DATASETS:
             try:
-                import_module(f"nearest_neighbors.datasets.{dataset_name}")
+                import_module(f"nsquared.datasets.{dataset_name}")
             except ImportError:
                 raise ValueError(
                     f"Dataset {dataset_name} not found. Available datasets: {get_available_datasets()}"
@@ -67,7 +67,7 @@ class NNData:
         """
         if dataset_name not in _DATASET_PARAMS:
             try:
-                import_module(f"nearest_neighbors.datasets.{dataset_name}")
+                import_module(f"nsquared.datasets.{dataset_name}")
             except ImportError:
                 raise ValueError(
                     f"Dataset {dataset_name} not found. Available datasets: {get_available_datasets()}"
@@ -94,7 +94,7 @@ class NNData:
 
         if dataset_name not in _DATASETS:
             try:
-                import_module(f"nearest_neighbors.datasets.{dataset_name}")
+                import_module(f"nsquared.datasets.{dataset_name}")
             except ImportError:
                 print(
                     f"Dataset {dataset_name} not found. Available datasets: {get_available_datasets()}"

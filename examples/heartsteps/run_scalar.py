@@ -191,7 +191,7 @@ if estimation_method == "tabpfn":
             warnings.simplefilter("ignore")
             start_time = time()
             # fit the model
-            model.fit(X, y)
+            model.fit(X, y)  # pyright: ignore
             end_time = time()
             fitting_time += end_time - start_time
 

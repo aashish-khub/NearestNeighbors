@@ -42,7 +42,7 @@ from nearest_neighbors.dr_nn import dr_nn
 
 from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
 
-#%%
+# %%
 
 parser = get_base_parser()
 args = parser.parse_args()

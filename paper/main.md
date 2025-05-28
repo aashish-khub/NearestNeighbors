@@ -53,11 +53,12 @@ bibliography: ref.bib
 
 # Summary
 
+N$^2$ is a Python package that implements a unified framework for nearest neighbor-based matrix completion methods as well as a test bench for evaluation the performance of these methods.
+
 # Statement of need
 
-# Citations
+Nearest neighbor methods have been shown to be effective in a variety of applications including matrix completion and counterfactual inference. However, there is a lack of a unified framework for implementing and evaluating these methods. N$^2$ fills this gap by providing a Python package that implements a variety of nearest neighbor-based matrix completion methods and a test bench for evaluating their performance.
 
 # Acknowledgements
 
 # References
-

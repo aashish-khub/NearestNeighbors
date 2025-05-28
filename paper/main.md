@@ -8,34 +8,36 @@ tags:
 authors:
   - name: Caleb Chin
     orcid: 0000-0000-0000-0000
-    equal-contrib: true
+    corresponding: true
     affiliation: 1
   - name: Aashish Khubchandani
-    equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
+    orcid: 0009-0003-2638-9472
+    corresponding: true
     affiliation: 1
   - name: Harshvardhan Maskara
-    corresponding: true # (This is how to denote the corresponding author)
     affiliation: 1
   - name: Kyuseong Choi
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-3380-2849
+    corresponding: true
     affiliation: 1
   - name: Jacob Feitelberg
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-4551-0245
+    corresponding: true
     affiliation: 2
   - name: Albert Gong
-    orcid: 0000-0000-0000-0000
+    orcid: 0009-0005-1687-0240
+    corresponding: true
     affiliation: 1
   - name: Manit Paul
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-1735-3289
     affiliation: 3
   - name: Tathagata Sadhukhan
-    orcid: 0000-0000-0000-0000
+    orcid: 0009-0001-1549-1469
     affiliation: 1
   - name: Anish Agarwal
-    orcid: 0000-0000-0000-0000
     affiliation: 2
   - name: Raaz Dwivedi
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-9993-8554
     affiliation: 1
 affiliations:
  - name: Cornell University, USA

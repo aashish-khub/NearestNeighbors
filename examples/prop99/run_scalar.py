@@ -42,7 +42,7 @@ from baselines import usvt, softimpute
 # %%
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
-from nsquared.estimation_methods import StarNNEstimator, TSEstimator
+from nsquared.estimation_methods import AWNNEstimator, TSEstimator
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -186,9 +186,9 @@ elif estimation_method == "softimpute":
     # Compute the synthetic control
     control_list = si_imputed[treatment_row]
 
-elif estimation_method == "star":
-    logger.info("Using star estimation")
-    estimator = StarNNEstimator()
+elif estimation_method == "aw":
+    logger.info("Using AWNN estimation")
+    estimator = AWNNEstimator()
     imputer = NearestNeighborImputer(estimator, data_type, distance_threshold=-1)
     # Impute missing values
     imputations = []

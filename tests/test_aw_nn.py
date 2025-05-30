@@ -1,8 +1,8 @@
-"""Tests for the Star NN imputer."""
+"""Tests for the AWNN imputer."""
 
 import numpy as np
 import pytest
-from nsquared.star_nn import star_nn
+from nsquared.aw_nn import aw_nn
 
 # Initialize constants
 ROWS = 16
@@ -17,7 +17,7 @@ def test_impute_one_vs_all() -> None:
     mask[1, 1] = 0  # Make one entry missing
     mask[2, 2] = 0  # Make another entry missing
     mask[3, 3] = 0  # Make another entry missing
-    imputer = star_nn()
+    imputer = aw_nn()
     imputed_matrix = imputer.impute_all(data, mask)
     for i in range(ROWS):
         for j in range(COLS):
@@ -36,7 +36,7 @@ def test_constant_imputation() -> None:
     mask = np.ones((ROWS, COLS))
     mask[1, 1] = 0  # Make one entry missing
 
-    imputer = star_nn(noise_variance=0.1, delta=0.05)
+    imputer = aw_nn(noise_variance=0.1, delta=0.05)
 
     imputed_value = imputer.impute(1, 1, data, mask)
     assert np.isclose(imputed_value, 1.0)
@@ -50,7 +50,7 @@ def test_no_observed_values() -> None:
     mask = np.ones((ROWS, COLS))
     mask[:, 1] = 0  # Make entire column missing
 
-    imputer = star_nn()
+    imputer = aw_nn()
 
     imputed_all = imputer.impute_all(data, mask)
     all_in_col_are_nan = np.isnan(imputed_all[:, 1])
@@ -70,7 +70,7 @@ def test_weight_calculation() -> None:
     mask = np.ones(data.shape)
     mask[1, 1] = 0
 
-    imputer = star_nn()
+    imputer = aw_nn()
 
     # Get the weights through imputation
     imputed_value = imputer.impute(1, 1, data, mask)
@@ -90,7 +90,7 @@ def test_convergence() -> None:
     mask = mask - (np.eye(ROWS, COLS) * np.fliplr(np.eye(ROWS, COLS)))
     max_iterations = 100
     # Set a high max_iterations to ensure convergence
-    imputer = star_nn(
+    imputer = aw_nn(
         noise_variance=0.1,
         delta=0.05,
         max_iterations=max_iterations,
@@ -113,8 +113,8 @@ def test_delta_parameter() -> None:
     mask[2, 2] = 0
 
     # Compare imputation with different delta values
-    imputer1 = star_nn(noise_variance=0.1, delta=0.01)
-    imputer2 = star_nn(noise_variance=0.1, delta=0.5)
+    imputer1 = aw_nn(noise_variance=0.1, delta=0.01)
+    imputer2 = aw_nn(noise_variance=0.1, delta=0.5)
 
     value1 = imputer1.impute_all(data, mask)
     value2 = imputer2.impute_all(data, mask)
@@ -142,7 +142,7 @@ def test_high_snr_convergence() -> None:
     mask[2, 2] = 0  # Make one entry missing
 
     # Create imputer with a very small noise variance
-    imputer = star_nn(
+    imputer = aw_nn(
         noise_variance=noise_stddev**2,
         delta=0.05,
         max_iterations=100,
@@ -167,7 +167,7 @@ def test_edge_case_single_observation() -> None:
     mask = np.zeros((ROWS, COLS))
     mask[0, 1] = 1  # Only one observation in column 1
 
-    imputer = star_nn()
+    imputer = aw_nn()
     # Should return the only observed value
     imputed_value = imputer.impute(0, 1, data, mask)
     assert np.isclose(imputed_value, data[0, 1])
@@ -177,28 +177,28 @@ def test_invalid_inputs() -> None:
     """Test that invalid inputs raise appropriate errors."""
     # Test with invalid delta values (should be between 0 and 1)
     with pytest.raises(ValueError, match="Delta must be between 0 and 1"):
-        star_nn(delta=-0.1)
+        aw_nn(delta=-0.1)
 
     with pytest.raises(ValueError, match="Delta must be between 0 and 1"):
-        star_nn(delta=1.5)
+        aw_nn(delta=1.5)
 
     # Test with invalid noise variance (should be non-negative)
     with pytest.raises(ValueError, match="Noise variance must be non-negative"):
-        star_nn(noise_variance=-0.1)
+        aw_nn(noise_variance=-0.1)
 
     # Test with invalid convergence threshold (should be non-negative)
     with pytest.raises(ValueError, match="Convergence threshold must be non-negative"):
-        star_nn(convergence_threshold=-0.01)
+        aw_nn(convergence_threshold=-0.01)
 
     # Test with invalid max iterations (should be positive)
     with pytest.raises(ValueError, match="Max iterations must be positive"):
-        star_nn(max_iterations=0)
+        aw_nn(max_iterations=0)
 
     with pytest.raises(ValueError, match="Max iterations must be positive"):
-        star_nn(max_iterations=-5)
+        aw_nn(max_iterations=-5)
 
     # Test with mismatched dimensions for data and mask
-    imputer = star_nn(noise_variance=0.1, delta=0.05)
+    imputer = aw_nn(noise_variance=0.1, delta=0.05)
     data = np.ones((3, 4))  # 3x4 matrix
     mask = np.ones((4, 3))  # 4x3 matrix (transposed dimensions)
 

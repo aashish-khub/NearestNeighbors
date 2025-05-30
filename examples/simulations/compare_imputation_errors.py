@@ -1,5 +1,5 @@
 """Script to generate a side-by-side boxplot comparing imputation errors
-of star_nn, row_row, and USVT against increasing matrix sizes.
+of aw_nn, row_row, and USVT against increasing matrix sizes.
 
 Example usage (from root of repo):
 ```bash
@@ -26,7 +26,7 @@ data_file = "out/results/est_errors-row-row-lbo.csv"
 
 # Create output directory
 # output_dir = "out/results"
-output_dir = "out/StarNN_vs_row_row"
+output_dir = "out/AWNN_vs_row_row"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load data

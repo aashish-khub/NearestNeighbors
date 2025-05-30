@@ -13,7 +13,7 @@ METHODS=(
     "col-col"
     "dr"
     "ts"
-    "star"
+    "aw"
 )
 for em in ${METHODS[@]};
 do

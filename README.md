@@ -142,3 +142,15 @@ This repository implements the methods from the following papers:
   year={2024}
 }
 ```
+[Adaptively-weighted Nearest Neighbors (AWNN)](https://arxiv.org/abs/2505.09612)
+```bibtex
+
+@misc{sadhukhan2025adaptivelyweightednearestneighborsmatrix,
+      title={Adaptively-weighted Nearest Neighbors for Matrix Completion},
+      author={Tathagata Sadhukhan and Manit Paul and Raaz Dwivedi},
+      year={2025},
+      eprint={2505.09612},
+      archivePrefix={arXiv},
+      primaryClass={stat.ML},
+      url={https://arxiv.org/abs/2505.09612},
+}

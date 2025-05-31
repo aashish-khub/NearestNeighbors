@@ -24,7 +24,7 @@ METHOD_ALIASES = {
     "usvt": "USVT",
     "softimpute": "Soft\nImpute",
     "nadaraya": "NW",
-    "star": "AW-\nNN",
+    "aw": "AW-\nNN",
     "sc": "Synth.",
 }
 
@@ -36,7 +36,7 @@ METHOD_ALIASES_SINGLE_LINE = {
     "usvt": "USVT",
     "softimpute": "SI",
     "nadaraya": "NW",
-    "star": "AWNN",
+    "aw": "aw",
     "sc": "Synth.",
 }
 
@@ -48,7 +48,7 @@ METHOD_LINE_STYLES = {
     "usvt": "-",
     "softimpute": "-",
     "nadaraya": "-",
-    "star": "dashdot",
+    "aw": "dashdot",
     "sc": "-",
 }
 
@@ -61,7 +61,7 @@ COLORS = {
     "ts": "grey",
     "usvt": "lightgrey",
     "softimpute": "lightgrey",
-    "star": "grey",
+    "aw": "grey",
     "sc": "blue",
 }
 

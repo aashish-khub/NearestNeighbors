@@ -612,8 +612,8 @@ class TSEstimator(EstimationMethod):
         # because it is the same as the two-sided estimator
 
 
-class StarNNEstimator(EstimationMethod):
-    """Estimate the missing value using Star NN."""
+class AWNNEstimator(EstimationMethod):
+    """Estimate the missing value using AWNN."""
 
     def __init__(
         self,
@@ -624,7 +624,7 @@ class StarNNEstimator(EstimationMethod):
         convergence_threshold: float = 1e-4,
         max_iterations: int = 10,
     ):
-        """Initialize the Star NN estimator."""
+        """Initialize the AWNN estimator."""
         # sanity checks:
         if delta < 0 or delta > 1:
             raise ValueError("Delta must be between 0 and 1.")
@@ -643,7 +643,7 @@ class StarNNEstimator(EstimationMethod):
         self.delta_value_for_signal_matrix = None
 
     def __str__(self):
-        return "StarNNEstimator"
+        return "AWNNEstimator"
 
     def _impute_single_value_helper(
         self,
@@ -654,7 +654,7 @@ class StarNNEstimator(EstimationMethod):
         data_type: DataType,
         vectorize: bool = True,
     ) -> npt.NDArray:
-        """Imputes one specific value using the Star NN method."""
+        """Imputes one specific value using the AWNN method."""
         n_rows, n_cols = data_array.shape
         delta = self.delta / np.sqrt(n_rows)
         logger.info("delta: %s" % delta)  # TODO switch to logger.log

@@ -1,4 +1,4 @@
-"""Script to compare row_row, star_nn, and USVT baseline on simulated data
+"""Script to compare row_row, aw_nn, and USVT baseline on simulated data
 using 20% of the observed indices as a test block. The main experiment involves increasing the size of the matrix.
 
 """
@@ -23,7 +23,7 @@ from nsquared.fit_methods import (
 )
 from nsquared.datasets.dataloader_factory import NNData
 from nsquared.vanilla_nn import row_row
-from nsquared.star_nn import star_nn, StarNNEstimator
+from nsquared.aw_nn import aw_nn, AWNNEstimator
 from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
@@ -61,8 +61,8 @@ m_size = np.repeat([2**4, 2**5, 2**6, 2**7], k)
 # m_size = np.repeat([2**4, 2**5, 2**6, 2**7, 2**8, 2**9], k)
 
 
-def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
-    """Compare the performance of StarNN and RowRow on simulated data"""
+def AWNNvsRowRowVsUsvt(m_size: npt.NDArray) -> None:
+    """Compare the performance of AWNN and RowRow on simulated data"""
     sizes_data = []
     train_times = []
     for i, size in zip(np.arange(len(m_size)), m_size):
@@ -118,16 +118,16 @@ def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
 
         block = list(zip(cv_inds_rows, cv_inds_cols))
         test_block = list(zip(test_inds_rows, test_inds_cols))
-        mask_test_star_nn = np.zeros_like(mask)
+        mask_test_aw_nn = np.zeros_like(mask)
         for i, j in test_block:
-            mask_test_star_nn[i, j] = 1
+            mask_test_aw_nn[i, j] = 1
 
         mask_test = mask.copy()
         mask_test[test_inds_rows, test_inds_cols] = 0
 
         _m_avg = np.average(mask)
         _m_test_avg = np.average(mask_test)
-        _m_star_nn_avg = np.average(mask_test_star_nn)
+        _m_aw_nn_avg = np.average(mask_test_aw_nn)
 
         logger.info("Using USVT estimation")
         usvt_data = data.copy()
@@ -161,8 +161,8 @@ def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
         )
         sizes_data.append(df_size)
 
-        logger.info("Using Star NN imputation")
-        imputer = star_nn()
+        logger.info("Using AWNN imputation")
+        imputer = aw_nn()
 
         print(f"Empirical noise variance: {empirical_noise_variance}")
         print(f"True noise variance: {true_noise_variance}")
@@ -175,10 +175,8 @@ def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
         end_time = time()
         fit_time = end_time - start_time
         est_method = imputer.estimation_method
-        if not isinstance(est_method, StarNNEstimator):
-            raise ValueError(
-                "The estimation method should be StarNNEstimator for StarNN."
-            )
+        if not isinstance(est_method, AWNNEstimator):
+            raise ValueError("The estimation method should be AWNNEstimator for AWNN.")
         noise_variance = est_method.noise_variance
 
         logger.info(
@@ -203,7 +201,7 @@ def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
 
         df_size = pd.DataFrame(
             data={
-                "estimation_method": "star_nn",
+                "estimation_method": "aw",
                 "est_errors": est_errors,
                 "row": test_inds_rows,
                 "col": test_inds_cols,
@@ -217,7 +215,7 @@ def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
 
         train_time = pd.DataFrame(
             data={
-                "estimation_method": "star_nn",
+                "estimation_method": "aw",
                 "time_fit": fit_time,
                 "size": size**2,
                 "empirical_noise_variance": np.var(
@@ -323,8 +321,8 @@ def StarVsRowRowVsUsvt(m_size: npt.NDArray) -> None:
     train_times_df.to_csv(train_times_path, index=False)
 
 
-def StarVsUsvt(m_size: npt.NDArray) -> None:
-    """Compare the performance of StarNN and RowRow on simulated data"""
+def AWNNvsUsvt(m_size: npt.NDArray) -> None:
+    """Compare the performance of AWNN and RowRow on simulated data"""
     sizes_data = []
     train_times = []
     for i, size in zip(np.arange(len(m_size)), m_size):
@@ -380,16 +378,16 @@ def StarVsUsvt(m_size: npt.NDArray) -> None:
 
         _block = list(zip(cv_inds_rows, cv_inds_cols))
         test_block = list(zip(test_inds_rows, test_inds_cols))
-        mask_test_star_nn = np.zeros_like(mask)
+        mask_test_aw_nn = np.zeros_like(mask)
         for i, j in test_block:
-            mask_test_star_nn[i, j] = 1
+            mask_test_aw_nn[i, j] = 1
 
         mask_test = mask.copy()
         mask_test[test_inds_rows, test_inds_cols] = 0
 
         _m_avg = np.average(mask)
         _m_test_avg = np.average(mask_test)
-        _m_star_nn_avg = np.average(mask_test_star_nn)
+        _m_aw_nn_avg = np.average(mask_test_aw_nn)
 
         logger.info("Using USVT estimation")
         usvt_data = data.copy()
@@ -423,8 +421,8 @@ def StarVsUsvt(m_size: npt.NDArray) -> None:
         )
         sizes_data.append(df_size)
 
-        logger.info("Using Star NN imputation")
-        imputer = star_nn()
+        logger.info("Using AWNN imputation")
+        imputer = aw_nn()
 
         print(f"Empirical noise variance: {empirical_noise_variance}")
         print(f"True noise variance: {true_noise_variance}")
@@ -437,10 +435,8 @@ def StarVsUsvt(m_size: npt.NDArray) -> None:
         end_time = time()
         fit_time = end_time - start_time
         est_method = imputer.estimation_method
-        if not isinstance(est_method, StarNNEstimator):
-            raise ValueError(
-                "The estimation method should be StarNNEstimator for StarNN."
-            )
+        if not isinstance(est_method, AWNNEstimator):
+            raise ValueError("The estimation method should be AWNNEstimator for AWNN.")
         noise_variance = est_method.noise_variance
         logger.info(
             f"Fitting completed in {fit_time:.2f} seconds with final noise variance: {noise_variance}"
@@ -464,7 +460,7 @@ def StarVsUsvt(m_size: npt.NDArray) -> None:
 
         df_size = pd.DataFrame(
             data={
-                "estimation_method": "star_nn",
+                "estimation_method": "aw",
                 "est_errors": est_errors,
                 "row": test_inds_rows,
                 "col": test_inds_cols,
@@ -478,7 +474,7 @@ def StarVsUsvt(m_size: npt.NDArray) -> None:
 
         train_time = pd.DataFrame(
             data={
-                "estimation_method": "star_nn",
+                "estimation_method": "aw",
                 "time_fit": fit_time,
                 "size": size**2,
                 "empirical_noise_variance": np.var(
@@ -499,6 +495,6 @@ def StarVsUsvt(m_size: npt.NDArray) -> None:
     train_times_df.to_csv(train_times_path, index=False)
 
 
-StarVsRowRowVsUsvt(m_size)
+AWNNvsRowRowVsUsvt(m_size)
 
-# StarVsUsvt(m_size)
+# AWNNvsUsvt(m_size)

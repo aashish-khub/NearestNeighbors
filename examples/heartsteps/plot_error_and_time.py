@@ -43,8 +43,8 @@ df_grouped = (
     .reset_index()
 )
 # rearrange the order of the estimation methods by
-# "usvt", "row-row", "col-col", "dr", "ts", "star"
-ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "star"]
+# "usvt", "row-row", "col-col", "dr", "ts", "aw"
+ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "aw"]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )

@@ -21,7 +21,7 @@ from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
-from nsquared.estimation_methods import StarNNEstimator, TSEstimator
+from nsquared.estimation_methods import AWNNEstimator, TSEstimator
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
@@ -205,9 +205,9 @@ elif estimation_method == "softimpute":
         # set the time to the average time per imputation
         imputation_times.append(elapsed_time / len(test_block))
     fit_times = [0] * len(test_block)
-elif estimation_method == "star":
-    logger.info("Using star estimation")
-    estimator = StarNNEstimator()
+elif estimation_method == "aw":
+    logger.info("Using AWNN estimation")
+    estimator = AWNNEstimator()
     imputer = NearestNeighborImputer(estimator, data_type, distance_threshold=-1)
     # Impute missing values
     imputations = []

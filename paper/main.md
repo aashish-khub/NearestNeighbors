@@ -53,12 +53,14 @@ bibliography: ref.bib
 
 # Summary
 
-N$^2$ is a Python package that implements a unified framework for nearest neighbor-based matrix completion methods as well as a test bench for evaluation the performance of these methods.
+N$^2$ is a Python package that provides a unified framework for nearest neighbor-based matrix completion methods as well as a test bench for evaluating the performance of these methods. It includes implementation of several nearest neighbor (NN) methods including row-wise NN, column-wise NN, two-sided NN, and doubly-robust NN. The test bench included with the package allows researchers and data scientists to easily evaluate the performance of these methods and future variants on heterogeneous real-world datasets. The package is designed to be simple to use and extendible, allowing users to easily customize the algorithms and test different methods on their own datasets.
 
 # Statement of need
 
-Nearest neighbor methods have been shown to be effective in a variety of applications including matrix completion and counterfactual inference. However, there is a lack of a unified framework for implementing and evaluating these methods. N$^2$ fills this gap by providing a Python package that implements a variety of nearest neighbor-based matrix completion methods and a test bench for evaluating their performance.
+Nearest neighbor methods are powerful and simple non-parametric algorithms used in a variety of machine learning and pattern recognition tasks. Their scalability and simplicity have also made them popular choices for matrix completion and causal inference tasks in panel-data settings. In particular, nearest neighbor methods have shown robustness to a variety complex of missingness patterns common in real-world datasets. This has led to a multitude of recent works extending the basic nearest neighbors algorithm beyond the standard row-wise nearest neighbor approach. However, there is a lack of a unified framework for implementing and evaluating these methods. N$^2$ fills this gap by providing a Python package that implements a variety of nearest neighbor-based matrix completion methods and a test bench for evaluating their performance.
 
 # Acknowledgements
+
+Jacob Feitelberg and Anish Agarwal were supported by the Columbia Center for AI and Responsible Financial Innovation in collaboration with Capital One.
 
 # References

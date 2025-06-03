@@ -205,6 +205,55 @@ elif estimation_method == "softimpute":
         # set the time to the average time per imputation
         imputation_times.append(elapsed_time / len(test_block))
     fit_times = [0] * len(test_block)
+elif estimation_method == "tabpfn":
+    logger.info("Using TabPFN estimator")
+
+    from tabpfn import TabPFNRegressor
+    import warnings
+
+    test_cols = set(test_inds_cols)
+
+    imputations = []
+
+    train_rows = np.unique(inds_rows_cv)
+    test_rows = np.unique(test_inds_rows)
+
+    fitting_time = 0
+    imputing_time = 0
+
+    for col in tqdm(list(test_cols)):
+        model = TabPFNRegressor()
+        # for each observed
+        X = data[train_rows, :col]
+        y = data[train_rows, col]
+
+        # remove nan values in y
+        X = X[~np.isnan(y)]
+        y = y[~np.isnan(y)]
+
+        X_test = data[test_rows, :col]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            start_time = time()
+            # fit the model
+            model.fit(X, y)  # pyright: ignore
+            end_time = time()
+            fitting_time += end_time - start_time
+
+            start_time = time()
+            # make predictions
+            y_pred = model.predict(X_test)
+            y_pred = y_pred[mask[test_rows, col] == 1]
+            end_time = time()
+            imputing_time += end_time - start_time
+
+            for val in y_pred:
+                imputations.append(val)
+
+    imputations = np.array(imputations)
+    imputation_times = [imputing_time / len(test_block)] * len(test_block)
+    fit_times = [fitting_time / len(test_block)] * len(test_block)
 elif estimation_method == "aw":
     logger.info("Using AWNN estimation")
     estimator = AWNNEstimator()

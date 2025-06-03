@@ -185,6 +185,54 @@ elif estimation_method == "softimpute":
 
     # Compute the synthetic control
     control_list = si_imputed[treatment_row]
+    
+elif estimation_method == "tabpfn":
+    logger.info("Using TabPFN estimation")
+    
+    from tabpfn import TabPFNRegressor
+    import warnings
+
+    # setup tabpfn imputation
+    tabpfn_data = data.copy().T
+    tabpfn_mask = mask.copy().T
+    tabpfn_mask[test_inds_cols, test_inds_rows] = 0
+    tabpfn_data[tabpfn_mask != 1] = np.nan
+    
+    imputed_values = np.zeros_like(tabpfn_data)
+    fitting_time = 0.0
+    imputing_time = 0.0
+    
+    for col in tqdm(range(tabpfn_data.shape[1]), desc="Imputing missing values"):
+        model = TabPFNRegressor()
+        # Get the train data (all other columns)
+        y = tabpfn_data[:, col]
+        X = np.delete(tabpfn_data, col, axis=1)
+        
+        not_nan_mask = ~np.isnan(y)
+        y_train = y[not_nan_mask]
+        X_train = X[not_nan_mask, :]
+        X_test = X[~not_nan_mask, :]
+        
+        if len(y_train) == 0:
+            logger.warning(f"No training data for column {col}. Skipping imputation.")
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            start_time = time()
+            model.fit(X_train, y_train)
+            fitting_time += time() - start_time
+            
+            start_time = time()
+            imputed_values[~not_nan_mask, col] = model.predict(X_test)
+            imputing_time += time() - start_time
+        
+    imputation_times = [imputing_time / len(test_block)] * len(test_block)
+    fit_times = [fitting_time / len(test_block)] * len(test_block)
+    
+    imputed_values = imputed_values.T  # Transpose back to original shape
+    control_list = imputed_values[treatment_row, :]
+    
+    imputations = imputed_values[test_inds_rows, test_inds_cols]
 
 elif estimation_method == "aw":
     logger.info("Using AWNN estimation")

@@ -26,6 +26,7 @@ METHOD_ALIASES = {
     "nadaraya": "NW",
     "aw": "AW-\nNN",
     "sc": "Synth.",
+    "tabpfn": "TabPFN",
 }
 
 METHOD_ALIASES_SINGLE_LINE = {
@@ -38,6 +39,7 @@ METHOD_ALIASES_SINGLE_LINE = {
     "nadaraya": "NW",
     "aw": "aw",
     "sc": "Synth.",
+    "tabpfn": "TabPFN",
 }
 
 METHOD_LINE_STYLES = {
@@ -50,6 +52,7 @@ METHOD_LINE_STYLES = {
     "nadaraya": "-",
     "aw": "dashdot",
     "sc": "-",
+    "tabpfn": "-",
 }
 
 NEURIPS_TEXTWIDTH = 5.5
@@ -63,6 +66,7 @@ COLORS = {
     "softimpute": "lightgrey",
     "aw": "grey",
     "sc": "blue",
+    "tabpfn": "orange",
 }
 
 DATA_TYPE_ALIASES = {

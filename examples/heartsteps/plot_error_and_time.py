@@ -16,8 +16,8 @@ from glob import glob
 import pandas as pd
 import logging
 
-from nearest_neighbors.utils.experiments import get_base_parser
-from nearest_neighbors.utils import plotting_utils
+from nsquared.utils.experiments import get_base_parser
+from nsquared.utils import plotting_utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,8 +43,8 @@ df_grouped = (
     .reset_index()
 )
 # rearrange the order of the estimation methods by
-# "usvt", "row-row", "col-col", "dr", "ts", "star"
-ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "star"]
+# "usvt", "row-row", "col-col", "dr", "ts", "aw"
+ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "aw"]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )

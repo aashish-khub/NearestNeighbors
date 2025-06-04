@@ -13,19 +13,19 @@ import numpy as np
 import pandas as pd
 from time import time
 
-from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.utils.experiments import (
+from nsquared.datasets.dataloader_factory import NNData
+from nsquared.utils.experiments import (
     get_base_parser,
     setup_logging,
     serialize,
 )
-from nearest_neighbors.estimation_methods import RowRowEstimator, ColColEstimator
-from nearest_neighbors.data_types import (
+from nsquared.estimation_methods import RowRowEstimator, ColColEstimator
+from nsquared.data_types import (
     DistributionKernelMMD,
     DistributionWassersteinSamples,
 )
-from nearest_neighbors.nnimputer import NearestNeighborImputer
-from nearest_neighbors.fit_methods import LeaveBlockOutValidation
+from nsquared.nnimputer import NearestNeighborImputer
+from nsquared.fit_methods import LeaveBlockOutValidation
 
 from ks import ks_distance
 

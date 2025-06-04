@@ -19,19 +19,19 @@ from hyperopt import Trials
 # import baseline methods
 
 # import nearest neighbor methods
-from nearest_neighbors.data_types import (
+from nsquared.data_types import (
     DistributionKernelMMD,
     DistributionWassersteinSamples,
 )
-from nearest_neighbors import NearestNeighborImputer
-from nearest_neighbors.fit_methods import (
+from nsquared import NearestNeighborImputer
+from nsquared.fit_methods import (
     LeaveBlockOutValidation,
 )
-from nearest_neighbors.estimation_methods import RowRowEstimator, ColColEstimator
-from nearest_neighbors.datasets.dataloader_factory import NNData
+from nsquared.estimation_methods import RowRowEstimator, ColColEstimator
+from nsquared.datasets.dataloader_factory import NNData
 
-# from nearest_neighbors.dr_nn import dr_nn
-from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+# from nsquared.dr_nn import dr_nn
+from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 parser.add_argument(

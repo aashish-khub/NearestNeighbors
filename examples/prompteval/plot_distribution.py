@@ -14,8 +14,8 @@ import os
 import logging
 from glob import glob
 
-from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
-from nearest_neighbors.utils import plotting_utils
+from nsquared.utils.experiments import get_base_parser, setup_logging
+from nsquared.utils import plotting_utils
 
 parser = get_base_parser()
 parser.add_argument(
@@ -132,7 +132,7 @@ for i, row in df.head(20).iterrows():
     )  # Move y-axis outward
 
     # Only add legend to the first subplot to avoid clutter
-    ax.legend(loc='upper left', fontsize=plotting_utils.LEGEND_FONT_SIZE)
+    ax.legend(loc="upper left", fontsize=plotting_utils.LEGEND_FONT_SIZE)
 
     figures_path = os.path.join(
         figures_dir,

@@ -9,9 +9,9 @@ Paper Reference for Prop99:
     https://doi.org/10.1198/jasa.2009.ap08746
 """
 
-from nearest_neighbors.datasets.dataloader_base import NNDataLoader
-from nearest_neighbors.datasets.dataloader_factory import register_dataset
-from nearest_neighbors.data_types import DataType
+from nsquared.datasets.dataloader_base import NNDataLoader
+from nsquared.datasets.dataloader_factory import register_dataset
+from nsquared.data_types import DataType
 import numpy as np
 import pandas as pd
 from typing import Any

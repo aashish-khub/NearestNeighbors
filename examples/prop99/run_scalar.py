@@ -41,25 +41,21 @@ from baselines import usvt, softimpute
 
 # %%
 # import nearest neighbor methods
-from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import (
-    StarNNEstimator,
-    TSEstimator,
-    AutoEstimator,
-)
-from nearest_neighbors import NearestNeighborImputer
-from nearest_neighbors.fit_methods import (
+from nsquared.data_types import Scalar
+from nsquared.estimation_methods import AWNNEstimator, TSEstimator, AutoEstimator
+from nsquared import NearestNeighborImputer
+from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
     AutoDRTSLeaveBlockOutValidation,
 )
-from nearest_neighbors.datasets.dataloader_factory import NNData
-from nearest_neighbors.vanilla_nn import row_row, col_col
-from nearest_neighbors.dr_nn import dr_nn
+from nsquared.datasets.dataloader_factory import NNData
+from nsquared.vanilla_nn import row_row, col_col
+from nsquared.dr_nn import dr_nn
 
 # %%
-from nearest_neighbors.utils.experiments import get_base_parser, setup_logging
+from nsquared.utils.experiments import get_base_parser, setup_logging
 
 # %%
 parser = get_base_parser()
@@ -191,9 +187,9 @@ elif estimation_method == "softimpute":
     # Compute the synthetic control
     control_list = si_imputed[treatment_row]
 
-elif estimation_method == "star":
-    logger.info("Using star estimation")
-    estimator = StarNNEstimator()
+elif estimation_method == "aw":
+    logger.info("Using AWNN estimation")
+    estimator = AWNNEstimator()
     imputer = NearestNeighborImputer(estimator, data_type, distance_threshold=-1)
     # Impute missing values
     imputations = []

@@ -231,7 +231,6 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            # distance_threshold_range=(0, 50),
             distance_threshold_range=(0, 300**2),
             n_trials=200,
             data_type=data_type,

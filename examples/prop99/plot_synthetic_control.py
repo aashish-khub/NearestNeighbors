@@ -59,9 +59,9 @@ for subdir in subdirs:
         # NOTE: va is opposite of what you'd expect (set top to nudge down, bottom to nudge up)
         match estimation_method:
             case "dr":
+                va = "top"
+            case "col-col":
                 va = "bottom"
-            # case "col-col":
-            #     va = "bottom"
             case "row-row":
                 va = "top"
             case _:
@@ -72,13 +72,25 @@ for subdir in subdirs:
             method,  # type: ignore
             fontsize=plotting_utils.TICK_FONT_SIZE,
             va=va,
+            color=plotting_utils.COLORS[estimation_method],
         )
+        # # add a line segment from the text label to the last valid value
+        # ax.plot(
+        #     [2000, 2010],
+        #     [last_valid_value, last_valid_value],
+        #     color=plotting_utils.COLORS[estimation_method],
+        #     linestyle="-",
+        # )
         if i == 0:
             ax.plot(
                 df.index, df["obs"], label="Observed", linestyle="-", color="orange"
             )
             ax.text(
-                2001, df["obs"].iloc[-1], "Obs.", fontsize=plotting_utils.TICK_FONT_SIZE
+                2001,
+                df["obs"].iloc[-1],
+                "Obs.",
+                fontsize=plotting_utils.TICK_FONT_SIZE,
+                color="orange",
             )
     # add a vertical line at 1989 called Proposition 99
     ax.axvline(x=1989, color="k", alpha=0.25, linestyle="dotted")
@@ -107,7 +119,7 @@ for subdir in subdirs:
     # ax.set_ylim(40, 160)
     # set the y-axis label to be the number of cigarettes smoked per capita
     ax.set_ylabel(
-        "Cigarette Consumption\n(Pack Sales Per Capita)",
+        "Cigarette Consumption",
         fontsize=plotting_utils.LABEL_FONT_SIZE,
     )
 
@@ -121,7 +133,7 @@ for subdir in subdirs:
     )  # Move y-axis outward
     # ax.legend(fontsize=plotting_utils.LEGEND_FONT_SIZE)
     plt.subplots_adjust(
-        left=0.15,
+        left=0.2,
         right=0.85,
         top=0.95,
         bottom=0.2,

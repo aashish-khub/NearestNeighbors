@@ -23,6 +23,7 @@ from typing import Any, cast
 import logging
 from joblib import Memory
 from datasets import load_dataset, Dataset
+from tqdm import tqdm
 
 
 memory = Memory(".joblib_cache", verbose=0)
@@ -164,6 +165,11 @@ class PromptEvalDataLoader(NNDataLoader):
             )  # instantiate random seed if provided but do it only once here
         self.n_examples_per_task = n_examples_per_task
 
+        # print('Loading dataset')
+        # for task in tqdm(self.tasks):
+        #     # Download the dataset to cache
+        #     load_dataset("PromptEval/PromptEval_MMLU_correctness", name=task)
+
     @staticmethod
     @memory.cache
     def load_config_data(
@@ -188,7 +194,11 @@ class PromptEvalDataLoader(NNDataLoader):
         dataset = cast(
             Dataset,
             load_dataset(
-                "PromptEval/PromptEval_MMLU_correctness", name=task, split=model
+                "PromptEval/PromptEval_MMLU_correctness",
+                name=task,
+                split=model,
+                num_proc=12,
+                keep_in_memory=True,
             ),
         )
         # rows are format templates, columns are examples
@@ -234,7 +244,11 @@ class PromptEvalDataLoader(NNDataLoader):
         ds = cast(
             Dataset,
             load_dataset(
-                "PromptEval/PromptEval_MMLU_correctness", name=task, split=model
+                "PromptEval/PromptEval_MMLU_correctness",
+                name=task,
+                split=model,
+                keep_in_memory=True,
+                num_proc=8,
             ),
         )
         df = cast(pd.DataFrame, ds.to_pandas())
@@ -275,7 +289,7 @@ class PromptEvalDataLoader(NNDataLoader):
 
         # Load the data for the multiple config and model
         df_list = []
-        for task in tasks:
+        for task in tqdm(tasks):
             for model in models:
                 df = self.load_config_data(
                     task, model, self.n_examples_per_task, self.seed

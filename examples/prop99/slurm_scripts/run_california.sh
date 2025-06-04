@@ -13,6 +13,7 @@ METHODS=(
     "ts"
     "star"
     "softimpute"
+    "auto"
 )
 for em in ${METHODS[@]};
 do

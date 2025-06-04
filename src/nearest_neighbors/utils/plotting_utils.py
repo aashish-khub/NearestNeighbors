@@ -25,7 +25,8 @@ METHOD_ALIASES = {
     "softimpute": "Soft\nImpute",
     "nadaraya": "NW",
     "star": "AW-\nNN",
-    "sc": "Synth.",
+    "sc": "SC",
+    "auto": "Auto-\nNN",
 }
 
 METHOD_ALIASES_SINGLE_LINE = {
@@ -37,7 +38,8 @@ METHOD_ALIASES_SINGLE_LINE = {
     "softimpute": "SI",
     "nadaraya": "NW",
     "star": "AWNN",
-    "sc": "Synth.",
+    "sc": "SC",
+    "auto": "AutoNN",
 }
 
 METHOD_LINE_STYLES = {
@@ -50,12 +52,13 @@ METHOD_LINE_STYLES = {
     "nadaraya": "-",
     "star": "dashdot",
     "sc": "-",
+    "auto": "-",
 }
 
 NEURIPS_TEXTWIDTH = 5.5
 
 COLORS = {
-    "row-row": "grey",
+    "row-row": "red",
     "col-col": "grey",
     "dr": "grey",
     "ts": "grey",
@@ -63,6 +66,7 @@ COLORS = {
     "softimpute": "lightgrey",
     "star": "grey",
     "sc": "blue",
+    "auto": "grey",
 }
 
 DATA_TYPE_ALIASES = {

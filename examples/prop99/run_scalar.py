@@ -42,12 +42,17 @@ from baselines import usvt, softimpute
 # %%
 # import nearest neighbor methods
 from nearest_neighbors.data_types import Scalar
-from nearest_neighbors.estimation_methods import StarNNEstimator, TSEstimator
+from nearest_neighbors.estimation_methods import (
+    StarNNEstimator,
+    TSEstimator,
+    AutoEstimator,
+)
 from nearest_neighbors import NearestNeighborImputer
 from nearest_neighbors.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nearest_neighbors.datasets.dataloader_factory import NNData
 from nearest_neighbors.vanilla_nn import row_row, col_col
@@ -264,6 +269,21 @@ else:
             allow_self_neighbor=True,
         )
         allow_self_neighbor = True
+    elif estimation_method == "auto":
+        logger.info("Using AutoNN estimation")
+        estimator = AutoEstimator(is_percentile=is_percentile)
+        imputer = NearestNeighborImputer(estimator, data_type)
+        logger.info("Using AutoNN fit method")
+        # Fit the imputer using leave-block-out validation
+        fitter = AutoDRTSLeaveBlockOutValidation(
+            block,
+            distance_threshold_range_row=(0, 300**2),
+            distance_threshold_range_col=(0, 300**2),
+            alpha_range=(0, 1),
+            n_trials=200,
+            data_type=data_type,
+            allow_self_neighbor=allow_self_neighbor,
+        )
     else:
         raise ValueError(
             f"Estimation method {estimation_method} and fit method {fit_method} not supported"

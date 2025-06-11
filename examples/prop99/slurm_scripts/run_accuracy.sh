@@ -13,6 +13,7 @@ METHODS=(
     "ts"
     "aw"
     "softimpute"
+    "auto"
 )
 CONTROL_STATES=(
     "TX" "WI" "MT" "RI" "KS" "ME" "UT" "VA" "IN" "GA"

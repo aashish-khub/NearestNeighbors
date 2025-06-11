@@ -42,12 +42,13 @@ from baselines import usvt, softimpute
 # %%
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
-from nsquared.estimation_methods import AWNNEstimator, TSEstimator
+from nsquared.estimation_methods import AWNNEstimator, TSEstimator, AutoEstimator
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nsquared.datasets.dataloader_factory import NNData
 from nsquared.vanilla_nn import row_row, col_col
@@ -106,7 +107,7 @@ elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 treatment_row = 0  # row corresponding to treated unit (California)
-logger.info(f"Mask for row {treatment_row}:", mask[treatment_row])
+logger.info(f"Mask for row {treatment_row}: {mask[treatment_row]}")
 
 # %%
 logger.info("Using scalar data type")
@@ -230,11 +231,11 @@ else:
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
-            # distance_threshold_range=(0, 50),
             distance_threshold_range=(0, 300**2),
             n_trials=200,
             data_type=data_type,
             allow_self_neighbor=allow_self_neighbor,
+            rng=rng,
         )
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
@@ -247,6 +248,7 @@ else:
             n_trials=200,
             data_type=data_type,
             allow_self_neighbor=allow_self_neighbor,
+            rng=rng,
         )
     elif estimation_method == "ts":
         logger.info("Using two-sided estimation")
@@ -264,6 +266,21 @@ else:
             allow_self_neighbor=True,
         )
         allow_self_neighbor = True
+    elif estimation_method == "auto":
+        logger.info("Using AutoNN estimation")
+        estimator = AutoEstimator(is_percentile=is_percentile)
+        imputer = NearestNeighborImputer(estimator, data_type)
+        logger.info("Using AutoNN fit method")
+        # Fit the imputer using leave-block-out validation
+        fitter = AutoDRTSLeaveBlockOutValidation(
+            block,
+            distance_threshold_range_row=(0, 300**2),
+            distance_threshold_range_col=(0, 300**2),
+            alpha_range=(0, 1),
+            n_trials=200,
+            data_type=data_type,
+            allow_self_neighbor=allow_self_neighbor,
+        )
     else:
         raise ValueError(
             f"Estimation method {estimation_method} and fit method {fit_method} not supported"

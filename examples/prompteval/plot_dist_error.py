@@ -33,7 +33,8 @@ results_dir = os.path.join(output_dir, "results")
 figures_dir = os.path.join(output_dir, "figures")
 os.makedirs(figures_dir, exist_ok=True)
 
-files = glob(os.path.join(results_dir, f"est_errors-*-p{propensity}-*.csv"))
+files = glob(os.path.join(results_dir, f"est_errors-*-p{propensity}-tp4.0.csv"))
+print(files)
 df_list = []
 for file in files:
     df = pd.read_csv(file)

@@ -20,13 +20,13 @@ from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
-from nsquared.estimation_methods import TSEstimator  # , AutoEstimator
+from nsquared.estimation_methods import TSEstimator, AutoEstimator
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
-    # AutoDRTSLeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nsquared.datasets.dataloader_factory import NNData
 from nsquared.vanilla_nn import row_row, col_col
@@ -35,7 +35,15 @@ from nsquared.dr_nn import dr_nn
 from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
+parser.add_argument(
+    "--noise_stddev",
+    "-nstd",
+    type=float,
+    default=0.001,
+    help="Standard deviation of the noise added to the data",
+)
 args = parser.parse_args()
+noise_stddev = args.noise_stddev
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
@@ -60,7 +68,7 @@ rng = np.random.default_rng(seed=seed)
 # Load the simulated data dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 m_size = [2**4, 2**5, 2**6, 2**7]
-num_trials = 15
+num_trials = 30
 
 
 def random_trial() -> None:
@@ -312,7 +320,7 @@ def last_col_trial() -> None:
                 num_cols=size,
                 seed=cantor(i, j),
                 miss_prob=0.5,
-                stddev_noise=0.001,
+                stddev_noise=noise_stddev,
                 latent_factor_combination_model="multiplicative",
             )
             data, mask = sim_dataloader.process_data_scalar()
@@ -454,6 +462,21 @@ def last_col_trial() -> None:
                         allow_self_neighbor=True,
                     )
                     allow_self_neighbor = True
+                elif estimation_method == "auto":
+                    logger.info("Using AutoNN estimation")
+                    estimator = AutoEstimator()
+                    imputer = NearestNeighborImputer(estimator, data_type)
+                    logger.info("Using AutoNN fit method")
+                    # Fit the imputer using leave-block-out validation
+                    fitter = AutoDRTSLeaveBlockOutValidation(
+                        block,
+                        distance_threshold_range_row=(0, 1),
+                        distance_threshold_range_col=(0, 1),
+                        alpha_range=(0, 1),
+                        n_trials=100,
+                        data_type=data_type,
+                        allow_self_neighbor=args.allow_self_neighbor,
+                    )
                 else:
                     raise ValueError(
                         f"Estimation method {estimation_method} and fit method {fit_method} not supported"

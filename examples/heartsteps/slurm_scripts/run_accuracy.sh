@@ -14,6 +14,7 @@ METHODS=(
     "dr"
     "ts"
     "aw"
+    "auto"
 )
 for em in ${METHODS[@]};
 do

@@ -107,7 +107,7 @@ elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 treatment_row = 0  # row corresponding to treated unit (California)
-logger.info(f"Mask for row {treatment_row}:", mask[treatment_row])
+logger.info(f"Mask for row {treatment_row}: {mask[treatment_row]}")
 
 # %%
 logger.info("Using scalar data type")
@@ -235,6 +235,7 @@ else:
             n_trials=200,
             data_type=data_type,
             allow_self_neighbor=allow_self_neighbor,
+            rng=rng,
         )
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
@@ -247,6 +248,7 @@ else:
             n_trials=200,
             data_type=data_type,
             allow_self_neighbor=allow_self_neighbor,
+            rng=rng,
         )
     elif estimation_method == "ts":
         logger.info("Using two-sided estimation")

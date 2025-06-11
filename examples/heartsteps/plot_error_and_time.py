@@ -32,6 +32,7 @@ os.makedirs(figures_dir, exist_ok=True)
 files = glob(os.path.join(results_dir, "est_errors-*.csv"))
 df_list = []
 for file in files:
+    print(file)
     df = pd.read_csv(file)
     df_list.append(df)
 df = pd.concat(df_list, ignore_index=True)
@@ -43,8 +44,8 @@ df_grouped = (
     .reset_index()
 )
 # rearrange the order of the estimation methods by
-# "usvt", "row-row", "col-col", "dr", "ts", "aw"
-ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "aw"]
+# "usvt", "row-row", "col-col", "dr", "ts", "star"
+ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "auto", "star", "kernel", "wasserstein_samples"]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )
@@ -57,7 +58,7 @@ for col_name, alias in [
     # NOTE: set the width to be the physical size of the figure in inches
     # The NeurIPS text is 5.5 inches wide and 9 inches long
     # If we use wrapfigure with 0.4\textwidth, then the figure needs to be 2.2 inches wide
-    fig = plt.figure(figsize=(2.2, 2))
+    fig = plt.figure(figsize=(3.25, 2))
     # Create boxplot
     ax = fig.add_subplot(111)
     box = ax.boxplot(
@@ -83,7 +84,7 @@ for col_name, alias in [
     )
     ax.tick_params(axis="x", length=0)  # Set tick length to 0
     ax.set_ylabel(alias, fontsize=plotting_utils.LABEL_FONT_SIZE)
-    # ax.set_xlabel("Estimation method", fontsize=plotting_utils.LABEL_FONT_SIZE)
+    #ax.set_xlabel("Estimation methods",color="white", fontsize=plotting_utils.LABEL_FONT_SIZE)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

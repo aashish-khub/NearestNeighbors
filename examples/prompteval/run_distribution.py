@@ -134,7 +134,7 @@ match estimation_method:
         raise ValueError(f"Estimation method {estimation_method} not supported")
 
 fit_method = LeaveBlockOutValidation(
-    block, distance_threshold_range=(0, 1.0), n_trials=10, data_type=data_type, rng=rng
+    block, distance_threshold_range=(0, 1.0), n_trials=50, data_type=data_type, rng=rng
 )
 imputer = NearestNeighborImputer(
     estimator,

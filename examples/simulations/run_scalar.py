@@ -35,7 +35,15 @@ from nsquared.dr_nn import dr_nn
 from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
+parser.add_argument(
+    "--noise_stddev",
+    "-nstd",
+    type=float,
+    default=0.001,
+    help="Standard deviation of the noise added to the data",
+)
 args = parser.parse_args()
+noise_stddev = args.noise_stddev
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
@@ -60,7 +68,7 @@ rng = np.random.default_rng(seed=seed)
 # Load the simulated data dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 m_size = [2**4, 2**5, 2**6, 2**7]
-num_trials = 15
+num_trials = 30
 
 
 def random_trial() -> None:
@@ -312,7 +320,7 @@ def last_col_trial() -> None:
                 num_cols=size,
                 seed=cantor(i, j),
                 miss_prob=0.5,
-                stddev_noise=0.001,
+                stddev_noise=noise_stddev,
                 latent_factor_combination_model="multiplicative",
             )
             data, mask = sim_dataloader.process_data_scalar()

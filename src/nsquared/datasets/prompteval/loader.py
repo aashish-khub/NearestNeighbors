@@ -255,7 +255,7 @@ class PromptEvalDataLoader(NNDataLoader):
         mask = np.random.binomial(1, propensity, size=df.shape)
 
         data = df.to_numpy(dtype=float)
-        data[mask == 0] = np.nan
+        #data[mask == 0] = np.nan
         self.data = data
         self.mask = mask
         return data, mask
@@ -324,7 +324,8 @@ class PromptEvalDataLoader(NNDataLoader):
 
         # Simulate MCAR missingness
         mask = np.random.binomial(1, propensity, size=data.shape[:2])
-        data[mask == 0] = np.nan
+        #TODO: change this back later
+        #data[mask == 0] = np.nan
 
         self.data = data
         self.mask = mask

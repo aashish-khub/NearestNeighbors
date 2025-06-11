@@ -16,9 +16,9 @@ DATA_TYPE=(
 )
 
 ps=(
-    "0.1"
+    "0.3"
     "0.5"
-    "0.9"
+    "0.7"
 )
 
 for data_type in ${DATA_TYPE[@]};
@@ -28,7 +28,7 @@ do
         for p in ${ps[@]};
         do
             echo $data_type
-            CMD="python run_distribution.py -em $em -p $p -tp 4.0 --data_type $data_type -s 1 --force"
+            CMD="python run_distribution.py -em $em -p $p -tp 4.0 --data_type $data_type -s 1 --force -od $OUTPUT_DIR"
             echo $CMD
             eval $CMD
         done

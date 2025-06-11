@@ -17,6 +17,9 @@ LINE_ALPHA = 0.75
 OUTWARD = 4
 
 METHOD_ALIASES = {
+    "kernel": "Kernel-\nNN",
+    "wasserstein_samples": "W$_2$-\nNN",
+    "auto": "Auto-\nNN",
     "row-row": "Row-\nNN",
     "col-col": "Col-\nNN",
     "dr": "DR-\nNN",
@@ -26,10 +29,10 @@ METHOD_ALIASES = {
     "nadaraya": "NW",
     "aw": "AW-\nNN",
     "sc": "SC",
-    "auto": "Auto-\nNN",
 }
 
 METHOD_ALIASES_SINGLE_LINE = {
+    "auto": "AutoNN",
     "row-row": "RowNN",
     "col-col": "ColNN",
     "dr": "DRNN",
@@ -39,7 +42,8 @@ METHOD_ALIASES_SINGLE_LINE = {
     "nadaraya": "NW",
     "aw": "AWNN",
     "sc": "SC",
-    "auto": "AutoNN",
+    "kernel": "KernelNN",
+    "wasserstein_samples": "W$_2$NN",
 }
 
 METHOD_LINE_STYLES = {
@@ -59,6 +63,10 @@ NEURIPS_TEXTWIDTH = 5.5
 
 COLORS = {
     "row-row": "red",
+    "auto": "grey",
+    "kernel": "dimgrey",
+    "wasserstein_samples": "dimgrey",
+    # "row-row": "grey",
     "col-col": "grey",
     "dr": "grey",
     "ts": "grey",
@@ -66,7 +74,6 @@ COLORS = {
     "softimpute": "lightgrey",
     "aw": "grey",
     "sc": "blue",
-    "auto": "grey",
 }
 
 DATA_TYPE_ALIASES = {

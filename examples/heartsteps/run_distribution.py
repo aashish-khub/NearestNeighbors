@@ -22,6 +22,7 @@ from hyperopt import Trials
 from nsquared.data_types import (
     DistributionKernelMMD,
     DistributionWassersteinSamples,
+    Scalar
 )
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
@@ -61,7 +62,7 @@ rng = np.random.default_rng(seed=seed)
 # Load the heartsteps dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-hs_dataloader = NNData.create("heartsteps")
+hs_dataloader = NNData.create("heartsteps", freq="1min", num_measurements=60)
 data, mask = hs_dataloader.process_data_distribution()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
@@ -197,15 +198,16 @@ for row, col in tqdm(test_block, desc="Imputing missing values"):
 
 ground_truth = data[test_inds_rows, test_inds_cols]
 est_errors = []
+error_datatype = Scalar()
 for i in range(len(imputations)):
-    est_errors.append(imputer.data_type.distance(imputations[i], ground_truth[i]))
+    est_errors.append(error_datatype.distance(np.nanmean(imputations[i]), np.nanmean(ground_truth[i])))
 # est_errors = np.abs(imputations - ground_truth)
 logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 save_imputations = np.array(imputations, dtype=object)
 ground_truth = np.array(ground_truth, dtype=object)
 # save imputations to pkl
 imputations_save_path = os.path.join(
-    results_dir, f"imputations-{estimation_method}-{fit_method}.npy"
+    results_dir, f"imputations-{estimation_method}-{fit_method}-{args.data_type}.npy"
 )
 logger.info(f"Saving imputations to {imputations_save_path}...")
 np.save(imputations_save_path, save_imputations)
@@ -218,7 +220,7 @@ np.save(ground_truth_save_path, ground_truth)
 
 df = pd.DataFrame(
     data={
-        "estimation_method": estimation_method,
+        "estimation_method": args.data_type,
         # "imputation": save_imputations,
         # "ground_truth": ground_truth,
         "data_type": args.data_type,

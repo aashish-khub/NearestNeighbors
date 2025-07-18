@@ -28,7 +28,7 @@ parser.add_argument(
     "--tuning_parameter",
     "-tp",
     type=float,
-    default=0.5,
+    default=4.0,
 )
 args = parser.parse_args()
 output_dir = args.output_dir
@@ -45,21 +45,63 @@ figures_dir = os.path.join(output_dir, "figures")
 os.makedirs(figures_dir, exist_ok=True)
 
 results_dir = os.path.join(output_dir, "results")
-files = glob(
-    os.path.join(results_dir, f"est_errors-*-p{propensity}-tp{tuning_parameter}.csv")
+# print(os.path.join(results_dir, f"est_errors-*-p{0.3}-tp{tuning_parameter}.csv"))
+# files01 = glob(
+#     os.path.join(results_dir, f"est_errors-*-p{0.3}-tp{tuning_parameter}.csv")
+# )
+files05 = glob(
+    os.path.join(results_dir, f"est_errors-*-p{0.7}-tp{tuning_parameter}.csv")
 )
-df_list = []
-for file in files:
+# files09 = glob(
+#     os.path.join(results_dir, f"est_errors-*-p{0.7}-tp{tuning_parameter}.csv")
+# )
+df_list_01 = []
+# for file in files01:
+#     df = pd.read_csv(file)
+#     # Convert string representations of lists to actual lists
+#     df["imputation"] = df["imputation"].apply(lambda x: np.array(eval(x)))
+#     df["ground_truth"] = df["ground_truth"].apply(lambda x: np.array(eval(x)))
+#     df_list_01.append(df)
+df_list_05 = []
+for file in files05:
     df = pd.read_csv(file)
     # Convert string representations of lists to actual lists
     df["imputation"] = df["imputation"].apply(lambda x: np.array(eval(x)))
     df["ground_truth"] = df["ground_truth"].apply(lambda x: np.array(eval(x)))
-    df_list.append(df)
-df = pd.concat(df_list, ignore_index=True)
+    df_list_05.append(df)
+# df_list_09 = []
+# for file in files09:
+#     df = pd.read_csv(file)
+#     # Convert string representations of lists to actual lists
+#     df["imputation"] = df["imputation"].apply(lambda x: np.array(eval(x)))
+#     df["ground_truth"] = df["ground_truth"].apply(lambda x: np.array(eval(x)))
+#     df_list_09.append(df)
+
+# df_01 = pd.concat(df_list_01, ignore_index=True)
+df_05 = pd.concat(df_list_05, ignore_index=True)
+# df_09 = pd.concat(df_list_09, ignore_index=True)
 # each row in the dataframe is a ground truth and imputation pair for a given estimation method, fit method, and data type at row r and column c
 # groupby r, c and plot the histograms of the ground truth and imputation for each group
-df = (
-    df.groupby(["row", "col"])
+# df_01 = (
+#     df_01.groupby(["row", "col"])
+#     .apply(
+#         lambda x: {
+#             "imputations": {
+#                 (row["estimation_method"], row["fit_method"], row["data_type"]): row[
+#                     "imputation"
+#                 ]
+#                 for _, row in x.iterrows()
+#             },
+#             "ground_truth": x["ground_truth"].iloc[
+#                 0
+#             ],  # Take first ground truth since it should be same for all methods
+#         }
+#     )
+#     .reset_index()
+#     .rename(columns={0: "data"})
+# )
+df_05 = (
+    df_05.groupby(["row", "col"])
     .apply(
         lambda x: {
             "imputations": {
@@ -76,65 +118,154 @@ df = (
     .reset_index()
     .rename(columns={0: "data"})
 )
+# df_09 = (
+#     df_09.groupby(["row", "col"])
+#     .apply(
+#         lambda x: {
+#             "imputations": {
+#                 (row["estimation_method"], row["fit_method"], row["data_type"]): row[
+#                     "imputation"
+#                 ]
+#                 for _, row in x.iterrows()
+#             },
+#             "ground_truth": x["ground_truth"].iloc[
+#                 0
+#             ],  # Take first ground truth since it should be same for all methods
+#         }
+#     )
+#     .reset_index()
+#     .rename(columns={0: "data"})
+# )
 
 COLORS = {
     ("row-row", "lbo", "kernel_mmd"): "teal",
     ("col-col", "lbo", "kernel_mmd"): "blue",
+    ("row-row", "lbo", "wasserstein_samples"): "green",
+    ("col-col", "lbo", "wasserstein_samples"): "orange",
 }
 
-for i, row in df.head(20).iterrows():
-    fig, ax = plt.subplots(figsize=(5.5 / 2, 5.5 / 2))
-    # Determine common bins based on all data
-    all_data = [row["data"]["ground_truth"]]
-    for imputation in row["data"]["imputations"].values():  # type: ignore
-        all_data.append(imputation)
+# Determine common bins based on all data
 
-    # Calculate the min and max across all data to create common bins
-    bins = list(np.linspace(0, 1, 40))  # 11 points create 10 bins
 
+# Calculate the min and max across all data to create common bins
+bins = list(np.linspace(0, 1, 30))  # 11 points create 10 bins
+
+for i in range(0, 100):
+    # row_09 = df_09.iloc[i]
+    row_05 = df_05.iloc[i]
+    # row_01 = df_01.iloc[i]
+    fig, ax2 = plt.subplots(figsize=(3, 2.5))
+
+    # all_data = row_09["data"]["ground_truth"]
+    # for imputation in row_09["data"]["imputations"].values():  # type: ignore
+    #     all_data.append(imputation)
     # Plot imputation for each method
-    for (est_method, fit_method, data_type), imputation in row["data"][  # type: ignore
+    # for (est_method, fit_method, data_type), imputation in row_09["data"][  # type: ignore
+    #     "imputations"
+    # ].items():  # type: ignore
+    #     weights = np.ones_like(imputation) / len(imputation)
+    #     ax1.hist(
+    #         imputation,
+    #         bins=bins,
+    #         alpha=0.6,
+    #         label=f"{plotting_utils.METHOD_ALIASES_SINGLE_LINE.get(est_method, est_method)}"
+    #         f"\n({plotting_utils.DATA_TYPE_ALIASES.get(data_type, data_type)})",
+    #         weights=weights,
+    #         color=COLORS[(est_method, fit_method, data_type)],
+    #     )
+    # # Plot ground truth
+    # weights = np.ones_like(row_09["data"]["ground_truth"]) / len(row_09["data"]["ground_truth"])
+    # ax1.hist(
+    #     row_09["data"]["ground_truth"],
+    #     weights=weights,
+    #     bins=bins,
+    #     alpha=0.6,
+    #     label="Ground\nTruth",
+    #     edgecolor="black",
+    #     color="white",
+    #     linestyle="--",
+    # )
+    # ax1.set_xlabel("Score", fontsize=plotting_utils.LABEL_FONT_SIZE)
+    # ax1.set_ylabel("Density", fontsize=plotting_utils.LABEL_FONT_SIZE)
+    # ax1.set_xlim(0, 1)
+
+    # ax1.spines["top"].set_visible(False)
+    # ax1.spines["right"].set_visible(False)
+    # # ax.spines["bottom"].set_position(
+    # #     ("outward", plotting_utils.OUTWARD)
+    # # )  # Move x-axis outward
+    # ax1.spines["left"].set_position(
+    #     ("outward", plotting_utils.OUTWARD)
+    # )  # Move y-axis outward
+
+    # # Only add legend to the first subplot to avoid clutter
+    # ax1.legend(loc='upper right', fontsize=plotting_utils.LEGEND_FONT_SIZE)
+
+    # all_data = row_05["data"]["ground_truth"]
+    # for imputation in row_05["data"]["imputations"].values():  # type: ignore
+    #     all_data.append(imputation)
+    # Plot imputation for each method
+    weights = np.ones_like(row_05["data"]["ground_truth"]) / len(
+        row_05["data"]["ground_truth"]
+    )
+    ax2.hist(
+        row_05["data"]["ground_truth"],
+        bins=bins,
+        weights=weights,
+        alpha=0.6,
+        label="Ground\nTruth",
+        edgecolor="black",
+        linestyle="--",
+        color="white",
+    )
+    for (est_method, fit_method, data_type), imputation in row_05["data"][  # type: ignore
         "imputations"
     ].items():  # type: ignore
-        ax.hist(
+        if data_type == "wasserstein_samples":
+            # Convert to numpy array if it's not already
+            est_method_dt = "wasserstein_samples"
+        else:
+            est_method_dt = "kernel"
+        if est_method == "col-col":
+            est_method_lbl = "col"
+        else:
+            est_method_lbl = "row"
+
+        weights = np.ones_like(imputation) / len(imputation)
+        ax2.hist(
             imputation,
             bins=bins,
-            alpha=0.5,
-            label=f"{plotting_utils.METHOD_ALIASES_SINGLE_LINE.get(est_method, est_method)}"
-            f"\n({plotting_utils.DATA_TYPE_ALIASES.get(data_type, data_type)})",
-            edgecolor="black",
-            density=True,
+            weights=weights,
+            alpha=0.6,
+            label=f"{plotting_utils.METHOD_ALIASES_SINGLE_LINE.get(est_method_dt, est_method_dt)}"
+            f"\n({est_method_lbl})",
             color=COLORS[(est_method, fit_method, data_type)],
         )
     # Plot ground truth
-    ax.hist(
-        row["data"]["ground_truth"],
-        bins=bins,
-        alpha=0.5,
-        label="Ground Truth",
-        edgecolor="black",
-        density=True,
-        color="yellow",
-    )
-    ax.set_xlabel("Score", fontsize=plotting_utils.LABEL_FONT_SIZE)
-    ax.set_ylabel("Density", fontsize=plotting_utils.LABEL_FONT_SIZE)
-    ax.set_xlim(0, 1)
 
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    ax2.set_ylabel("Proportion", fontsize=plotting_utils.LABEL_FONT_SIZE)
+    ax2.set_xlabel("Score", fontsize=plotting_utils.LABEL_FONT_SIZE)
+    ax2.legend(loc="upper right", fontsize=plotting_utils.LEGEND_FONT_SIZE)
+
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
+    ax2.spines["left"].set_visible(False)
+    ax2.set_axisbelow(True)
+    ax2.grid(True, alpha=0.4)
     # ax.spines["bottom"].set_position(
     #     ("outward", plotting_utils.OUTWARD)
     # )  # Move x-axis outward
-    ax.spines["left"].set_position(
-        ("outward", plotting_utils.OUTWARD)
-    )  # Move y-axis outward
+    # ax2.spines["left"].set_position(
+    #     ("outward", plotting_utils.OUTWARD)
+    # )  # Move y-axis outward
 
     # Only add legend to the first subplot to avoid clutter
-    ax.legend()
+    ax2.legend(loc="upper left", fontsize=plotting_utils.LEGEND_FONT_SIZE)
 
     figures_path = os.path.join(
         figures_dir,
-        f"distributions-r{row.row}-c{row.col}-p{propensity}-tp{tuning_parameter}.pdf",
+        f"distributions-entry{i}-tp{tuning_parameter}.pdf",
     )
     logger.info(f"Saving figure to {figures_path}")
     plt.savefig(figures_path, dpi=300, bbox_inches="tight")
+    plt.close()

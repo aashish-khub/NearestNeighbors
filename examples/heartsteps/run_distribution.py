@@ -22,6 +22,7 @@ from hyperopt import Trials
 from nsquared.data_types import (
     DistributionKernelMMD,
     DistributionWassersteinSamples,
+    Scalar,
 )
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
@@ -38,17 +39,11 @@ parser.add_argument(
     "--data_type",
     "-dt",
     type=str,
-    default="kernel",
-    choices=["kernel", "wasserstein_samples"],
+    default="kernel_mmd",
+    choices=["kernel_mmd", "wasserstein_samples"],
     help="Data type to use",
 )
 args = parser.parse_args()
-if args.data_type == "kernel":
-    data_type = DistributionKernelMMD(kernel="exponential")
-elif args.data_type == "wasserstein_samples":
-    data_type = DistributionWassersteinSamples()
-else:
-    raise ValueError(f"Data type {args.data_type} not supported")
 output_dir = args.output_dir
 estimation_method = args.estimation_method
 fit_method = args.fit_method
@@ -61,29 +56,37 @@ logger = logging.getLogger(__name__)
 os.makedirs(output_dir, exist_ok=True)
 results_dir = os.path.join(output_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
-save_path = os.path.join(
-    results_dir, f"est_errors-{estimation_method}-{fit_method}-{data_type}.csv"
-)
-
-if os.path.exists(save_path) and not args.force:
-    logger.info(f"Results already exist at {save_path}. Use --force to overwrite.")
-    exit()
 
 rng = np.random.default_rng(seed=seed)
 
 # Load the heartsteps dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-hs_dataloader = NNData.create("heartsteps")
+hs_dataloader = NNData.create("heartsteps", freq="1min", num_measurements=60)
 data, mask = hs_dataloader.process_data_distribution()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
+
 elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
 logger.info("Using distribution data type")
-data_type_kernel = DistributionKernelMMD(kernel="exponential")
-data_type_wasserstein = DistributionWassersteinSamples()
+
+if args.data_type == "kernel":
+    data_type = DistributionKernelMMD(kernel="exponential")
+elif args.data_type == "wasserstein_samples":
+    data_type = DistributionWassersteinSamples(num_samples=data[0, 0].shape[0])
+else:
+    raise ValueError(f"Data type {args.data_type} not supported")
+
+save_path = os.path.join(
+    results_dir, f"est_errors-{estimation_method}-{fit_method}-{args.data_type}.csv"
+)
+
+if os.path.exists(save_path) and not args.force:
+    logger.info(f"Results already exist at {save_path}. Use --force to overwrite.")
+    exit()
+
 
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
@@ -127,16 +130,16 @@ mask_test[test_inds_rows, test_inds_cols] = 0
 if estimation_method == "row-row":
     logger.info("Using row-row estimation")
     imputer = NearestNeighborImputer(
-        estimation_method=RowRowEstimator(is_percentile=False), data_type=data_type
+        estimation_method=RowRowEstimator(is_percentile=True), data_type=data_type
     )
     logger.info("Using leave-block-out validation")
     fitter = LeaveBlockOutValidation(
-        block, distance_threshold_range=(0, 100), n_trials=100, data_type=data_type
+        block, distance_threshold_range=(0, 1), n_trials=100, data_type=data_type
     )
 elif estimation_method == "col-col":
     logger.info("Using col-col estimation")
     imputer = NearestNeighborImputer(
-        estimation_method=ColColEstimator(), data_type=data_type
+        estimation_method=ColColEstimator(is_percentile=True), data_type=data_type
     )
 
     logger.info("Using leave-block-out validation")
@@ -196,15 +199,18 @@ for row, col in tqdm(test_block, desc="Imputing missing values"):
 
 ground_truth = data[test_inds_rows, test_inds_cols]
 est_errors = []
+error_datatype = Scalar()
 for i in range(len(imputations)):
-    est_errors.append(imputer.data_type.distance(imputations[i], ground_truth[i]))
+    est_errors.append(
+        error_datatype.distance(np.nanmean(imputations[i]), np.nanmean(ground_truth[i]))
+    )
 # est_errors = np.abs(imputations - ground_truth)
 logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 save_imputations = np.array(imputations, dtype=object)
 ground_truth = np.array(ground_truth, dtype=object)
 # save imputations to pkl
 imputations_save_path = os.path.join(
-    results_dir, f"imputations-{estimation_method}-{fit_method}.npy"
+    results_dir, f"imputations-{estimation_method}-{fit_method}-{args.data_type}.npy"
 )
 logger.info(f"Saving imputations to {imputations_save_path}...")
 np.save(imputations_save_path, save_imputations)
@@ -217,7 +223,7 @@ np.save(ground_truth_save_path, ground_truth)
 
 df = pd.DataFrame(
     data={
-        "estimation_method": estimation_method,
+        "estimation_method": args.data_type,
         # "imputation": save_imputations,
         # "ground_truth": ground_truth,
         "data_type": args.data_type,

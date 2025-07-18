@@ -32,6 +32,7 @@ from ks import ks_distance
 parser = get_base_parser()
 parser.add_argument(
     "--data_type",
+    "-dt",
     type=str,
     default="kernel_mmd",
     choices=["kernel_mmd", "wasserstein_samples"],
@@ -70,16 +71,6 @@ if os.path.exists(save_path) and not args.force:
 
 rng = np.random.default_rng(seed=seed)
 
-match data_type:
-    case "kernel_mmd":
-        data_type = DistributionKernelMMD(
-            kernel="exponential", tuning_parameter=tuning_parameter
-        )
-    case "wasserstein_samples":
-        data_type = DistributionWassersteinSamples()
-    case _:
-        raise ValueError(f"Data type {data_type} not supported")
-
 dataloader = NNData.create(
     "prompteval",
     # NOTE: uncomment to run on a subset of models and tasks (for debugging)
@@ -88,6 +79,18 @@ dataloader = NNData.create(
     propensity=propensity,
     seed=seed,
 )
+
+match data_type:
+    case "kernel_mmd":
+        data_type = DistributionKernelMMD(
+            kernel="exponential", tuning_parameter=tuning_parameter
+        )
+    case "wasserstein_samples":
+        n = 100
+        data_type = DistributionWassersteinSamples(num_samples=n)
+    case _:
+        raise ValueError(f"Data type {data_type} not supported")
+
 data, mask = dataloader.process_data_distribution(data_type)
 
 holdout_inds = np.nonzero(mask == 1)
@@ -132,7 +135,7 @@ match estimation_method:
         raise ValueError(f"Estimation method {estimation_method} not supported")
 
 fit_method = LeaveBlockOutValidation(
-    block, distance_threshold_range=(0, 1.0), n_trials=10, data_type=data_type, rng=rng
+    block, distance_threshold_range=(0, 1.0), n_trials=50, data_type=data_type, rng=rng
 )
 imputer = NearestNeighborImputer(
     estimator,

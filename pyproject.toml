@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nsquared"
 requires-python = ">=3.10"
 description = "A comprehensive nearest neighbors library for matrix completion with scalar and distributional entries"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
     {name="Aashish Khubchandani", email="akk223@cornell.edu"},
     {name="Albert Gong", email="agong@cs.cornell.edu"},

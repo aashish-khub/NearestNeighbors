@@ -21,12 +21,13 @@ from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
-from nsquared.estimation_methods import AWNNEstimator, TSEstimator
+from nsquared.estimation_methods import AWNNEstimator, TSEstimator, AutoEstimator
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nsquared.datasets.dataloader_factory import NNData
 from nsquared.vanilla_nn import row_row, col_col
@@ -61,7 +62,7 @@ rng = np.random.default_rng(seed=seed)
 # Load the heartsteps dataset
 # NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-hs_dataloader = NNData.create("heartsteps", agg="std")
+hs_dataloader = NNData.create("heartsteps", agg="mean")
 data, mask = hs_dataloader.process_data_scalar()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
@@ -269,9 +270,25 @@ else:
             distance_threshold_range_col=(0, 1),
             n_trials=100,
             data_type=data_type,
+            allow_self_neighbor=True,
         )
         # for TSNN, self neighbor is necessary (for now)
         allow_self_neighbor = True
+    elif estimation_method == "auto":
+        logger.info("Using AutoNN estimation")
+        estimator = AutoEstimator(is_percentile=True)
+        imputer = NearestNeighborImputer(estimator, data_type)
+        logger.info("Using AutoNN fit method")
+        # Fit the imputer using leave-block-out validation
+        fitter = AutoDRTSLeaveBlockOutValidation(
+            block,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            alpha_range=(0, 1),
+            n_trials=200,
+            data_type=data_type,
+            allow_self_neighbor=args.allow_self_neighbor,
+        )
     else:
         raise ValueError(
             f"Estimation method {estimation_method} and fit method {fit_method} not supported"

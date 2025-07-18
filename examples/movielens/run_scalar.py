@@ -1,4 +1,5 @@
-"""Script to run NN imputers + USVT baseline on the PromptEval dataset
+
+"""Script to run NN imputers + USVT baseline on the MovieLens dataset
 using 20% of the observed indices as a test block.
 
 Example usage (from root of repo):
@@ -7,6 +8,7 @@ python run_scalar.py -od OUTPUT_DIR -em ESTIMATION_METHOD -fm FIT_METHOD
 ```
 """
 
+# %%
 # standard imports
 import numpy as np
 from tqdm import tqdm
@@ -17,21 +19,31 @@ import pandas as pd
 from hyperopt import Trials
 
 # import baseline methods
-from baselines import usvt
+from baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
-from nsquared.estimation_methods import AWNNEstimator, TSEstimator
+from nsquared.estimation_methods import (
+    ColColEstimator,
+    RowRowEstimator,
+    TSEstimator,
+    AWNNEstimator,
+    AutoEstimator,
+)
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
     DRLeaveBlockOutValidation,
     TSLeaveBlockOutValidation,
     LeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
 )
 from nsquared.datasets.dataloader_factory import NNData
 from nsquared.vanilla_nn import row_row, col_col
 from nsquared.dr_nn import dr_nn
+
 from nsquared.utils.experiments import get_base_parser, setup_logging
+
+# %%
 
 parser = get_base_parser()
 args = parser.parse_args()
@@ -57,16 +69,21 @@ if os.path.exists(save_path) and not args.force:
 
 rng = np.random.default_rng(seed=seed)
 
-# Load the PromptEval dataset
+# Load the movielens
+# NOTE: the raw and processed data is cached in .joblib_cache
 start_time = time()
-hs_dataloader = NNData.create(
-    "prompteval",
-    models=["meta_llama_llama_3_8b_instruct"],
-    tasks=["high_school_microeconomics"],
-    propensity=0.5,
-    rng=rng,
+sample_users = None  # 1000
+sample_movies = None  # 1000
+seed = 0
+ml_dataloader = NNData.create(
+    "movielens", sample_users=sample_users, sample_movies=sample_movies, seed=seed
 )
-data, mask = hs_dataloader.process_data_scalar()
+
+data, mask = ml_dataloader.process_data_scalar()
+data_sparsity = 1 - np.sum(mask) / mask.size
+data_shape = data.shape
+logger.info(f"Data shape: {data_shape}")
+logger.info(f"Data sparsity: {data_sparsity:.2%}")
 elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 
@@ -76,19 +93,22 @@ data_type = Scalar()
 holdout_inds = np.nonzero(mask == 1)
 inds_rows = holdout_inds[0]
 inds_cols = holdout_inds[1]
+
 range_inds = np.arange(len(inds_rows))
 
 # randomly shuffle indices
 rng.shuffle(range_inds)
 # 20% of the indices will be used for testing
-test_size = int(0.2 * len(range_inds))
+test_size = int(0.8 * len(range_inds))
 test_inds = range_inds[:test_size]
+test_inds = test_inds[:500]
 # 80% of the indices will be used for training
 train_inds = range_inds[test_size:]
 range_train_inds = np.arange(len(train_inds))
 rng.shuffle(range_train_inds)
 # 20% of the training indices will be used for cv holdout
-cv_size = int(0.2 * len(train_inds))
+# cv_size = int(0.01 * len(train_inds))
+cv_size = 100
 cv_inds = range_train_inds[:cv_size]
 # get the rows and columns of the train indices
 
@@ -99,11 +119,22 @@ test_inds_rows = list(inds_rows[test_inds])
 test_inds_cols = list(inds_cols[test_inds])
 
 block = list(zip(cv_inds_rows, cv_inds_cols))
+
+# # Convert dense data_array to sparse, skipping NaNs using mask
+valid_mask = (~np.isnan(data)) & (mask == 1)
+# rows, cols = np.where(valid_mask)
+# values = data[rows, cols]
+
+# data_sparse = coo_matrix((values, (rows, cols)), shape=data.shape).tocsc()
+
 test_block = list(zip(test_inds_rows, test_inds_cols))
 
 mask_test = mask.copy()
 mask_test[test_inds_rows, test_inds_cols] = 0
 
+# %%
+
+num_trials = 10
 if estimation_method == "usvt":
     logger.info("Using USVT estimation")
     # setup usvt imputation
@@ -116,6 +147,21 @@ if estimation_method == "usvt":
     usvt_imputed = usvt(usvt_data)
     elapsed_time = time() - start_time
     imputations = usvt_imputed[test_inds_rows, test_inds_cols]
+    # set the time to the average time per imputation
+    imputation_times = [elapsed_time / len(test_block)] * len(test_block)
+    fit_times = [0] * len(test_block)
+elif estimation_method == "softimpute":
+    logger.info("Using SoftImpute estimation")
+    # setup softimpute imputation
+    si_data = data.copy()
+    si_mask = mask.copy()
+    si_mask[test_inds_rows, test_inds_cols] = 0
+    si_data[si_mask != 1] = np.nan
+    # impute missing values simultaneously
+    start_time = time()
+    si_imputed = softimpute(si_data)
+    elapsed_time = time() - start_time
+    imputations = si_imputed[test_inds_rows, test_inds_cols]
     # set the time to the average time per imputation
     imputation_times = [elapsed_time / len(test_block)] * len(test_block)
     fit_times = [0] * len(test_block)
@@ -145,29 +191,45 @@ else:
             block,
             distance_threshold_range_row=(0, 1),
             distance_threshold_range_col=(0, 1),
-            n_trials=200,
+            n_trials=num_trials,
             data_type=data_type,
         )
     elif estimation_method == "row-row":
         logger.info("Using row-row estimation")
         imputer = row_row()
+        if not isinstance(imputer.estimation_method, RowRowEstimator):
+            raise ValueError(
+                f"Estimation method {imputer.estimation_method} not supported for row-row"
+            )
+        # imputer.estimation_method._precalculate_distances(
+        #     data, mask, np.array(cv_inds_rows)
+        # )
 
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
             distance_threshold_range=(0, 1),
-            n_trials=200,
+            n_trials=num_trials,
             data_type=data_type,
         )
     elif estimation_method == "col-col":
         logger.info("Using col-col estimation")
         imputer = col_col()
 
+        if not isinstance(imputer.estimation_method, ColColEstimator):
+            raise ValueError(
+                f"Estimation method {imputer.estimation_method} not supported for col-col"
+            )
+
+        # imputer.estimation_method.estimator._precalculate_distances(
+        #     np.swapaxes(data, 0, 1), np.swapaxes(mask, 0, 1), np.array(cv_inds_cols)
+        # )
+
         logger.info("Using leave-block-out validation")
         fitter = LeaveBlockOutValidation(
             block,
             distance_threshold_range=(0, 1),
-            n_trials=200,
+            n_trials=num_trials,
             data_type=data_type,
         )
     elif estimation_method == "ts":
@@ -181,8 +243,23 @@ else:
             block,
             distance_threshold_range_row=(0, 1),
             distance_threshold_range_col=(0, 1),
-            n_trials=200,
+            n_trials=num_trials,
             data_type=data_type,
+        )
+    elif estimation_method == "auto":
+        logger.info("Using AutoNN estimation")
+        estimator = AutoEstimator(is_percentile=True)
+        imputer = NearestNeighborImputer(estimator, data_type)
+        logger.info("Using AutoNN fit method")
+        # Fit the imputer using leave-block-out validation
+        fitter = AutoDRTSLeaveBlockOutValidation(
+            block,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            alpha_range=(0, 1),
+            n_trials=num_trials,
+            data_type=data_type,
+            allow_self_neighbor=args.allow_self_neighbor,
         )
     else:
         raise ValueError(
@@ -190,7 +267,7 @@ else:
         )
 
     start_time = time()
-    trials = fitter.fit(data, mask_test, imputer, ret_trials=True)
+    trials = fitter.fit(data, valid_mask, imputer, ret_trials=True)
     end_time = time()
     fit_times = [end_time - start_time] * len(test_block)
 

@@ -177,5 +177,6 @@ ax1.spines["right"].set_visible(False)
 ax1.spines["left"].set_visible(False)
 ax1.grid(True, alpha=0.4)
 plt.tight_layout()
-# Show the plot
+# Show the plot as pdf (better quality) and png (for markdown)
 plt.savefig(f"{output_dir}/sims_plot.pdf", bbox_inches="tight")
+plt.savefig(f"{output_dir}/sims_plot.png", bbox_inches="tight")

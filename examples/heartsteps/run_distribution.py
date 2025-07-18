@@ -39,8 +39,8 @@ parser.add_argument(
     "--data_type",
     "-dt",
     type=str,
-    default="kernel",
-    choices=["kernel", "wasserstein_samples"],
+    default="kernel_mmd",
+    choices=["kernel_mmd", "wasserstein_samples"],
     help="Data type to use",
 )
 args = parser.parse_args()
@@ -66,6 +66,7 @@ hs_dataloader = NNData.create("heartsteps", freq="1min", num_measurements=60)
 data, mask = hs_dataloader.process_data_distribution()
 data = data[:, :200]  # only use the first 200 timesteps
 mask = mask[:, :200]
+
 elapsed_time = time() - start_time
 logger.info(f"Time to load and process data: {elapsed_time:.2f} seconds")
 

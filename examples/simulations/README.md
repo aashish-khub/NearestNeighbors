@@ -1,5 +1,12 @@
-# Replicating experiments
-![High SNR Figure](example_plots/sims_plot_highsnr.pdf)
+# Replicating simulations experiments
+<div style="text-align: center;">
+  <img src="example_plots/sims_plot_highsnr.png" width="350">
+  
+  Figure 1: AutoNN recovers DRNN performance with High SNR
+</div>
+
+
+
 
 To replicate Figure 1, run the following commands while in the `examples/simulations` directory.
 

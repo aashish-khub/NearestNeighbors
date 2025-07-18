@@ -11,7 +11,7 @@ We run our experiments with shell scripts, which requires additional setup for W
 3. Navigate to project bench directory
 
 ### For Mac / Linux Users
-No additional setup should be necessary. 
+No additional setup should be necessary.
 
 ### Experiments:
 To replicate the experimental results in [our paper](https://arxiv.org/pdf/2506.04166), run `bench/experiments.sh` as follows:
@@ -20,11 +20,11 @@ To replicate the experimental results in [our paper](https://arxiv.org/pdf/2506.
 # from the bench directory
 ./experiments.sh -o OUTPUT_DIR -l LOG_LEVEL -e EXPERIMENT_NAME
 ```
-If `EXPERIMENT_NAME` is `all` (default), experiments on all four datasets (heartsteps, movielens, prompteval, and prop99) will be run and stored in `OUTPUT_DIR`. You can also run the experiments for a specific dataset setting `EXPERIMENT_NAME` to `heartsteps`, `movielens`, `prompteval`, and `prop99`. 
+If `EXPERIMENT_NAME` is `all` (default), experiments on all four datasets (heartsteps, movielens, prompteval, and prop99) will be run and stored in `OUTPUT_DIR`. You can also run the experiments for a specific dataset setting `EXPERIMENT_NAME` to `heartsteps`, `movielens`, `prompteval`, and `prop99`.
 
-The experiments for `movielens` are very memory-intensive due to the size of the dataset and could terminate unexpectedly. 
+The experiments for `movielens` are very memory-intensive due to the size of the dataset and could terminate unexpectedly.
 
-For plotting utilities, see the `examples` directory for files with names prefixed by `plot`.  
+For plotting utilities, see the `examples` directory for files with names prefixed by `plot`.
 
 
 ## Adding and testing new methods
@@ -32,8 +32,8 @@ For plotting utilities, see the `examples` directory for files with names prefix
 ### Nearest neighbor variants:
 To add a new nearest neighbor variant:
 
-1. Define an `EstimationMethod` in `nsquared/estimation_methods.py`. 
-   
+1. Define an `EstimationMethod` in `nsquared/estimation_methods.py`.
+
    ```python
    class MyNewEstimator(EstimationMethod):
     """Estimate things"""
@@ -54,13 +54,13 @@ To add a new nearest neighbor variant:
         ) -> npt.NDArray:
         """
         Impute the missing value at
-        the given row and column using 
+        the given row and column using
         XYZ method
         """
         ...
    ```
 
-2. Define a `FitMethod` (if needed). 
+2. Define a `FitMethod` (if needed).
     ```python
     class MyNewFitMethod(FitMethod):
         def __init__(
@@ -86,24 +86,24 @@ To add a new nearest neighbor variant:
 
     ```
 
-3. To ensure compatability with the experiments and plotting functions, add an alias for your method in [`nsquared/utils/experiments.py`](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/src/nsquared/utils/experiments.py#L19) under the parser argument for `--estimation_method` and fill out [`nsquared/utils/plotting_utils.py`](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/src/nsquared/utils/plotting_utils.py#L19) with your desired plot settings. 
+3. To ensure compatability with the experiments and plotting functions, add an alias for your method in [`nsquared/utils/experiments.py`](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/src/nsquared/utils/experiments.py#L19) under the parser argument for `--estimation_method` and fill out [`nsquared/utils/plotting_utils.py`](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/src/nsquared/utils/plotting_utils.py#L19) with your desired plot settings.
 
-4. To test on a given dataset (for example: `heartsteps`), navigate to `examples/heartsteps/run_scalar.py` and add your method following the existing template. In general, all that is required is adding a block to [this conditional structure](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/examples/heartsteps/run_scalar.py#L157), but your method is not required to use the exact format of the `run_scalar.py` script. For distributional methods, do the same, but in `run_distribution.py`. 
-   
-5. Adjust the corresponding `slurm_scripts/*.sh` files in the `examples` directory to add your new methods alias under `METHODS`. 
+4. To test on a given dataset (for example: `heartsteps`), navigate to `examples/heartsteps/run_scalar.py` and add your method following the existing template. In general, all that is required is adding a block to [this conditional structure](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/examples/heartsteps/run_scalar.py#L157), but your method is not required to use the exact format of the `run_scalar.py` script. For distributional methods, do the same, but in `run_distribution.py`.
+
+5. Adjust the corresponding `slurm_scripts/*.sh` files in the `examples` directory to add your new methods alias under `METHODS`.
 
 ### Non-nearest neigbor methods
 If you wish to test methods on the benchmark that do not follow the $N^2$ framework, there are two options:
 
 #### Option 1:
-Use downloaded data hosted [here](https://github.com/calebchin/nsquared_bench_data). 
+Use downloaded data hosted [here](https://github.com/calebchin/nsquared_bench_data).
 
-This contains the masked (missingness included) matrix used in our experiments, the corresponding unmasked (no missingness) matrix, and the masking matrix for each dataset. 
+This contains the masked (missingness included) matrix used in our experiments, the corresponding unmasked (no missingness) matrix, and the masking matrix for each dataset.
 
 #### Option 2:
-Use the dataloader in `nsquared.datasets`. 
+Use the dataloader in `nsquared.datasets`.
 
-For examples on how the dataloader works, check out the use of the loader [here](https://github.com/aashish-khub/NearestNeighbors/blob/main/examples/heartsteps/run_scalar.py) or [here](https://github.com/aashish-khub/NearestNeighbors/blob/main/examples/prop99/run_scalar.py). 
+For examples on how the dataloader works, check out the use of the loader [here](https://github.com/aashish-khub/NearestNeighbors/blob/main/examples/heartsteps/run_scalar.py) or [here](https://github.com/aashish-khub/NearestNeighbors/blob/main/examples/prop99/run_scalar.py).
 
 
 ## Adding new datasets
@@ -147,8 +147,8 @@ To add a new dataset:
         def process_data_scalar(self, agg: str = "mean") -> tuple[np.ndarray, np.ndarray]:
             """
             Process new dataset in the scalar setting (# of entries is 1)
-            """      
-            ...      
+            """
+            ...
 
         def process_data_distribution(self, data_type: DataType | None = None) -> tuple[np.ndarray, np.ndarray]:
             """
@@ -166,4 +166,4 @@ To add a new dataset:
    ```python
    from .loader import MyNewDatasetLoader  # noqa: F401
    ```
-4. To run the existing methods on the dataset, follow the template provided in any of the example `run_scalar.py` or `run_distribution.py` files. It is possible that all you will need to change is the data loading step (e.g. `my_new_dataloader = NNData.create("MyNewDataset")`). 
+4. To run the existing methods on the dataset, follow the template provided in any of the example `run_scalar.py` or `run_distribution.py` files. It is possible that all you will need to change is the data loading step (e.g. `my_new_dataloader = NNData.create("MyNewDataset")`).

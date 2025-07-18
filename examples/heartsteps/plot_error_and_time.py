@@ -45,7 +45,18 @@ df_grouped = (
 )
 # rearrange the order of the estimation methods by
 # "usvt", "row-row", "col-col", "dr", "ts", "star"
-ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "auto", "star", "kernel", "wasserstein_samples"]
+ORDER = [
+    "usvt",
+    "softimpute",
+    "col-col",
+    "row-row",
+    "dr",
+    "ts",
+    "auto",
+    "star",
+    "kernel",
+    "wasserstein_samples",
+]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
 )
@@ -84,7 +95,7 @@ for col_name, alias in [
     )
     ax.tick_params(axis="x", length=0)  # Set tick length to 0
     ax.set_ylabel(alias, fontsize=plotting_utils.LABEL_FONT_SIZE)
-    #ax.set_xlabel("Estimation methods",color="white", fontsize=plotting_utils.LABEL_FONT_SIZE)
+    # ax.set_xlabel("Estimation methods",color="white", fontsize=plotting_utils.LABEL_FONT_SIZE)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

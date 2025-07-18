@@ -62,7 +62,7 @@ import nsquared as nsq
 > If using VSCode, make sure to set the interpreter to the .venv environment using `Cmd + Shift + P` -> `Python: Select Interpreter`.
 
 ## $N^2$ Bench and New Methods/Datasets
-To replicate the experiments in [our paper](https://arxiv.org/abs/2506.04166) and test out new methods or datasets, check out the `bench` directory. For direct access to the data used in the $N^2$ bench, we host the data for download on [this repo](https://github.com/calebchin/nsquared_bench_data).  
+To replicate the experiments in [our paper](https://arxiv.org/abs/2506.04166) and test out new methods or datasets, check out the `bench` directory. For direct access to the data used in the $N^2$ bench, we host the data for download on [this repo](https://github.com/calebchin/nsquared_bench_data).
 
 ## Submitting Changes
 ### Linting

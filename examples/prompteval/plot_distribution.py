@@ -45,7 +45,7 @@ figures_dir = os.path.join(output_dir, "figures")
 os.makedirs(figures_dir, exist_ok=True)
 
 results_dir = os.path.join(output_dir, "results")
-#print(os.path.join(results_dir, f"est_errors-*-p{0.3}-tp{tuning_parameter}.csv"))
+# print(os.path.join(results_dir, f"est_errors-*-p{0.3}-tp{tuning_parameter}.csv"))
 # files01 = glob(
 #     os.path.join(results_dir, f"est_errors-*-p{0.3}-tp{tuning_parameter}.csv")
 # )
@@ -151,9 +151,9 @@ COLORS = {
 bins = list(np.linspace(0, 1, 30))  # 11 points create 10 bins
 
 for i in range(0, 100):
-    #row_09 = df_09.iloc[i]
+    # row_09 = df_09.iloc[i]
     row_05 = df_05.iloc[i]
-    #row_01 = df_01.iloc[i]
+    # row_01 = df_01.iloc[i]
     fig, ax2 = plt.subplots(figsize=(3, 2.5))
 
     # all_data = row_09["data"]["ground_truth"]
@@ -163,7 +163,7 @@ for i in range(0, 100):
     # for (est_method, fit_method, data_type), imputation in row_09["data"][  # type: ignore
     #     "imputations"
     # ].items():  # type: ignore
-    #     weights = np.ones_like(imputation) / len(imputation)  
+    #     weights = np.ones_like(imputation) / len(imputation)
     #     ax1.hist(
     #         imputation,
     #         bins=bins,
@@ -205,21 +205,22 @@ for i in range(0, 100):
     # for imputation in row_05["data"]["imputations"].values():  # type: ignore
     #     all_data.append(imputation)
     # Plot imputation for each method
-    weights = np.ones_like(row_05["data"]["ground_truth"]) / len(row_05["data"]["ground_truth"])  
+    weights = np.ones_like(row_05["data"]["ground_truth"]) / len(
+        row_05["data"]["ground_truth"]
+    )
     ax2.hist(
-            row_05["data"]["ground_truth"],
-            bins=bins,
-            weights=weights,
-            alpha=0.6,
-            label="Ground\nTruth",
-            edgecolor="black",
-            linestyle="--",
-            color="white",
-        )
+        row_05["data"]["ground_truth"],
+        bins=bins,
+        weights=weights,
+        alpha=0.6,
+        label="Ground\nTruth",
+        edgecolor="black",
+        linestyle="--",
+        color="white",
+    )
     for (est_method, fit_method, data_type), imputation in row_05["data"][  # type: ignore
         "imputations"
     ].items():  # type: ignore
-        
         if data_type == "wasserstein_samples":
             # Convert to numpy array if it's not already
             est_method_dt = "wasserstein_samples"
@@ -227,10 +228,10 @@ for i in range(0, 100):
             est_method_dt = "kernel"
         if est_method == "col-col":
             est_method_lbl = "col"
-        elif est_method == "row-row":
+        else:
             est_method_lbl = "row"
-            
-        weights = np.ones_like(imputation) / len(imputation)  
+
+        weights = np.ones_like(imputation) / len(imputation)
         ax2.hist(
             imputation,
             bins=bins,
@@ -241,7 +242,7 @@ for i in range(0, 100):
             color=COLORS[(est_method, fit_method, data_type)],
         )
     # Plot ground truth
-    
+
     ax2.set_ylabel("Proportion", fontsize=plotting_utils.LABEL_FONT_SIZE)
     ax2.set_xlabel("Score", fontsize=plotting_utils.LABEL_FONT_SIZE)
     ax2.legend(loc="upper right", fontsize=plotting_utils.LEGEND_FONT_SIZE)
@@ -259,7 +260,7 @@ for i in range(0, 100):
     # )  # Move y-axis outward
 
     # Only add legend to the first subplot to avoid clutter
-    ax.legend(loc="upper left", fontsize=plotting_utils.LEGEND_FONT_SIZE)
+    ax2.legend(loc="upper left", fontsize=plotting_utils.LEGEND_FONT_SIZE)
 
     figures_path = os.path.join(
         figures_dir,

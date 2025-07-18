@@ -39,7 +39,7 @@ fi
 
 for exper in ${EXPERIMENTS[@]};
 do
-    if [ "$exper" = "heartsteps" ] 
+    if [ "$exper" = "heartsteps" ]
     then
         HEARTSTEPS_DIR="../../bench/${OUTPUT_DIR}/heartsteps"
         echo "Running heartsteps experiment"
@@ -48,14 +48,14 @@ do
         python run_distribution.py -od $HEARTSTEPS_DIR -dt kernel_mmd --force --log_level $LOG_LEVEL -em col-col
         python run_distribution.py -od $HEARTSTEPS_DIR -dt wasserstein_samples --force --log_level $LOG_LEVEL -em col-col
         cd ../../bench
-    elif [ "$exper" = "movielens" ] 
+    elif [ "$exper" = "movielens" ]
     then
         MOVIELENS_DIR="../../bench/${OUTPUT_DIR}/movielens"
         echo "Running movielens experiment"
         cd ../examples/movielens
         ./slurm_scripts/run_accuracy.sh $MOVIELENS_DIR $LOG_LEVEL
         cd ../../bench
-    elif [ "$exper" = "prompteval" ] 
+    elif [ "$exper" = "prompteval" ]
     then
         PROMPTEVAL_DIR="../../bench/${OUTPUT_DIR}/prompteval"
         echo "Running prompteval experiment"
@@ -64,7 +64,7 @@ do
         python run_distribution.py -od $PROMPTEVAL_DIR -dt kernel_mmd --force --log_level $LOG_LEVEL -em col-col
         python run_distribution.py -od $PROMPTEVAL_DIR -dt wasserstein_samples --force --log_level $LOG_LEVEL -em col-col
         cd ../../bench
-    elif [ "$exper" = "prop99" ] 
+    elif [ "$exper" = "prop99" ]
     then
         PROP99_DIR="../../bench/${OUTPUT_DIR}/prop99"
         cd ../examples/prop99

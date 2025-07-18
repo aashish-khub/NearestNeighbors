@@ -22,7 +22,7 @@ from hyperopt import Trials
 from nsquared.data_types import (
     DistributionKernelMMD,
     DistributionWassersteinSamples,
-    Scalar
+    Scalar,
 )
 from nsquared import NearestNeighborImputer
 from nsquared.fit_methods import (
@@ -201,7 +201,9 @@ ground_truth = data[test_inds_rows, test_inds_cols]
 est_errors = []
 error_datatype = Scalar()
 for i in range(len(imputations)):
-    est_errors.append(error_datatype.distance(np.nanmean(imputations[i]), np.nanmean(ground_truth[i])))
+    est_errors.append(
+        error_datatype.distance(np.nanmean(imputations[i]), np.nanmean(ground_truth[i]))
+    )
 # est_errors = np.abs(imputations - ground_truth)
 logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 save_imputations = np.array(imputations, dtype=object)

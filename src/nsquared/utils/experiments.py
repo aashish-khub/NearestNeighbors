@@ -26,6 +26,7 @@ def get_base_parser() -> ArgumentParser:
             "auto",
             "aw",
             "usvt",
+            "sklearn-knn",
         ],
         help="Estimation method to use",
     )

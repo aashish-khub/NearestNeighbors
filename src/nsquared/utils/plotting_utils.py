@@ -74,6 +74,7 @@ COLORS = {
     "softimpute": "lightgrey",
     "aw": "grey",
     "sc": "blue",
+    "sklearn-knn": "grey",
 }
 
 DATA_TYPE_ALIASES = {

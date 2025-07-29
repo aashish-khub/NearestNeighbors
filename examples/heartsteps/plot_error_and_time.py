@@ -53,9 +53,10 @@ ORDER = [
     "dr",
     "ts",
     "auto",
-    "star",
+    "aw",
     "kernel",
     "wasserstein_samples",
+    "sklearn-knn",
 ]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))

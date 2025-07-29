@@ -18,6 +18,7 @@ from hyperopt import Trials
 
 # import baseline methods
 from baselines import usvt, softimpute
+from sklearn.impute import KNNImputer
 
 # import nearest neighbor methods
 from nsquared.data_types import Scalar
@@ -35,6 +36,7 @@ from nsquared.dr_nn import dr_nn
 from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
+parser.add_argument("--n_neighbors", type=int, default=5)
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
@@ -206,6 +208,22 @@ elif estimation_method == "softimpute":
         # set the time to the average time per imputation
         imputation_times.append(elapsed_time / len(test_block))
     fit_times = [0] * len(test_block)
+elif estimation_method == "sklearn-knn":
+    logger.info("Using KNNImputer from sklearn")
+    # Reference: https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_0_22_0.html#knn-based-imputation
+    estimator = KNNImputer(n_neighbors=args.n_neighbors, keep_empty_features=True)
+    masked_data = data.copy()
+    masked_data[(1 - mask_test).astype(bool)] = np.nan
+    # import pdb; pdb.set_trace()
+    new_data = estimator.fit_transform(masked_data)
+    imputations = []
+    imputation_times = []
+    for row, col in block:
+        imputed_value = new_data[row, col]
+        imputations.append(imputed_value)
+    imputations = np.array(imputations)
+    fit_times = [0] * len(test_block)
+    imputation_times = [0] * len(test_block)
 elif estimation_method == "aw":
     logger.info("Using AWNN estimation")
     estimator = AWNNEstimator()

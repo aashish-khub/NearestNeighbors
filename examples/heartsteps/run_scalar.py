@@ -37,6 +37,7 @@ from nsquared.utils.experiments import get_base_parser, setup_logging
 
 parser = get_base_parser()
 parser.add_argument("--n_neighbors", type=int, default=5)
+parser.add_argument("--use_val_split", action="store_true")
 args = parser.parse_args()
 output_dir = args.output_dir
 estimation_method = args.estimation_method
@@ -213,17 +214,29 @@ elif estimation_method == "sklearn-knn":
     # Reference: https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_0_22_0.html#knn-based-imputation
     estimator = KNNImputer(n_neighbors=args.n_neighbors, keep_empty_features=True)
     masked_data = data.copy()
-    masked_data[(1 - mask_test).astype(bool)] = np.nan
-    # import pdb; pdb.set_trace()
+    if args.use_val_split:
+        masked_data[cv_inds_rows, cv_inds_cols] = np.nan
+    else:
+        masked_data[(1 - mask_test).astype(bool)] = np.nan
     new_data = estimator.fit_transform(masked_data)
     imputations = []
     imputation_times = []
-    for row, col in block:
-        imputed_value = new_data[row, col]
-        imputations.append(imputed_value)
-    imputations = np.array(imputations)
-    fit_times = [0] * len(test_block)
-    imputation_times = [0] * len(test_block)
+    if args.use_val_split:
+        # For fitting, use the block
+        for row, col in block:
+            imputed_value = new_data[row, col]
+            imputations.append(imputed_value)
+        imputations = np.array(imputations)
+        fit_times = [0] * len(block)
+        imputation_times = [0] * len(block)
+    else:
+        # For testing, use the test block
+        for row, col in test_block:
+            imputed_value = new_data[row, col]
+            imputations.append(imputed_value)
+        imputations = np.array(imputations)
+        fit_times = [0] * len(test_block)
+        imputation_times = [0] * len(test_block)
 elif estimation_method == "aw":
     logger.info("Using AWNN estimation")
     estimator = AWNNEstimator()
@@ -356,7 +369,10 @@ else:
         imputations.append(imputed_value)
     imputations = np.array(imputations)
 
-ground_truth = data[test_inds_rows, test_inds_cols]
+if args.use_val_split:
+    ground_truth = data[cv_inds_rows, cv_inds_cols]
+else:
+    ground_truth = data[test_inds_rows, test_inds_cols]
 est_errors = np.abs(imputations - ground_truth)
 logger.info(f"Mean absolute error: {np.mean(est_errors)}")
 
@@ -365,8 +381,10 @@ df = pd.DataFrame(
         "estimation_method": estimation_method,
         "fit_method": fit_method,
         "est_errors": est_errors,
-        "row": test_inds_rows,
-        "col": test_inds_cols,
+        # "row": test_inds_rows,
+        # "col": test_inds_cols,
+        "row": cv_inds_rows if args.use_val_split else test_inds_rows,
+        "col": cv_inds_cols if args.use_val_split else test_inds_cols,
         "time_impute": imputation_times,
         "time_fit": fit_times,
     }

@@ -33,6 +33,7 @@ import os
 from time import time
 import pandas as pd
 from hyperopt import Trials
+from sklearn.impute import KNNImputer
 # import matplotlib.pyplot as plt
 
 # %%
@@ -186,6 +187,47 @@ elif estimation_method == "softimpute":
 
     # Compute the synthetic control
     control_list = si_imputed[treatment_row]
+
+elif estimation_method == "sklearn-knn":
+    logger.info("Using KNNImputer from sklearn")
+    # Reference: https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_0_22_0.html#knn-based-imputation
+    # Fitting
+    errors = []
+    for n_neighbors in range(1, 10):
+        estimator = KNNImputer(n_neighbors=n_neighbors, keep_empty_features=True)
+        masked_data = data.copy()
+        masked_data[cv_inds_rows, cv_inds_cols] = np.nan
+        new_data = estimator.fit_transform(masked_data)
+        imputations = []
+        imputation_times = []
+        # For fitting, use the block
+        for row, col in block:
+            imputed_value = new_data[row, col]
+            imputations.append(imputed_value)
+        imputations = np.array(imputations)
+        # compute mean absolute error
+        est_errors = np.abs(imputations - data[cv_inds_rows, cv_inds_cols])
+        mean_error = np.mean(est_errors)
+        errors.append(mean_error)
+    # find the value of n_neighbors that minimizes the error
+    best_n_neighbors = int(np.argmin(errors) + 1)
+    logger.info(f"Best n_neighbors: {best_n_neighbors}")
+    # Testing
+    estimator = KNNImputer(n_neighbors=best_n_neighbors, keep_empty_features=True)
+    masked_data = data.copy()
+    masked_data[(1 - mask_test).astype(bool)] = np.nan
+    new_data = estimator.fit_transform(masked_data)
+    imputations = []
+    imputation_times = []
+    # For testing, use the test block
+    for row, col in test_block:
+        imputed_value = new_data[row, col]
+        imputations.append(imputed_value)
+    imputations = np.array(imputations)
+    fit_times = [0] * len(test_block)
+    imputation_times = [0] * len(test_block)
+    # Compute synthetic control
+    control_list = new_data[treatment_row]
 
 elif estimation_method == "aw":
     logger.info("Using AWNN estimation")

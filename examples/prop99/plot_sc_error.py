@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from glob import glob
 import os
 import logging
+import numpy as np
+from tabulate import tabulate
 
 from nsquared.utils.experiments import get_base_parser
 from nsquared.utils import plotting_utils
@@ -49,9 +51,49 @@ df_grouped = (
 )
 
 # rearrange the order of the estimation methods
-ORDER = ["usvt", "softimpute", "col-col", "row-row", "dr", "ts", "auto", "aw", "sc"]
+ORDER = [
+    "usvt",
+    "softimpute",
+    "sklearn-knn",
+    "col-col",
+    "row-row",
+    "dr",
+    "ts",
+    "auto",
+    "aw",
+    "sc",
+]
 df_grouped = df_grouped.sort_values(
     by="estimation_method", key=lambda x: x.map(lambda y: ORDER.index(y))
+)
+# Compute mean, 25%, 50%, 75% quantiles for each method
+df_grouped["mean_error"] = df_grouped["est_errors"].apply(
+    lambda x: np.mean(x) if len(x) > 0 else np.nan
+)
+df_grouped["median_error"] = df_grouped["est_errors"].apply(
+    lambda x: np.quantile(x, 0.5) if len(x) > 0 else np.nan
+)
+df_grouped["25%_error"] = df_grouped["est_errors"].apply(
+    lambda x: np.quantile(x, 0.25) if len(x) > 0 else np.nan
+)
+df_grouped["75%_error"] = df_grouped["est_errors"].apply(
+    lambda x: np.quantile(x, 0.75) if len(x) > 0 else np.nan
+)
+print(
+    tabulate(
+        df_grouped[
+            [
+                "estimation_method",
+                "mean_error",
+                "median_error",
+                "25%_error",
+                "75%_error",
+            ]
+        ],
+        headers="keys",
+        tablefmt="github",
+        showindex=False,
+    )
 )
 
 for col_name, alias in [

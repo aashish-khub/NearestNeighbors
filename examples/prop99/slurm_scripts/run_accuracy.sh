@@ -14,6 +14,7 @@ METHODS=(
     "aw"
     "softimpute"
     "auto"
+    "sklearn-knn"
 )
 CONTROL_STATES=(
     "TX" "WI" "MT" "RI" "KS" "ME" "UT" "VA" "IN" "GA"

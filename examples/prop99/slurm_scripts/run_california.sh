@@ -14,6 +14,7 @@ METHODS=(
     "aw"
     "softimpute"
     "auto"
+    "sklearn-knn"
 )
 for em in ${METHODS[@]};
 do

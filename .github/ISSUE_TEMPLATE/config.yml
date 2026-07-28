@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/aashish-khub/NearestNeighbors/blob/main/CONTRIBUTING.md
+    about: How to set up a dev environment, run the tests, and open a pull request.
+  - name: Code of Conduct
+    url: https://github.com/aashish-khub/NearestNeighbors/blob/main/CODE_OF_CONDUCT.md
+    about: The standards we expect of everyone participating in this project.

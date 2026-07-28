@@ -1,0 +1,24 @@
+name: Question / support
+description: Ask how to use the package
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking, please check the [documentation](../../tree/main/docs) and the
+        [examples](../../tree/main/examples) directory, and search existing issues.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What are you trying to do, and where are you stuck?
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Code you have already written, if any.
+      render: python

@@ -1,20 +1,103 @@
-# TODO these should be maintained as this __init__.py file is used to expose the classes and functions when the package itself is imported. Task owner: Aashish
-# For example: `from nsquared import NearestNeighborImputer`
-# is easier to read than from `nsquared.nnimputer import NearestNeighborImputer`
+"""N^2: nearest neighbor methods for scalar and distributional matrix completion.
 
-# TODO @ALL: please uncomment the following lines when the code is ready in each file
+The public API is re-exported here so that the documented entry points can be
+imported directly from the top-level package, e.g.::
 
-from .dr_nn import *  # noqa: F403
+    from nsquared import row_row, ts_nn, Scalar, LeaveBlockOutValidation
 
-# from .nadaraya_watson import * # noqa: F403
-from .nnimputer import *  # noqa: F403
+See https://github.com/aashish-khub/NearestNeighbors/blob/main/docs/index.md for
+the full documentation.
+"""
 
-# from .syn_nn import * # noqa: F403
-# from .ts_nn import * # noqa: F403
-from .vanilla_nn import *  # noqa: F403
-from .utils import *  # noqa: F403
-from .simulations import *  # noqa: F403
-# ...add new files here
+# Core abstractions and the composite imputer.
+from .nnimputer import DataType, EstimationMethod, FitMethod, NearestNeighborImputer
 
-from .datasets.dataloader_factory import *  # noqa: F403
-from .datasets.dataloader_base import *  # noqa: F403
+# Entry geometries (Distance / Average modules).
+from .data_types import (
+    Scalar,
+    DistributionKernelMMD,
+    DistributionWassersteinSamples,
+    DistributionWassersteinQuantile,
+)
+
+# Estimators.
+from .estimation_methods import (
+    RowRowEstimator,
+    ColColEstimator,
+    TSEstimator,
+    DREstimator,
+    AWNNEstimator,
+    AutoEstimator,
+)
+
+# NOTE: nsquared.nadaraya_watson.NadarayaWatsonEstimator is deliberately not exported.
+# It does not implement the abstract EstimationMethod._calculate_distances hook, so it
+# cannot currently be instantiated. See https://github.com/aashish-khub/NearestNeighbors/issues
+
+# Convenience constructors for the common scalar imputers.
+from .vanilla_nn import row_row, col_col
+from .ts_nn import ts_nn
+from .dr_nn import dr_nn
+from .aw_nn import aw_nn
+
+# Cross-validation / hyperparameter fitting.
+from .fit_methods import (
+    evaluate_imputation,
+    LeaveBlockOutValidation,
+    DualThresholdLeaveBlockOutValidation,
+    DRLeaveBlockOutValidation,
+    TSLeaveBlockOutValidation,
+    AutoDRTSLeaveBlockOutValidation,
+)
+
+# Benchmark data loaders.
+from .datasets.dataloader_factory import (
+    NNData,
+    get_available_datasets,
+    register_dataset,
+)
+from .datasets.dataloader_base import NNDataLoader
+
+from . import utils  # noqa: F401
+from . import simulations  # noqa: F401
+
+__all__ = [
+    # Core abstractions
+    "DataType",
+    "EstimationMethod",
+    "FitMethod",
+    "NearestNeighborImputer",
+    # Data types
+    "Scalar",
+    "DistributionKernelMMD",
+    "DistributionWassersteinSamples",
+    "DistributionWassersteinQuantile",
+    # Estimation methods
+    "RowRowEstimator",
+    "ColColEstimator",
+    "TSEstimator",
+    "DREstimator",
+    "AWNNEstimator",
+    "AutoEstimator",
+    # Constructors
+    "row_row",
+    "col_col",
+    "ts_nn",
+    "dr_nn",
+    "aw_nn",
+    # Fit methods
+    "evaluate_imputation",
+    "LeaveBlockOutValidation",
+    "DualThresholdLeaveBlockOutValidation",
+    "DRLeaveBlockOutValidation",
+    "TSLeaveBlockOutValidation",
+    "AutoDRTSLeaveBlockOutValidation",
+    # Datasets
+    "NNData",
+    "NNDataLoader",
+    "get_available_datasets",
+    "register_dataset",
+    # Subpackages
+    "utils",
+    "simulations",
+]

@@ -177,4 +177,4 @@ out*/
 # *.pdf
 # *.ipynb
 # *.zip
-# *.npy
+# *.npy/.venv/

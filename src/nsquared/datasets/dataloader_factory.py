@@ -1,3 +1,4 @@
+import pkgutil
 from typing import Dict, Type
 from importlib import import_module
 from .dataloader_base import NNDataLoader
@@ -20,9 +21,30 @@ def register_dataset(name: str, params: Dict[str, Tuple[Type, Any, str]] = {}) -
     return decorator
 
 
+def _discover_datasets() -> None:
+    """Import every dataset subpackage so its loader registers itself.
+
+    Loaders register via the ``@register_dataset`` decorator, which only runs
+    once the module is imported. Without this discovery step
+    ``get_available_datasets`` would report only the loaders that happen to
+    have been imported already. Subpackages whose optional dependencies are
+    missing are skipped rather than raising.
+    """
+    package = import_module("nsquared.datasets")
+    for module_info in pkgutil.iter_modules(package.__path__):
+        if not module_info.ispkg:
+            continue
+        try:
+            import_module(f"nsquared.datasets.{module_info.name}")
+        except ImportError:
+            # Optional dependency for this dataset is not installed; skip it.
+            continue
+
+
 def get_available_datasets() -> list[str]:
-    """Returns the available dataset loaders."""
-    return list(_DATASETS.keys())
+    """Returns the names of all registered dataset loaders."""
+    _discover_datasets()
+    return sorted(_DATASETS.keys())
 
 
 class NNData:

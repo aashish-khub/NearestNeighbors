@@ -82,8 +82,14 @@ JOSS requires a tagged release archived with a DOI.
 >    in the importing user's environment. All scripts in `examples/` are updated.
 > 2. **Most dependencies are now optional.** `pip install nsquared` installs only
 >    `numpy`, `hyperopt`, and `tqdm`. Code that used the bundled dataset loaders needs
->    `pip install "nsquared[data]"`, and SoftImpute needs `"nsquared[baselines]"`.
->    `pip install "nsquared[all]"` restores the previous behaviour exactly.
+>    `pip install "nsquared[data]"`. `pip install "nsquared[all]"` restores the previous
+>    behaviour exactly.
+> 3. **SoftImpute is now implemented in-package** rather than delegating to
+>    `fancyimpute`, which is no longer a dependency at all. Numerically equivalent
+>    (worst relative difference 2.6e-4 over 12 randomized problems; RMSE against ground
+>    truth agrees to ~1e-4), so published benchmark numbers stand. One behaviour change:
+>    it raises `ValueError` on a row or column with no observed entries — the same
+>    condition `fancyimpute` rejected, with a clearer message.
 
 - [ ] Bump the version in `pyproject.toml` and in `CITATION.cff` (`version:` and
       `date-released:`). Follow [`RELEASE.md`](../RELEASE.md).
@@ -134,7 +140,7 @@ Checked against <https://joss.readthedocs.io/en/latest/review_criteria.html>.
 | Installation instructions incl. dependencies | ✅ README; [`docs/installation.md`](../docs/installation.md) |
 | Example usage | ✅ README quickstart; [`docs/quickstart.md`](../docs/quickstart.md); `examples/` |
 | API documentation | ✅ [`docs/api_reference.md`](../docs/api_reference.md) plus docstrings |
-| Automated tests | ✅ 144 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
+| Automated tests | ✅ 159 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
 | Community guidelines (contribute / report / support) | ✅ [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), issue templates |
 
 ### Paper

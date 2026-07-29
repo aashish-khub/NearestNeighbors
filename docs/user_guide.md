@@ -205,11 +205,12 @@ For comparison, `nsquared.baselines` packages two classical non-NN matrix comple
 methods:
 
 - `nsquared.baselines.usvt` — universal singular value thresholding (Chatterjee, 2015).
-- `nsquared.baselines.softimpute` — SoftImpute (Hastie et al., 2015), via `fancyimpute`.
+- `nsquared.baselines.softimpute` — SoftImpute (Mazumder et al., 2010; Hastie et al.,
+  2015).
 
 Both take a matrix with `np.nan` in the missing positions, so they drop into the same
-evaluation loop. `softimpute` needs the optional `baselines` extra
-(`pip install "nsquared[baselines]"`); `usvt` needs only NumPy.
+evaluation loop, and both are implemented directly on NumPy — no optional dependency is
+needed for either.
 
 ## Further reading
 

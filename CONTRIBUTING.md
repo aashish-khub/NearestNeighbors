@@ -62,14 +62,16 @@ pre-commit install
 ```
 
 `pip install -e ".[dev]"` installs the package in editable mode along with every optional
-extra (`data`, `baselines`, `plots`, `examples`) plus `pytest`, `ruff`, and `pre-commit`.
-The test suite assumes all of them, so use `[dev]` rather than a narrower extra when
-developing.
+extra (`data`, `plots`, `examples`) plus `pytest`, `ruff`, and `pre-commit`. The test
+suite assumes all of them, so use `[dev]` rather than a narrower extra when developing.
 
 The runtime install is deliberately much smaller — `pip install nsquared` pulls only
-`numpy`, `hyperopt`, and `tqdm`. If you add a dependency, put it behind the extra that
-needs it rather than in `[project.dependencies]`, and make the import site fail with a
-message naming that extra. See `nsquared/baselines/__init__.py` for the pattern.
+`numpy`, `hyperopt`, and `tqdm`. Please keep it that way: if you add a dependency, put it
+behind the extra that needs it rather than in `[project.dependencies]`, and make the
+import site fail with a message naming that extra. See the missing-dependency handling in
+`nsquared/datasets/dataloader_factory.py` for the pattern. For a self-contained numerical
+algorithm, prefer implementing it on NumPy over adding a dependency — that is why
+`nsquared/baselines/_softimpute.py` exists.
 
 ## Running the checks
 

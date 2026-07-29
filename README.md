@@ -74,9 +74,8 @@ small dependency footprint (`numpy`, `hyperopt`, `tqdm`). The heavier pieces are
 
 | Install | Adds |
 | --- | --- |
-| `pip install nsquared` | The imputers, data types, cross-validation, synthetic data |
+| `pip install nsquared` | The imputers, data types, cross-validation, synthetic data, both baselines |
 | `pip install "nsquared[data]"` | The $N^2$-Bench loaders — HeartSteps, MovieLens, PromptEval, Prop 99 |
-| `pip install "nsquared[baselines]"` | The SoftImpute baseline (`fancyimpute`) |
 | `pip install "nsquared[plots]"` | Plot styling helpers (`matplotlib`) |
 | `pip install "nsquared[examples]"` | Everything the scripts in `examples/` and `bench/` need |
 | `pip install "nsquared[all]"` | All of the above |

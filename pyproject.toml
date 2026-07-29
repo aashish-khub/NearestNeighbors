@@ -54,21 +54,16 @@ data = [
     "requests",
     "datasets",
 ]
-# Classical non-NN baselines (nsquared.baselines.softimpute).
-# fancyimpute 0.7.0 calls sklearn.utils.check_array(force_all_finite=...), which
-# scikit-learn deprecated in 1.6 and removed in 1.8, so SoftImpute raises
-# TypeError on newer scikit-learn. Pin until fancyimpute ships a fix.
-baselines = [
-    "fancyimpute",
-    "scikit-learn<1.8",
-]
+# NOTE: there is deliberately no "baselines" extra. Both classical baselines in
+# nsquared.baselines (USVT and SoftImpute) are implemented directly on NumPy, so
+# they need nothing beyond the core dependencies.
 # Plot styling helpers (nsquared.utils.plotting_utils).
 plots = [
     "matplotlib",
 ]
 # Everything the scripts under examples/ and bench/ import.
 examples = [
-    "nsquared[data,baselines,plots]",
+    "nsquared[data,plots]",
     "seaborn",
     "tabulate",
     "SyntheticControlMethods",

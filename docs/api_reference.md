@@ -216,14 +216,18 @@ See [Datasets](datasets.md) for the shipped loaders.
 
 ## Baselines
 
-Not exported from the top level; import from `nsquared.baselines`.
+Not exported from the top level; import from `nsquared.baselines`. Both are implemented
+directly on NumPy and need no optional dependencies.
 
-- `nsquared.baselines.usvt(A, eta=1e-4)` — universal singular value thresholding. Needs
-  only NumPy.
-- `nsquared.baselines.softimpute(X)` — SoftImpute via `fancyimpute`. Resolved lazily, so
-  importing the package works without `fancyimpute`; touching `softimpute` without it
-  raises an `ImportError` naming the extra to install
-  (`pip install "nsquared[baselines]"`).
+- `nsquared.baselines.usvt(A, eta=1e-4)` — universal singular value thresholding
+  (Chatterjee, 2015).
+- `nsquared.baselines.softimpute(X, shrinkage_value=None, convergence_threshold=0.001,
+  max_iters=100, max_rank=None, min_value=None, max_value=None, normalize=True)` —
+  SoftImpute (Mazumder et al., 2010) with the bi-scaling of Hastie et al. (2015).
+  Implemented directly on NumPy. `shrinkage_value` defaults to one fiftieth of the largest
+  singular value; `normalize=True` centers and scales rows and columns before imputing and
+  undoes it afterwards. Raises `ValueError` on a row or column with no observed entries,
+  which carries no information to impute from.
 
 Both take a matrix whose missing entries are `np.nan` and return the completed matrix, so
 they drop into the same evaluation loop as the NN imputers.

@@ -145,66 +145,17 @@ def test_usvt_needs_no_optional_dependency() -> None:
     assert not np.any(np.isnan(completed))
 
 
-def test_softimpute_is_resolved_lazily() -> None:
-    """Softimpute is reachable but must not be imported eagerly.
+def test_baselines_need_no_optional_dependency() -> None:
+    """Both baselines run on a core-only install.
 
-    Importing ``nsquared.baselines`` has to work without ``fancyimpute`` so that
-    a core-only install can still use ``usvt``.
+    They are implemented directly on NumPy rather than delegating to
+    ``fancyimpute``, so there is no ``baselines`` extra to install.
     """
     import nsquared.baselines as pkg
 
-    assert "softimpute" in pkg.__all__
-
-    try:
-        resolved = pkg.softimpute
-    except ImportError as exc:
-        # Without the extra, the error has to name the extra to install.
-        assert "nsquared[baselines]" in str(exc)
-    else:
-        assert callable(resolved)
-
-    with pytest.raises(AttributeError):
-        pkg.not_a_real_baseline
-
-
-def test_softimpute_stays_a_function_across_accesses() -> None:
-    """Repeated access must not degrade into the implementation module.
-
-    The lazy loader caches the resolved function on the package. If the
-    implementation module were also named ``softimpute``, the import system
-    would rebind the attribute to that module and every access after the first
-    would return a module instead of a callable.
-    """
-    fancyimpute = pytest.importorskip(
-        "fancyimpute", reason="requires the 'baselines' extra"
-    )
-    assert fancyimpute is not None
-
-    import nsquared.baselines as pkg
-    from nsquared.baselines import softimpute
-
+    assert sorted(pkg.__all__) == ["softimpute", "usvt"]
     assert callable(pkg.softimpute)
-    assert pkg.softimpute is pkg.softimpute
-    assert pkg.softimpute is softimpute
-
-
-def test_softimpute_completes_a_matrix() -> None:
-    """The SoftImpute baseline runs end to end on its installed dependencies.
-
-    Guards the ``scikit-learn<1.8`` pin in the ``baselines`` extra: fancyimpute
-    0.7.0 calls ``check_array(force_all_finite=...)``, removed in scikit-learn
-    1.8, so an unpinned resolve raises TypeError here.
-    """
-    pytest.importorskip("fancyimpute", reason="requires the 'baselines' extra")
-    from nsquared.baselines import softimpute
-
-    matrix = np.array([[1.0, 2.0, 3.0], [4.0, np.nan, 6.0], [7.0, 8.0, 9.0]])
-    completed = softimpute(matrix)
-
-    assert completed.shape == matrix.shape
-    assert not np.any(np.isnan(completed))
-    # Observed entries are preserved; the missing one is filled sensibly.
-    assert completed[1, 1] == pytest.approx(5.0, abs=1.0)
+    assert callable(pkg.usvt)
 
 
 if __name__ == "__main__":

@@ -34,15 +34,17 @@ have to install a data-download stack and a convex solver.
 
 | Extra | Command | Adds | Pulls in |
 | --- | --- | --- | --- |
-| *(none)* | `pip install nsquared` | Imputers, data types, cross-validation, synthetic data | `numpy`, `hyperopt`, `tqdm` |
+| *(none)* | `pip install nsquared` | Imputers, data types, cross-validation, synthetic data, both baselines | `numpy`, `hyperopt`, `tqdm` |
 | `data` | `pip install "nsquared[data]"` | The $N^2$-Bench loaders | `pandas`, `joblib`, `requests`, `datasets` |
-| `baselines` | `pip install "nsquared[baselines]"` | The SoftImpute baseline | `fancyimpute` |
 | `plots` | `pip install "nsquared[plots]"` | `nsquared.utils.plotting_utils` | `matplotlib` |
 | `examples` | `pip install "nsquared[examples]"` | Everything `examples/` and `bench/` import | the above, plus `seaborn`, `tabulate`, `SyntheticControlMethods`, `wrds` |
 | `all` | `pip install "nsquared[all]"` | All of the above | — |
 | `dev` | `pip install -e ".[dev]"` | `all` plus the test and lint toolchain | `pytest`, `ruff`, `pre-commit` |
 
-Extras compose: `pip install "nsquared[data,baselines]"`.
+Extras compose: `pip install "nsquared[data,plots]"`.
+
+Both classical baselines (`nsquared.baselines.usvt` and `nsquared.baselines.softimpute`)
+are implemented directly on NumPy, so there is no extra to install for them.
 
 With the `data` extra you should see all five loaders:
 
@@ -106,7 +108,6 @@ test suite and CI expect.
 | `joblib` | `data` | Caching of processed datasets |
 | `requests` | `data` | Downloading MovieLens and Prop 99 |
 | `datasets` | `data` | Downloading PromptEval from the Hugging Face Hub |
-| `fancyimpute` | `baselines` | The SoftImpute baseline |
 | `matplotlib` | `plots` | `nsquared.utils.plotting_utils` |
 | `seaborn` | `examples` | Plots in `examples/simulations/` |
 | `tabulate` | `examples` | Console tables in `examples/prompteval/` |
@@ -137,9 +138,10 @@ import importlib
 importlib.import_module("nsquared.datasets.movielens")
 ```
 
-**`ImportError` mentioning `fancyimpute` when using `softimpute`.** Install the baselines
-extra: `pip install "nsquared[baselines]"`. `nsquared.baselines.usvt` needs only NumPy and
-always works.
+**`ValueError: ... rows and ... columns have no observed values` from `softimpute`.** A
+row or column with nothing observed cannot be imputed by SoftImpute, which borrows
+strength only from observed entries. Drop those rows and columns first, or use a nearest
+neighbor estimator, which reports the entry as unimputable instead.
 
 **`ModuleNotFoundError: No module named 'baselines'`.** As of the move into the package
 namespace, the baselines live at `nsquared.baselines`. Change

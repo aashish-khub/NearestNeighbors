@@ -160,8 +160,14 @@ subclasses) that holds out a block of observed entries and searches distance thr
 with `hyperopt` [@bergstra2013hyperopt]. Because tuning is separate from estimation,
 cross-validation strategies and estimators can be mixed freely. Benchmark datasets are
 registered through a decorator-based factory (`@register_dataset`), so contributing a new
-dataset means writing one loader class rather than modifying the harness. All numerical
-work is built on NumPy [@harris2020array].
+dataset means writing one loader class rather than modifying the harness.
+
+We also keep the dependency footprint deliberately small, since a heavy install is a
+barrier to reuse: all numerical work is built on NumPy [@harris2020array], the estimators
+and both baselines require nothing else, and the data loaders, plotting helpers, and
+example scripts sit behind optional extras. SoftImpute is implemented in-package from
+@mazumder2010spectral rather than pulled from a third-party library that would have added
+twenty-six transitive dependencies, including convex solvers the algorithm never uses.
 
 # Research impact
 

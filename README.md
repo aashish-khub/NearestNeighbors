@@ -53,8 +53,8 @@ them hard to compare and hard to adopt. $N^2$ solves this:
 | Nadaraya–Watson (kernel-smoothed) NN | `NadarayaWatsonEstimator` | ✅ | — | [Nadaraya, 1964](https://doi.org/10.1137/1109020); Watson, 1964 |
 | Kernel (MMD) distributional NN | `DistributionKernelMMD` | — | ✅ | [Choi et al., 2024](https://arxiv.org/abs/2410.13381) |
 | Wasserstein distributional NN | `DistributionWasserstein*` | — | ✅ | [Feitelberg et al., 2024](https://arxiv.org/abs/2410.13112) |
-| USVT (baseline) | `baselines.usvt` | ✅ | — | [Chatterjee, 2015](https://doi.org/10.1214/14-AOS1272) |
-| SoftImpute (baseline) | `baselines.softimpute` | ✅ | — | [Hastie et al., 2015](https://jmlr.org/papers/v16/hastie15a.html) |
+| USVT (baseline) | `nsquared.baselines.usvt` | ✅ | — | [Chatterjee, 2015](https://doi.org/10.1214/14-AOS1272) |
+| SoftImpute (baseline) | `nsquared.baselines.softimpute` | ✅ | — | [Hastie et al., 2015](https://jmlr.org/papers/v16/hastie15a.html) |
 
 Doubly robust estimation requires a well-defined subtraction on entries, so it is
 restricted to scalar (vector-space) entries.
@@ -68,6 +68,21 @@ $N^2$ requires **Python 3.10 or later**. Check with `python --version`.
 ```bash
 pip install nsquared
 ```
+
+That gives you every imputer, every data type, and cross-validation, on a deliberately
+small dependency footprint (`numpy`, `hyperopt`, `tqdm`). The heavier pieces are opt-in:
+
+| Install | Adds |
+| --- | --- |
+| `pip install nsquared` | The imputers, data types, cross-validation, synthetic data |
+| `pip install "nsquared[data]"` | The $N^2$-Bench loaders — HeartSteps, MovieLens, PromptEval, Prop 99 |
+| `pip install "nsquared[baselines]"` | The SoftImpute baseline (`fancyimpute`) |
+| `pip install "nsquared[plots]"` | Plot styling helpers (`matplotlib`) |
+| `pip install "nsquared[examples]"` | Everything the scripts in `examples/` and `bench/` need |
+| `pip install "nsquared[all]"` | All of the above |
+
+If you ask for a benchmark dataset without its extra, the error tells you which one to
+install — nothing fails silently.
 
 <details>
 <summary>Installing from source (latest, unreleased code)</summary>
@@ -104,10 +119,9 @@ run `eval "$(pyenv init -)"`, then `pyenv local 3.11`.
 
 </details>
 
-**Dependencies** (installed automatically): `numpy`, `pandas`, `scipy`-backed
-`fancyimpute`, `matplotlib`, `seaborn`, `hyperopt`, `joblib`, `requests`, `datasets`,
-`tabulate`, `tqdm`, `SyntheticControlMethods`, `wrds`. The `[dev]` extra adds `pytest`,
-`ruff`, and `pre-commit`.
+**Dependencies.** The core install requires only `numpy`, `hyperopt` (threshold search),
+and `tqdm` (progress reporting). Everything else is behind the extras in the table above.
+The `[dev]` extra installs `[all]` plus `pytest`, `ruff`, and `pre-commit`.
 
 > [!NOTE]
 > If using VSCode, set the interpreter to the `.venv` environment with

@@ -35,24 +35,50 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
+# Kept deliberately small: what the imputers and their cross-validation need,
+# and nothing else. Everything for the bundled datasets, baselines, plotting,
+# and example scripts lives in an extra below.
 dependencies = [
     "numpy",
-    "pandas",
-    "matplotlib",
-    "hyperopt",
-    "joblib",
-    "requests",
-    "seaborn",
-    "SyntheticControlMethods",
-    "fancyimpute",
-    "datasets",
-    "tabulate",
-    "tqdm",
-    "wrds",
+    "hyperopt",  # threshold search in nsquared.fit_methods
+    "tqdm",      # progress reporting in nsquared.estimation_methods
 ]
 
 [project.optional-dependencies]
+# The N^2-Bench data loaders (nsquared.datasets). Needed for
+# NNData.create("heartsteps"), ("movielens"), ("prompteval"), ("prop99").
+# The synthetic loader needs no extra.
+data = [
+    "pandas",
+    "joblib",
+    "requests",
+    "datasets",
+]
+# Classical non-NN baselines (nsquared.baselines.softimpute).
+# fancyimpute 0.7.0 calls sklearn.utils.check_array(force_all_finite=...), which
+# scikit-learn deprecated in 1.6 and removed in 1.8, so SoftImpute raises
+# TypeError on newer scikit-learn. Pin until fancyimpute ships a fix.
+baselines = [
+    "fancyimpute",
+    "scikit-learn<1.8",
+]
+# Plot styling helpers (nsquared.utils.plotting_utils).
+plots = [
+    "matplotlib",
+]
+# Everything the scripts under examples/ and bench/ import.
+examples = [
+    "nsquared[data,baselines,plots]",
+    "seaborn",
+    "tabulate",
+    "SyntheticControlMethods",
+    "wrds",
+]
+all = [
+    "nsquared[examples]",
+]
 dev = [
+    "nsquared[all]",
     "pre-commit",
     "ruff",
     "pytest",
@@ -66,6 +92,9 @@ Issues = "https://github.com/aashish-khub/NearestNeighbors/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# Guard against shipping a top-level package alongside nsquared: a generic name
+# like "baselines" would squat the importing user's namespace.
+include = ["nsquared*"]
 
 [tool.setuptools.package-dir]
 "" = "src"

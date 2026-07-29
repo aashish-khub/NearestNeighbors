@@ -26,8 +26,30 @@ def test_registry_discovers_all_loaders() -> None:
 
 def test_unknown_dataset_raises() -> None:
     """Asking for a dataset that does not exist is an error, not a silent None."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="not found"):
         NNData.create("no_such_dataset")
+
+
+def test_unknown_dataset_is_not_blamed_on_a_missing_dependency() -> None:
+    """A typo must not be reported as a missing optional dependency.
+
+    The two failures need different fixes -- fix the name versus
+    ``pip install "nsquared[data]"`` -- so they must not share a message.
+    """
+    with pytest.raises(ValueError) as excinfo:
+        NNData.create("hartsteps")  # deliberate typo
+
+    message = str(excinfo.value)
+    assert "not found" in message
+    assert "optional dependency" not in message
+
+
+def test_unknown_dataset_does_not_pollute_the_registry() -> None:
+    """A failed lookup must not leave the bad name in the help listing."""
+    with pytest.raises(ValueError):
+        NNData.create("definitely_not_a_dataset")
+
+    assert "definitely_not_a_dataset" not in get_available_datasets()
 
 
 def test_get_data_params_documents_parameters() -> None:

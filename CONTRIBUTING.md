@@ -61,8 +61,15 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
-`pip install -e ".[dev]"` installs the package in editable mode along with `pytest`,
-`ruff`, and `pre-commit`.
+`pip install -e ".[dev]"` installs the package in editable mode along with every optional
+extra (`data`, `baselines`, `plots`, `examples`) plus `pytest`, `ruff`, and `pre-commit`.
+The test suite assumes all of them, so use `[dev]` rather than a narrower extra when
+developing.
+
+The runtime install is deliberately much smaller — `pip install nsquared` pulls only
+`numpy`, `hyperopt`, and `tqdm`. If you add a dependency, put it behind the extra that
+needs it rather than in `[project.dependencies]`, and make the import site fail with a
+message naming that extra. See `nsquared/baselines/__init__.py` for the pattern.
 
 ## Running the checks
 

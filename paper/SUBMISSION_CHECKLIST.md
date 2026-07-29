@@ -73,6 +73,18 @@ submitting, so there is a single source of truth.
 
 JOSS requires a tagged release archived with a DOI.
 
+> **This release contains breaking changes.** Bump the **minor** version (1.1.0 → 1.2.0),
+> not the patch version, and say so in the release notes:
+>
+> 1. **`baselines` moved into the package namespace.** `from baselines import usvt,
+>    softimpute` is now `from nsquared.baselines import usvt, softimpute`. Version 1.1.0
+>    shipped a top-level `baselines` package on PyPI, which squatted a very generic name
+>    in the importing user's environment. All scripts in `examples/` are updated.
+> 2. **Most dependencies are now optional.** `pip install nsquared` installs only
+>    `numpy`, `hyperopt`, and `tqdm`. Code that used the bundled dataset loaders needs
+>    `pip install "nsquared[data]"`, and SoftImpute needs `"nsquared[baselines]"`.
+>    `pip install "nsquared[all]"` restores the previous behaviour exactly.
+
 - [ ] Bump the version in `pyproject.toml` and in `CITATION.cff` (`version:` and
       `date-released:`). Follow [`RELEASE.md`](../RELEASE.md).
 - [ ] Tag and publish the release on GitHub. The `publish.yml` workflow pushes it to PyPI.
@@ -111,7 +123,7 @@ Checked against <https://joss.readthedocs.io/en/latest/review_criteria.html>.
 | More than six months of public history | ✅ first commit 2024-12-05, 458 commits |
 | Multiple contributors | ✅ seven |
 | Tagged releases | ✅ `v1.0.0`, `v1.1.0`; a JOSS release still needs tagging |
-| Packaged to language standards | ✅ on PyPI as `nsquared` |
+| Packaged to language standards | ✅ on PyPI as `nsquared`; core install pulls 3 dependencies, the rest are extras |
 | Substantial scholarly effort | ✅ ~4,000 lines of library code plus the benchmark |
 
 ### Documentation
@@ -122,7 +134,7 @@ Checked against <https://joss.readthedocs.io/en/latest/review_criteria.html>.
 | Installation instructions incl. dependencies | ✅ README; [`docs/installation.md`](../docs/installation.md) |
 | Example usage | ✅ README quickstart; [`docs/quickstart.md`](../docs/quickstart.md); `examples/` |
 | API documentation | ✅ [`docs/api_reference.md`](../docs/api_reference.md) plus docstrings |
-| Automated tests | ✅ 137 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
+| Automated tests | ✅ 144 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
 | Community guidelines (contribute / report / support) | ✅ [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), issue templates |
 
 ### Paper

@@ -16,7 +16,7 @@ from time import time
 import pandas as pd
 
 # import baseline methods
-from baselines import usvt, softimpute
+from nsquared.baselines import usvt, softimpute
 
 # import nearest neighbor methods
 from nsquared.data_types import Scalar

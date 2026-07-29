@@ -201,12 +201,15 @@ Full templates for all three extension points are in
 
 ## Baselines
 
-For comparison, `src/baselines/` packages two classical non-NN matrix completion methods:
+For comparison, `nsquared.baselines` packages two classical non-NN matrix completion
+methods:
 
-- `baselines.usvt` — universal singular value thresholding (Chatterjee, 2015).
-- `baselines.softimpute` — SoftImpute (Hastie et al., 2015), via `fancyimpute`.
+- `nsquared.baselines.usvt` — universal singular value thresholding (Chatterjee, 2015).
+- `nsquared.baselines.softimpute` — SoftImpute (Hastie et al., 2015), via `fancyimpute`.
 
-Both take the same `(data, mask)` pair, so they drop into the same evaluation loop.
+Both take a matrix with `np.nan` in the missing positions, so they drop into the same
+evaluation loop. `softimpute` needs the optional `baselines` extra
+(`pip install "nsquared[baselines]"`); `usvt` needs only NumPy.
 
 ## Further reading
 

@@ -28,6 +28,7 @@ DOCUMENTED_NAMES = [
     "DREstimator",
     "AWNNEstimator",
     "AutoEstimator",
+    "NadarayaWatsonEstimator",
     # Constructors
     "row_row",
     "col_col",

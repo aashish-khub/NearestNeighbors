@@ -102,13 +102,25 @@ threshold as a quantile of observed distances rather than a raw distance.
 | `DREstimator(is_percentile=True)` | `(row, col)` | `Scalar` only |
 | `AWNNEstimator(delta=1, noise_variance=None, convergence_threshold=1e-4, max_iterations=10)` | none | any `DataType` |
 | `AutoEstimator(is_percentile=True)` | `(row, col)` + `alpha` | `Scalar` only |
+| `NadarayaWatsonEstimator(kernel="gaussian", is_percentile=True)` | one (kernel bandwidth) | `Scalar` only |
 
 `DREstimator` and `AutoEstimator` subtract entries, which is undefined for probability
-distributions, hence the `Scalar` restriction.
+distributions, hence the `Scalar` restriction. `NadarayaWatsonEstimator` forms a
+kernel-weighted mean of the target column, which is likewise only defined for scalars.
 
-> `nsquared.nadaraya_watson.NadarayaWatsonEstimator` is present in the source tree but is
-> not part of the public API: it does not yet implement the abstract
-> `_calculate_distances` hook and cannot be instantiated.
+### `NadarayaWatsonEstimator(kernel="gaussian", is_percentile=True)`
+
+Uses the same row-row distances as `RowRowEstimator`, but instead of averaging the rows
+that fall inside a threshold it averages *every* row whose target entry is observed,
+weighting each by `kernel(distance / bandwidth)`. The threshold is therefore a kernel
+bandwidth rather than a cutoff. Supported kernels are `"gaussian"`, `"laplace"`,
+`"box"`, and `"singular_box"`; passing anything else raises `ValueError`.
+
+With the `"box"` kernel the estimator reduces exactly to `RowRowEstimator`, since every
+row inside the bandwidth then carries equal weight.
+
+Returns `np.nan` when no row can contribute — either because the target column is
+unobserved everywhere, or because no row falls inside the bandwidth.
 
 ---
 

@@ -61,7 +61,7 @@ def test_imputing_without_a_threshold_raises() -> None:
 
 
 def test_leave_block_out_sets_threshold_in_place() -> None:
-    """fit returns the chosen threshold and also stores it on the imputer."""
+    """Fit returns the chosen threshold and also stores it on the imputer."""
     data, mask, block = make_problem()
     imputer = row_row()
 
@@ -73,6 +73,8 @@ def test_leave_block_out_sets_threshold_in_place() -> None:
     )
     best = cv.fit(data, mask, imputer)
 
+    # Without ret_trials the return type is a bare threshold.
+    assert isinstance(best, float)
     assert 0 <= best <= 1
     assert imputer.distance_threshold == best
 
@@ -110,8 +112,11 @@ def test_leave_block_out_can_return_trials() -> None:
         n_trials=N_TRIALS,
         data_type=Scalar(),
     )
-    best, trials = cv.fit(data, mask, imputer, ret_trials=True)
+    result = cv.fit(data, mask, imputer, ret_trials=True)
 
+    # With ret_trials the return type widens to (threshold, Trials).
+    assert isinstance(result, tuple)
+    best, trials = result
     assert 0 <= best <= 1
     assert len(trials.trials) == N_TRIALS
 

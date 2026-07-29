@@ -30,9 +30,7 @@ from .estimation_methods import (
     AutoEstimator,
 )
 
-# NOTE: nsquared.nadaraya_watson.NadarayaWatsonEstimator is deliberately not exported.
-# It does not implement the abstract EstimationMethod._calculate_distances hook, so it
-# cannot currently be instantiated. See https://github.com/aashish-khub/NearestNeighbors/issues
+from .nadaraya_watson import NadarayaWatsonEstimator
 
 # Convenience constructors for the common scalar imputers.
 from .vanilla_nn import row_row, col_col
@@ -79,6 +77,7 @@ __all__ = [
     "DREstimator",
     "AWNNEstimator",
     "AutoEstimator",
+    "NadarayaWatsonEstimator",
     # Constructors
     "row_row",
     "col_col",

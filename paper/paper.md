@@ -184,17 +184,40 @@ scripts and data loaders needed to reproduce every experiment in
 
 # AI usage disclosure
 
-Generative AI coding assistants were used, under author direction, to help draft portions
-of this paper and of the package's user-facing documentation. All AI-assisted text was
-read, edited, and verified for technical accuracy by the authors, and every factual claim
-about the software was checked against the source code and test suite. The statistical
-methods, their implementations, and the benchmark experiments were designed and written
-by the authors.
+**Tools.** Claude Opus 5 (Anthropic), accessed through the Claude Code command-line
+interface, was used under author direction in July 2026.
 
-<!-- ACTION REQUIRED BEFORE SUBMISSION: all co-authors must confirm this disclosure is
-complete. If generative AI was used elsewhere (e.g. to write or refactor library source,
-tests, or experiment scripts), amend the paragraph above to say where it was used and how
-the output was verified. If it was used nowhere else, the paragraph is already accurate. -->
+**Where it was used, and for what.** The primary use was *test generation*: the assistant
+wrote the test modules covering the kernel MMD and Wasserstein data types
+(`tests/test_dnn_kernel.py`, `tests/test_dnn_wasserstein.py`), the benchmark data loaders
+(`tests/test_datasets.py`), the cross-validation layer (`tests/test_fit_methods.py`), and
+the public API surface (`tests/test_public_api.py`). Four of these files previously existed
+as empty placeholders. It was also used to draft the user-facing documentation (`docs/`,
+`README.md`, `CONTRIBUTING.md`), the repository scaffolding for this submission
+(continuous-integration workflows, issue and pull-request templates, `CITATION.cff`), and
+two small interface refactors: an explicit export list in `nsquared/__init__.py` and
+automatic discovery of dataset loaders in `nsquared/datasets/dataloader_factory.py`.
+[Generative AI also assisted in drafting portions of this manuscript.]
+
+**Where it was not used.** The nearest neighbor methods, their implementations in
+`nsquared/estimation_methods.py`, `nsquared/data_types.py`, and `nsquared/fit_methods.py`,
+the benchmark design, and the experiments were conceived and written by the authors
+without generative AI assistance.
+
+**Human verification.** All architectural and methodological decisions were made by the
+authors. Every AI-generated test was executed and its assertions checked against the
+documented behaviour of the code under test rather than accepted on the basis of a passing
+run; the tests that pin known gaps (the unimplemented MNAR generator) do so deliberately.
+All AI-drafted documentation was read and corrected by the authors, and each factual claim
+about the software was verified against the source. The authors take full responsibility
+for the correctness of all content in the software and this paper.
+
+<!-- BEFORE SUBMISSION:
+1. If you rewrite this paper's text from scratch, delete the bracketed sentence above.
+   If any AI-drafted prose survives your revision, keep it (without the brackets).
+2. All co-authors must confirm this is complete: if generative AI was used anywhere else
+   during development, name the tool and where it was applied.
+JOSS policy: https://joss.readthedocs.io/en/latest/policies.html -->
 
 # Acknowledgements
 

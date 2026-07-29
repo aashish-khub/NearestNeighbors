@@ -52,11 +52,20 @@ def test_synthetic_scalar_shapes_agree() -> None:
 
 
 def test_synthetic_data_is_reproducible() -> None:
-    """The same seed produces the same matrix and mask."""
-    kwargs = {"num_rows": 10, "num_cols": 10, "seed": 123}
+    """The same seed produces the same matrix and mask.
 
-    data1, mask1 = NNData.create("synthetic_data", **kwargs).process_data_scalar()
-    data2, mask2 = NNData.create("synthetic_data", **kwargs).process_data_scalar()
+    Note the construct-then-generate order: ``SyntheticDataLoader`` seeds the
+    *global* NumPy RNG in its constructor rather than holding its own
+    ``Generator``, so reproducibility only holds if each loader generates its
+    data before the next one is built. Constructing both loaders up front and
+    generating afterwards yields different matrices.
+    """
+    data1, mask1 = NNData.create(
+        "synthetic_data", num_rows=10, num_cols=10, seed=123
+    ).process_data_scalar()
+    data2, mask2 = NNData.create(
+        "synthetic_data", num_rows=10, num_cols=10, seed=123
+    ).process_data_scalar()
 
     np.testing.assert_allclose(data1, data2)
     np.testing.assert_array_equal(mask1, mask2)

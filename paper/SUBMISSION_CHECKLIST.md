@@ -27,22 +27,29 @@ Reference: <https://joss.readthedocs.io/en/latest/submitting.html>
       `corresponding: true`, and Caleb Chin / Aashish Khubchandani are marked
       `equal-contrib: true`. The old draft marked five authors as corresponding.
 
-- [ ] **Sign off on the AI usage disclosure.** JOSS now *requires* this section. The text
-      in `paper.md` discloses that generative AI assisted in drafting the paper and the
-      user-facing documentation, under author direction and with author verification.
-      An HTML comment right below it flags what to check. **Every co-author must confirm
-      it is complete** — in particular, whether generative AI was used anywhere in the
-      library source, tests, or experiment scripts. Amend the paragraph accordingly.
+- [ ] **Sign off on the AI usage disclosure.** JOSS *requires* this section, and the
+      [policy](https://joss.readthedocs.io/en/latest/policies.html) asks for three things:
+      the AI systems **and versions** used and exactly where; the scope of assistance; and
+      an assertion that humans reviewed, modified, and validated the output and made the
+      core design decisions. The section in `paper.md` is written to that structure and
+      names Claude Opus 5 (via Claude Code), used primarily for test generation plus the
+      documentation and repository scaffolding. Two things to resolve:
+      - The bracketed sentence "Generative AI also assisted in drafting portions of this
+        manuscript." — delete it only if the paper text is rewritten from scratch; keep it
+        (unbracketed) if any AI-drafted prose survives revision.
+      - **Every co-author must confirm the disclosure is complete** for any other AI use
+        during development. An incomplete or inaccurate disclosure is treated by JOSS as
+        an ethical breach, with desk rejection or post-publication withdrawal as possible
+        outcomes.
 
 - [ ] **Verify the research-impact claims.** The "Research impact" section states that
       NN variants often outperform classical methods on N$^2$-Bench and that
       distributional NN beats every scalar method on HeartSteps. Confirm these match the
       final numbers in the benchmark manuscript before submitting.
 
-- [ ] **Decide what to do about `NadarayaWatsonEstimator`.** It cannot be instantiated
-      (missing `_calculate_distances`), so it is currently excluded from the public API
-      and the docs. Either finish it or delete `src/nsquared/nadaraya_watson.py`. A
-      reviewer reading the source will notice dead code.
+- [x] ~~**Decide what to do about `NadarayaWatsonEstimator`.**~~ Resolved: the estimator
+      was completed (it now implements `_calculate_distances`, instantiates, and is
+      covered by `tests/test_nadaraya_watson.py`) and is exported and documented again.
 
 ---
 
@@ -115,7 +122,7 @@ Checked against <https://joss.readthedocs.io/en/latest/review_criteria.html>.
 | Installation instructions incl. dependencies | ✅ README; [`docs/installation.md`](../docs/installation.md) |
 | Example usage | ✅ README quickstart; [`docs/quickstart.md`](../docs/quickstart.md); `examples/` |
 | API documentation | ✅ [`docs/api_reference.md`](../docs/api_reference.md) plus docstrings |
-| Automated tests | ✅ 116 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
+| Automated tests | ✅ 137 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
 | Community guidelines (contribute / report / support) | ✅ [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), issue templates |
 
 ### Paper
@@ -147,3 +154,8 @@ Not required for acceptance, but reviewers often note them:
       `NNData.create()` and absent from `get_available_datasets()`.
 - [ ] Implement `SyntheticDataLoader._make_mnar` — the `mode="mnar"` option currently
       raises `NotImplementedError` (pinned by `tests/test_datasets.py`).
+- [ ] Give `SyntheticDataLoader` its own `np.random.Generator`. It currently calls
+      `np.random.seed()` in its constructor, so (a) reproducibility depends on
+      construct-then-generate ordering, and (b) creating a loader silently perturbs the
+      caller's global NumPy random state. Check the other seeded loaders for the same
+      pattern.

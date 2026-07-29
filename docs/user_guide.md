@@ -96,12 +96,12 @@ Shipped implementations:
 | `DREstimator` | doubly robust: combine row and column estimates, subtracting the overlap | two |
 | `AWNNEstimator` | adaptively-weighted: solve for continuous weights instead of a hard cutoff | none (uses `delta`, `noise_variance`) |
 | `AutoEstimator` | convex combination of the doubly robust and two-sided estimates | two + mixing weight |
-
-A kernel-smoothed Nadaraya–Watson estimator is present in
-`nsquared/nadaraya_watson.py` but is not yet complete and is not exported.
+| `NadarayaWatsonEstimator` | kernel-smoothed: weight every row by a kernel of its distance instead of applying a cutoff | one (kernel bandwidth) |
 
 `DREstimator` is the one estimator that is *not* geometry-agnostic: it subtracts entries,
 which is undefined in the space of probability distributions, so it requires `Scalar`.
+`NadarayaWatsonEstimator` is restricted the same way, since a kernel-weighted mean of the
+target column is only defined for scalar entries.
 
 ### Composing them
 

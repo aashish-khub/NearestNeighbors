@@ -50,6 +50,7 @@ them hard to compare and hard to adopt. $N^2$ solves this:
 | Doubly robust NN | `dr_nn()` | ✅ | — | [Dwivedi et al., 2022](https://arxiv.org/abs/2211.14297) |
 | Adaptively-weighted NN | `aw_nn()` | ✅ | ✅ | [Sadhukhan et al., 2025](https://arxiv.org/abs/2505.09612) |
 | Auto NN | `AutoEstimator` | ✅ | — | [Chin et al., 2025](https://arxiv.org/abs/2506.04166) |
+| Nadaraya–Watson (kernel-smoothed) NN | `NadarayaWatsonEstimator` | ✅ | — | [Nadaraya, 1964](https://doi.org/10.1137/1109020); Watson, 1964 |
 | Kernel (MMD) distributional NN | `DistributionKernelMMD` | — | ✅ | [Choi et al., 2024](https://arxiv.org/abs/2410.13381) |
 | Wasserstein distributional NN | `DistributionWasserstein*` | — | ✅ | [Feitelberg et al., 2024](https://arxiv.org/abs/2410.13112) |
 | USVT (baseline) | `baselines.usvt` | ✅ | — | [Chatterjee, 2015](https://doi.org/10.1214/14-AOS1272) |

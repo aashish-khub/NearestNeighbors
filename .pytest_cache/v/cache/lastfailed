@@ -1,5 +1,0 @@
-{
-  "tests/test_dnn_wasserstein.py::test_quantile_constant_matrix_imputation": true,
-  "tests/test_datasets.py::test_mnar_mode_is_supported": true,
-  "tests/test_softimpute.py::test_max_rank_caps_the_estimate": true
-}

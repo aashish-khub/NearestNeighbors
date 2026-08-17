@@ -140,7 +140,7 @@ Checked against <https://joss.readthedocs.io/en/latest/review_criteria.html>.
 | Installation instructions incl. dependencies | ✅ README; [`docs/installation.md`](../docs/installation.md) |
 | Example usage | ✅ README quickstart; [`docs/quickstart.md`](../docs/quickstart.md); `examples/` |
 | API documentation | ✅ [`docs/api_reference.md`](../docs/api_reference.md) plus docstrings |
-| Automated tests | ✅ 159 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
+| Automated tests | ✅ 180 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
 | Community guidelines (contribute / report / support) | ✅ [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), issue templates |
 
 ### Paper

@@ -149,6 +149,11 @@ loader = NNData.create(
 data, mask = loader.process_data_scalar()
 ```
 
+The generative model behind this loader lives in `nsquared.simulations` and can be
+driven directly if you want the factors, the noiseless signal, and the mask separately
+rather than a ready-made `(data, mask)` pair — see
+[API reference § Simulations](api_reference.md#simulations).
+
 ---
 
 ## Pre-computed benchmark matrices

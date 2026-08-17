@@ -1,10 +1,24 @@
-"""MCAR simulation data
-
-TODO: remove commented out code
-"""
+"""MCAR (missing completely at random) simulation."""
 
 import numpy as np
+import numpy.typing as npt
 from typing import Tuple
+
+
+def make_mcar_mask(num_rows: int, num_cols: int, miss_prob: float) -> npt.NDArray:
+    """Draw a missingness mask with every entry missing independently.
+
+    Args:
+        num_rows (int): Number of rows N.
+        num_cols (int): Number of columns T.
+        miss_prob (float): Probability that any given entry is missing.
+
+    Returns:
+        npt.NDArray: Boolean array of shape ``(N, T)``, True where the entry is
+            missing.
+
+    """
+    return np.random.binomial(1, miss_prob, size=(num_rows, num_cols)) == 1
 
 
 def gendata_lin_mcar(
@@ -63,8 +77,10 @@ def gendata_lin_mcar(
 
     # Y1 += np.random.normal(0, 0.001, size=(N,T))
     # gaussian noise
-    Theta: np.ndarray = Y
-    Y += np.random.normal(0, 0.001, size=(N, T))
+    # Copy before noising: binding Theta to Y and then doing Y += ... in place
+    # would make the 'true' matrix carry the noise too.
+    Theta: np.ndarray = Y.copy()
+    Y = Y + np.random.normal(0, 0.001, size=(N, T))
     # TODO: clean up this code
     Masking: np.ndarray = np.zeros((N, T))
 
@@ -127,8 +143,10 @@ def gendata_nonlin_mcar(
         raise ValueError(
             "non_lin must be one of 'expit', 'tanh', 'sin', 'cubic', or 'sinh'."
         )
-    Theta: np.ndarray = Y
-    Y += np.random.normal(0, 0.001, size=(N, T))
+    # Copy before noising: binding Theta to Y and then doing Y += ... in place
+    # would make the 'true' matrix carry the noise too.
+    Theta: np.ndarray = Y.copy()
+    Y = Y + np.random.normal(0, 0.001, size=(N, T))
 
     # TODO: clean up this code
     Masking: np.ndarray = np.zeros((N, T))

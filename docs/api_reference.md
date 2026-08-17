@@ -240,5 +240,36 @@ they drop into the same evaluation loop as the NN imputers.
   scripts in [`examples/`](../examples/).
 - `nsquared.utils.kernels`, `nsquared.utils.helper_fns` — kernel definitions and shared
   numerical helpers.
-- `nsquared.simulations.mcar`, `nsquared.simulations.mnar` — missingness generators used
-  by the synthetic data loader.
+## Simulations
+
+`nsquared.simulations` holds the data-generating process behind the
+`synthetic_data` loader, exposed so the generative model can be driven directly:
+
+```python
+from nsquared.simulations import (
+    generate_latent_factors, combine_latent_factors, add_gaussian_noise, make_mcar_mask,
+)
+
+U, V = generate_latent_factors(100, 100, dimensionality=4)
+signal = combine_latent_factors(U, V, model="multiplicative")   # or "additive"
+data = add_gaussian_noise(signal, stddev=0.1)
+missing = make_mcar_mask(100, 100, miss_prob=0.3)
+```
+
+| Function | Purpose |
+| --- | --- |
+| `generate_latent_factors(num_rows, num_cols, dimensionality=4)` | Draw row and column factors from Uniform(-0.5, 0.5) |
+| `combine_latent_factors(U, V, model="multiplicative", rho=0.5)` | Bilinear `U V^T`, or the Holder-continuous additive model |
+| `apply_nonlinear_transform(matrix, kind="")` | One of `expit`, `tanh`, `sin`, `cubic`, `sinh` |
+| `noise_scale_for_snr(signal, snr)` | Noise standard deviation hitting a target signal-to-noise ratio |
+| `add_gaussian_noise(signal, stddev)` | Additive i.i.d. Gaussian noise |
+| `make_mcar_mask(num_rows, num_cols, miss_prob)` | Boolean missingness mask, `True` where missing |
+
+Three self-contained generators return a full problem in one call:
+`gendata_lin_mcar(N, T, p, seed, r=4)` and `gendata_nonlin_mcar(...)` return
+`(Data, Theta, Masking)`; `gendata_s_adopt(N, T, n, d, beta, seed)` generates confounded
+staggered-adoption data for the distributional setting, returning
+`(Data, Masking, true_Mean, true_Cov)`.
+
+These all draw from NumPy's global random state, so seed with `np.random.seed` for
+reproducibility.

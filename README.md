@@ -217,8 +217,15 @@ pre-commit run --all-files   # ruff lint + format, pyright type checking
 pytest                       # test suite
 ```
 
-Both run in [CI](.github/workflows/ci.yml) on every push and pull request across Python
-3.10–3.12. Release instructions are in [RELEASE.md](RELEASE.md).
+> [!IMPORTANT]
+> Run these from the `.venv` created above. `[tool.pyright]` in `pyproject.toml` pins
+> `venv = ".venv"`, because the pre-commit pyright hook runs in its own isolated
+> environment and cannot see your interpreter otherwise. With no `./.venv` present,
+> pyright reports every third-party import as unresolved — hundreds of spurious errors.
+
+[CI](.github/workflows/ci.yml) runs the test suite on Python 3.10–3.12 on Linux plus
+macOS and Windows, and runs the linters once in a separate job. Release instructions are
+in [RELEASE.md](RELEASE.md).
 
 ---
 

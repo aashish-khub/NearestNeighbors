@@ -81,9 +81,19 @@ Run the linter and formatter over the whole tree:
 pre-commit run --all-files
 ```
 
-This runs `ruff` (lint + format) and `pyright` (static type checking). Both must pass —
-`tests/test_precommit.py` runs `pre-commit` as part of the test suite, so a lint failure
-is a test failure.
+This runs `ruff` (lint + format) and `pyright` (static type checking), and both must pass
+before a pull request can be merged.
+
+**Run it from the `.venv` you created above.** `[tool.pyright]` in `pyproject.toml` pins
+`venv = ".venv"`: the pre-commit pyright hook executes inside pre-commit's own isolated
+environment, so it cannot see your active interpreter and has to be pointed at the project
+environment explicitly. If you install the package somewhere else — conda, or your system
+Python — pyright finds no environment and reports every third-party import as unresolved,
+which looks like hundreds of real errors but is not.
+
+`tests/test_precommit.py` also runs `pre-commit`, so a lint failure normally surfaces as a
+test failure too. It skips itself when there is no `./.venv`, or off Linux, since the hook
+cannot work in those cases; CI covers linting in a dedicated job instead.
 
 Run the test suite:
 
@@ -91,8 +101,8 @@ Run the test suite:
 pytest
 ```
 
-Both commands are run on every push and pull request by
-[CI](.github/workflows/ci.yml), across Python 3.10–3.12.
+[CI](.github/workflows/ci.yml) runs the test suite on Python 3.10, 3.11 and 3.12 on Linux,
+plus one job each on macOS and Windows, and runs the linters once in a separate job.
 
 ### Style conventions
 

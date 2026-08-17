@@ -1,7 +1,5 @@
 from nsquared.datasets.dataloader_base import NNDataLoader
 from nsquared.datasets.dataloader_factory import register_dataset
-import warnings
-
 import numpy as np
 from typing import Any
 from nsquared.data_types import DataType
@@ -128,13 +126,11 @@ class SyntheticDataLoader(NNDataLoader):
             )  # instantiate random seed if provided but do it only once here
 
     def download_data(self) -> None:
-        """Nothing to download for synthetic data."""
-        warnings.warn(
-            "download=True has no effect for synthetic data: it is generated "
-            "locally, so there is nothing to fetch.",
-            UserWarning,
-            stacklevel=2,
+        """Nothing to download for synthetic data"""
+        print(
+            "Warning: 'download' arg set to true, but there is no data to download when using synthetic data."
         )
+        pass
 
     def _generate_simulated_data(self) -> None:
         """Generates the simulated data with no missing values.

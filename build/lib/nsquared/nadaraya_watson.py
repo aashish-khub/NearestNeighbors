@@ -5,16 +5,10 @@ Instead of identifying the nearest neighbors using a thresholding rule
 neighbors, but weights their contribution according to a kernel function.
 
 TODO (Albert): Test NW on HeartSteps dataset with various kernel functions
+TODO (Albert): Implement additional kernel functions (e.g., Epanechnikov)
 """
 
-from .utils.kernels import (
-    box,
-    epanechnikov,
-    gaussian,
-    laplace,
-    singular_box,
-    wendland,
-)
+from .utils.kernels import gaussian, laplace, singular_box, box
 from .nnimputer import EstimationMethod, DataType
 from .estimation_methods import RowRowEstimator
 from .data_types import Scalar
@@ -54,14 +48,7 @@ class NadarayaWatsonEstimator(EstimationMethod):
     observed, weighting each one by a kernel applied to that distance.
     """
 
-    valid_kernels = [
-        "gaussian",
-        "laplace",
-        "singular_box",
-        "box",
-        "epanechnikov",
-        "wendland",
-    ]
+    valid_kernels = ["gaussian", "laplace", "singular_box", "box"]
 
     def __init__(self, kernel: str = "gaussian", is_percentile: bool = True):
         """Initialize the Nadaraya-Watson estimator.
@@ -229,10 +216,6 @@ class NadarayaWatsonEstimator(EstimationMethod):
                 return singular_box(dists=dists, eta=eta)
             case "box":
                 return box(dists=dists, eta=eta)
-            case "epanechnikov":
-                return epanechnikov(dists=dists, eta=eta)
-            case "wendland":
-                return wendland(dists=dists, eta=eta)
             case _:
                 raise ValueError(f"{self.kernel=} is not supported")
 

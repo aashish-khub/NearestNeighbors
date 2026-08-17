@@ -662,8 +662,10 @@ class AWNNEstimator(EstimationMethod):
         """Imputes one specific value using the AWNN method."""
         n_rows, n_cols = data_array.shape
         delta = self.delta / np.sqrt(n_rows)
-        logger.info("delta: %s", delta)
-        logger.info("noise_variance: %s", self.noise_variance)
+        logger.info("delta: %s" % delta)  # TODO switch to logger.log
+        logger.info(
+            "noise_variance: %s" % self.noise_variance
+        )  # TODO switch to logger.log
         if self.noise_variance is None:
             noise_variance = np.var(data_array[mask_array == 1]) / 2
             self.noise_variance = noise_variance
@@ -728,7 +730,7 @@ class AWNNEstimator(EstimationMethod):
         n_rows, n_cols = data_array.shape
         imputed_data = np.zeros_like(data_array)
         for iter in range(self.max_iterations):
-            logger.info("Iteration %d", iter)
+            logger.info("Iteration %d" % iter)  # TODO switch to logger.log
             for i in range(n_rows):
                 for j in range(n_cols):
                     imputed_data[i, j] = self._impute_single_value_helper(

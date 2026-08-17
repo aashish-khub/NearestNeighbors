@@ -296,7 +296,7 @@ class HeartStepsDataLoader(NNDataLoader):
     def _group_steps(df: pd.DataFrame, freq: str) -> pd.DataFrame:
         return df.groupby(
             [
-                # NOTE: pyright rejects this Grouper call, saying no parameter named 'label' but pd.Grouper param list has 'label'.
+                # TODO: (Caleb) resolve this Grouper pyright error - says no parameter named 'label' but pd.Grouper param list has 'label'.
                 # Main issue is that TimeGrouper (which has the param label) was deprecated but is still used under the hood
                 # so the param label is not explicitly exposed in the Grouper init definition but is still accepted/used.
                 pd.Grouper(freq=freq, level="steps.utime", label="right"),  # pyright: ignore
@@ -342,7 +342,7 @@ class HeartStepsDataLoader(NNDataLoader):
         df_sugg_sel["sugg.decision.utime"] = pd.to_datetime(
             df_sugg_sel["sugg.decision.utime"]
         )
-        # NOTE: pyright rejects this dropna call; suppressed below.
+        # TODO: (Caleb) Resolve pyright error with dropna function
         df_sugg_sel = df_sugg_sel.dropna(  # pyright: ignore
             subset=["sugg.decision.utime", "sugg.select.utime", "user.index"]
         )
@@ -378,7 +378,7 @@ class HeartStepsDataLoader(NNDataLoader):
                 left_on="steps.utime",
                 right_on="sugg.decision.utime",
                 by="user.index",
-                # NOTE: pyright rejects pd.Timedelta here, another pandas type-stub gap.
+                # TODO: (Caleb) Resolve pyright error with pd.Timedelta. This is due to another incompatibility in the pandas type specification.
                 # tolerance does not accept NaT, but Timedelta could return NaT. Pandas documentation uses pd.Timedelta in this way exactly, so unsure of solution.
                 tolerance=pd.Timedelta(self.freq),  # pyright: ignore
                 allow_exact_matches=False,

@@ -179,7 +179,12 @@ lint.fixable = [
 lint.unfixable = []
 
 [tool.pyright]
+# The pre-commit pyright hook runs inside pre-commit's own isolated environment,
+# so the interpreter on PATH is pre-commit's, not this project's. pyright must
+# therefore be pointed at the project venv explicitly, or every third-party
+# import resolves as missing. Anything running pyright needs a populated .venv
+# here -- see the lint job in .github/workflows/ci.yml.
 venv = ".venv"
 venvPath = "."
-include = ["src"]
+include = ["src", "tests"]
 pythonVersion = "3.10"

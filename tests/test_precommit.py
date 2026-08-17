@@ -9,6 +9,7 @@ without re-checking style. See `.github/workflows/ci.yml`.
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -20,6 +21,14 @@ pytestmark = [
     pytest.mark.skipif(
         sys.platform != "linux",
         reason="lint checks are enforced on Linux only",
+    ),
+    pytest.mark.skipif(
+        not Path(__file__).resolve().parent.parent.joinpath(".venv").exists(),
+        reason=(
+            "no .venv to point pyright at; [tool.pyright] pins venv = '.venv', "
+            "so the hook cannot resolve imports without one. CI covers this in "
+            "its dedicated lint job."
+        ),
     ),
 ]
 

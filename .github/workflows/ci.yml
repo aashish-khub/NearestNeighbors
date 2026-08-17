@@ -43,6 +43,10 @@ jobs:
         python -m pip install -U pip
         pip install -e ".[dev]"
     - name: Run tests with pytest
+      # No .venv here on purpose: these jobs exercise the library across OSes
+      # and Python versions. Linting is the lint job's responsibility, and
+      # tests/test_precommit.py skips itself when there is no .venv to point
+      # pyright at.
       run: pytest
 
   lint:
@@ -59,11 +63,16 @@ jobs:
         cache: pip
         cache-dependency-path: pyproject.toml
     - name: Install dependencies
+      # Installed into .venv rather than the runner's Python because
+      # [tool.pyright] in pyproject.toml pins venv = ".venv": the pre-commit
+      # pyright hook runs in its own isolated environment, so it cannot see the
+      # ambient interpreter and needs this path to resolve imports.
       run: |
-        python -m pip install -U pip
-        pip install -e ".[dev]"
+        python -m venv .venv
+        .venv/bin/python -m pip install -U pip
+        .venv/bin/pip install -e ".[dev]"
     - name: Run pre-commit
-      run: pre-commit run --all-files --show-diff-on-failure
+      run: .venv/bin/pre-commit run --all-files --show-diff-on-failure
 
   add-to-project:
     if: github.event_name == 'issues' && github.event.action == 'opened'  # Only run when an issue is opened

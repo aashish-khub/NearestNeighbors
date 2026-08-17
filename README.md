@@ -54,7 +54,8 @@ them hard to compare and hard to adopt. $N^2$ solves this:
 | Kernel (MMD) distributional NN | `DistributionKernelMMD` | — | ✅ | [Choi et al., 2024](https://arxiv.org/abs/2410.13381) |
 | Wasserstein distributional NN | `DistributionWasserstein*` | — | ✅ | [Feitelberg et al., 2024](https://arxiv.org/abs/2410.13112) |
 | USVT (baseline) | `nsquared.baselines.usvt` | ✅ | — | [Chatterjee, 2015](https://doi.org/10.1214/14-AOS1272) |
-| SoftImpute (baseline) | `nsquared.baselines.softimpute` | ✅ | — | [Hastie et al., 2015](https://jmlr.org/papers/v16/hastie15a.html) |
+| SoftImpute (baseline) | `nsquared.baselines.softimpute` | ✅ | — | [Mazumder et al., 2010](https://www.jmlr.org/papers/v11/mazumder10a.html) |
+| k-NN imputation (baseline) | `nsquared.baselines.knn_impute` | ✅ | — | matches `sklearn.impute.KNNImputer` |
 
 Doubly robust estimation requires a well-defined subtraction on entries, so it is
 restricted to scalar (vector-space) entries.

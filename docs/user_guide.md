@@ -22,6 +22,54 @@ $$
 
 $N^2$ treats these as the same problem with a different notion of "what lives in a cell".
 
+## The mask, and what it means
+
+Every loader and every estimator takes two arrays: a data matrix and a `mask_array`. Two
+things about the mask are easy to get wrong.
+
+### The mask encodes treatment, not merely "is this cell populated"
+
+In the counterfactual-inference framing, `mask[i, t] == 1` means *entry `(i, t)` was
+observed **under the treatment you are asking about***. It is an availability indicator
+for one arm of the experiment, not a general "data exists here" flag.
+
+HeartSteps makes this concrete. A notification either was or was not sent at decision
+point `t` for participant `i`, and the loader derives the mask from that treatment
+indicator (`send.sedentary`). The estimand is the counterfactual: what the step count
+*would* have been under the treatment that was not assigned. So `mask[i, t] == 0` does not
+mean "we know nothing about this participant at this time" — it means "this participant
+was not treated here, so their outcome under treatment is the thing we are imputing".
+
+The practical consequence: to study the other arm, you re-derive the mask, you do not
+reuse the same one. And a mask built by asking "which cells are non-empty?" is generally
+the *wrong* mask for a causal question, because it conflates two different arms.
+
+### `mask == 0` does not imply `nan` in the data matrix
+
+The mask is authoritative; the data matrix is not. Loaders differ deliberately:
+
+- `synthetic_data` **does** write `np.nan` at masked-out positions, because the noiseless
+  ground truth is returned separately via `get_full_state_as_dict()`.
+- `prompteval` **deliberately leaves the true values in place** at `mask == 0`. Its loader
+  contains the line `# data[mask == 0] = np.nan`, commented out on purpose, so that the
+  held-out entries remain available for scoring.
+
+So do not infer missingness with `np.isnan(data)`, and do not assume masked entries are
+safe to read. Estimators consult `mask_array`, and reading `data_array` where
+`mask_array == 0` may hand you the answer you are trying to predict — which silently
+turns a benchmark into a leak.
+
+```python
+# Wrong: the data matrix may still hold the held-out truth.
+missing = np.isnan(data)
+
+# Right: the mask is the single source of truth.
+missing = mask == 0
+```
+
+Conversely `nan` can appear where `mask == 1`, since an entry can be observed but
+genuinely undefined, so `mask == 1` is not a promise that the value is finite either.
+
 ## Two modules, two abstractions
 
 Every nearest neighbor variant in the literature can be written as a composition of two
@@ -207,6 +255,11 @@ methods:
 - `nsquared.baselines.usvt` — universal singular value thresholding (Chatterjee, 2015).
 - `nsquared.baselines.softimpute` — SoftImpute (Mazumder et al., 2010; Hastie et al.,
   2015).
+- `nsquared.baselines.knn_impute` — k-nearest-neighbor imputation, matching
+  `sklearn.impute.KNNImputer`. Note this is the *feature-matrix* form of k-NN imputation,
+  matching on rows only; it is the thing the row-wise estimators in this package
+  generalize, and is included so that generalization can be measured.
+- `nsquared.baselines.knn_impute_columnwise` — the same over columns.
 
 Both take a matrix with `np.nan` in the missing positions, so they drop into the same
 evaluation loop, and both are implemented directly on NumPy — no optional dependency is

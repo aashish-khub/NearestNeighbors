@@ -229,7 +229,16 @@ directly on NumPy and need no optional dependencies.
   undoes it afterwards. Raises `ValueError` on a row or column with no observed entries,
   which carries no information to impute from.
 
-Both take a matrix whose missing entries are `np.nan` and return the completed matrix, so
+- `nsquared.baselines.knn_impute(X, n_neighbors=5, weights="uniform")` — fills each hole
+  with the average of that column among the `k` rows closest under the nan-aware Euclidean
+  metric, restricted to rows that observe the target column. `weights` is `"uniform"` or
+  `"distance"` (inverse-distance). Reimplements `sklearn.impute.KNNImputer` on NumPy;
+  verified equal to it to machine precision. Columns observed nowhere stay `np.nan`.
+- `nsquared.baselines.knn_impute_columnwise(X, n_neighbors=5, weights="uniform")` — the
+  same over columns rather than rows, since matrix completion has no privileged
+  orientation.
+
+All take a matrix whose missing entries are `np.nan` and return the completed matrix, so
 they drop into the same evaluation loop as the NN imputers.
 
 ## Utilities

@@ -37,6 +37,11 @@ state = loader.get_full_state_as_dict(include_metadata=True)
 
 Downloads are cached, so repeated runs do not re-fetch.
 
+Loaders differ in whether they blank out masked entries in the data matrix: `prompteval`
+keeps the held-out truth in place, `synthetic_data` writes `np.nan`. Always drive
+missingness from the mask — see
+[User guide § The mask, and what it means](user_guide.md#the-mask-and-what-it-means).
+
 ---
 
 ## `heartsteps` — mobile health

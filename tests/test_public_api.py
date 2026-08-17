@@ -153,9 +153,16 @@ def test_baselines_need_no_optional_dependency() -> None:
     """
     import nsquared.baselines as pkg
 
-    assert sorted(pkg.__all__) == ["softimpute", "usvt"]
-    assert callable(pkg.softimpute)
-    assert callable(pkg.usvt)
+    assert sorted(pkg.__all__) == [
+        "knn_impute",
+        "knn_impute_columnwise",
+        "softimpute",
+        "usvt",
+    ]
+    for name in pkg.__all__:
+        assert callable(getattr(pkg, name)), (
+            f"nsquared.baselines.{name} is not callable"
+        )
 
 
 if __name__ == "__main__":

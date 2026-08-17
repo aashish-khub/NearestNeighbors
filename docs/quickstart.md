@@ -14,6 +14,10 @@ $N^2$ works with two arrays that always come as a pair:
 
 Every benchmark loader returns exactly this pair.
 
+> **The mask is authoritative, not `np.isnan(data)`.** Some loaders deliberately keep the
+> true values at masked-out positions so they can be scored against. See
+> [User guide § The mask, and what it means](user_guide.md#the-mask-and-what-it-means).
+
 ## Scalar matrix completion
 
 ```python

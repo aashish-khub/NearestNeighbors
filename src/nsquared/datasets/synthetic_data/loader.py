@@ -179,7 +179,11 @@ class SyntheticDataLoader(NNDataLoader):
 
     def get_full_state_as_dict(self, include_metadata: bool = False) -> dict:
         """Returns the full state of this object as a dictionary"""
-        return_dict = {
+        # Annotated because the initializer holds only arrays, so the inferred
+        # value type would be NDArray and the metadata dict added below would
+        # not be assignable. Whether that is flagged depends on the numpy
+        # version's stubs, so it fails on some interpreters and not others.
+        return_dict: dict[str, Any] = {
             "data_observed": self.data_obs,
             "observed_entries": self.availability_mask,
             "full_data_true": self.data_true,

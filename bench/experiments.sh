@@ -71,7 +71,7 @@ do
         echo "Running prop99 experiment"
         ./slurm_scripts/run_accuracy.sh $PROP99_DIR $LOG_LEVEL
         ./slurm_scripts/run_california.sh $PROP99_DIR $LOG_LEVEL
-        python proposal_99.py -od $OUTPUT_DIR --force --log_level $LOG_LEVEL
+        python proposal_99.py -od $PROP99_DIR --force --log_level $LOG_LEVEL
         cd ../../bench
     else
         echo "$exper is not a valid experiment. Please choose from heartsteps, movielens, prompteval, or prop99."

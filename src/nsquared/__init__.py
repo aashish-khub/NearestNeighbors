@@ -9,6 +9,13 @@ See https://github.com/aashish-khub/NearestNeighbors/blob/main/docs/index.md for
 the full documentation.
 """
 
+from importlib.metadata import PackageNotFoundError, version as _version
+
+try:
+    __version__ = _version("nsquared")
+except PackageNotFoundError:  # running from a source tree that was never installed
+    __version__ = "0+unknown"
+
 # Core abstractions and the composite imputer.
 from .nnimputer import DataType, EstimationMethod, FitMethod, NearestNeighborImputer
 
@@ -60,6 +67,7 @@ from . import utils  # noqa: F401
 from . import simulations  # noqa: F401
 
 __all__ = [
+    "__version__",
     # Core abstractions
     "DataType",
     "EstimationMethod",

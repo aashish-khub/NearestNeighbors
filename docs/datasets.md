@@ -30,8 +30,8 @@ state = loader.get_full_state_as_dict(include_metadata=True)
 
 | Argument | Default | Description |
 | --- | --- | --- |
-| `download` | `False` | Fetch the raw data on first use. Required the first time for the real datasets |
-| `save_dir` | `"./"` | Where raw and processed data are cached |
+| `download` | `False` | Accepted for compatibility. Raw data is fetched on first use whenever it is not already in `save_dir` |
+| `save_dir` | `"./"` | Where the raw data files are written. Processed results are memoised separately under `./.joblib_cache` in the working directory |
 | `agg` | `"mean"` | How multiple measurements collapse to a scalar. One of `mean`, `sum`, `median`, `std`, `variance` |
 | `save_processed` | `False` | Persist the processed matrices to `save_dir` |
 
@@ -97,9 +97,9 @@ structured rather than random.
 | Parameter | Default | Description |
 | --- | --- | --- |
 | `start_year` | `1970` | First year included |
-| `end_year` | `2019` | Last year included |
-| `sample_states` | `None` (all) | Number of states to subsample |
-| `seed` | `None` | Random seed for the subsample |
+| `end_year` | `2000` | Last year included |
+| `state` | `"CA"` | Treated state. Placed in the first row; its post-1988 entries are masked |
+| `seed` | `None` | Random seed |
 
 ---
 
@@ -115,8 +115,17 @@ setting captures the full score distribution across examples rather than only it
 | --- | --- | --- |
 | `tasks` | `None` (all) | Restrict to a list of tasks |
 | `models` | `None` (all) | Restrict to a list of models |
-| `propensity` | `None` | Proportion of entries to keep observed |
+| `propensity` | `1.0` | Proportion of entries kept observed (MCAR) |
 | `seed` | `None` | Random seed |
+| `n_examples_per_task` | `100` | Examples sampled per task in the distributional setting |
+
+The two settings build different matrices. `process_data_scalar()` builds a
+(template × example) matrix for **one** model and **one** task, so `models` and `tasks`
+must each hold exactly one entry or it raises `ValueError`.
+`process_data_distribution()` builds a (model × task) matrix whose entries are the
+per-template score distributions; with the defaults it loads all 15 models × 57 tasks
+from the Hugging Face Hub, which takes a long time on first use — restrict `models` and
+`tasks` while exploring.
 
 ---
 
@@ -128,7 +137,8 @@ level. Useful for studying how methods scale with matrix size or degrade with no
 download is required.
 
 > **Note:** only `mode="mcar"` is implemented. Passing `mode="mnar"` raises
-> `NotImplementedError`.
+> `NotImplementedError`, and so does `process_data_distribution()` — this loader is
+> scalar-only.
 
 | Parameter | Default | Description |
 | --- | --- | --- |
@@ -160,6 +170,12 @@ rather than a ready-made `(data, mask)` pair — see
 [API reference § Simulations](api_reference.md#simulations).
 
 ---
+
+## Not part of the benchmark: `earnings`
+
+`nsquared.datasets.earnings` holds a loader for analyst earnings forecasts used in
+ongoing work. It is not registered with `NNData`, needs a WRDS subscription (`wrds`, in
+the `examples` extra), and is driven by the scripts in `examples/earnings/`.
 
 ## Pre-computed benchmark matrices
 

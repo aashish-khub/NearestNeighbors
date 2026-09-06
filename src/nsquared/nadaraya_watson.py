@@ -182,7 +182,7 @@ class NadarayaWatsonEstimator(EstimationMethod):
         if total == 0:
             # No candidate row falls inside the bandwidth.
             return _scalar_estimate(np.nan)
-        return _scalar_estimate(weights @ y / total)
+        return _scalar_estimate(weights[candidates] @ y[candidates] / total)
 
     def _resolve_bandwidth(
         self,

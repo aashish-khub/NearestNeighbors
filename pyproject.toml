@@ -99,7 +99,6 @@ include = ["nsquared*"]
 exclude = [
     ".git",
     "__pycache__",
-    "unconsolidated_code/*",
     "docs/*",
 ]
 

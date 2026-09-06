@@ -20,7 +20,7 @@ from joblib import Memory
 import os
 import requests
 
-memory = Memory(".joblib_cache", verbose=2)
+memory = Memory(".joblib_cache", verbose=0)
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +32,13 @@ params = {
     ),
     "end_year": (
         int,
-        2019,
+        2000,
         "End year for the data range.",
     ),
-    "sample_states": (
-        int,
-        None,
-        "Number of states to sample from the dataset. By default, returns all.",
+    "state": (
+        str,
+        "CA",
+        "Treated state placed in the first row; its post-1988 entries are masked.",
     ),
     "seed": (int, None, "Random seed for reproducibility"),
 }
@@ -126,7 +126,7 @@ class Prop99DataLoader(NNDataLoader):
         Args:
         ----
             start_year: Start year for the data range. Default: 1970.
-            end_year: End year for the data range. Default: 2019.
+            end_year: End year for the data range. Default: 2000.
             state: State to impute. Default: "CA".
             seed: Random seed for reproducibility. Default: None
             kwargs: Additional keyword arguments.
@@ -154,7 +154,7 @@ class Prop99DataLoader(NNDataLoader):
             mask: Mask for processed data
 
         """
-        df = self._load_data()
+        df = self._load_data(self.save_dir)
 
         # Filter for cigarette consumption in packs
         logger.info(f"Original data shape: {df.shape}")
@@ -260,12 +260,13 @@ class Prop99DataLoader(NNDataLoader):
 
     @classmethod
     @memory.cache
-    def _load_data(cls) -> pd.DataFrame:
-        """Download and load the Tax Burden on Tobacco dataset."""
-        csv_path = "tobacco_data.csv"
+    def _load_data(cls, save_dir: str = "./") -> pd.DataFrame:
+        """Load the Tax Burden on Tobacco dataset, downloading it into ``save_dir`` if absent."""
+        os.makedirs(save_dir, exist_ok=True)
+        csv_path = os.path.join(save_dir, "tobacco_data.csv")
 
         # Check for locally provided file
-        local_file = "The_Tax_Burden_on_Tobacco.csv"
+        local_file = os.path.join(save_dir, "The_Tax_Burden_on_Tobacco.csv")
         if os.path.exists(local_file):
             logger.info(f"Using locally provided file: {local_file}")
             return pd.read_csv(local_file)

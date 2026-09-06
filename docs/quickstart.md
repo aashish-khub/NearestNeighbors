@@ -41,6 +41,7 @@ cv = LeaveBlockOutValidation(
     distance_threshold_range=(0, 1),
     n_trials=20,
     data_type=Scalar(),
+    rng=rng,  # seeds the search; omit it and each run picks a different threshold
 )
 best_threshold = cv.fit(data, mask, imputer)
 
@@ -195,7 +196,8 @@ data, mask = loader.process_data_scalar()               # scalar setting
 data, mask = loader.process_data_distribution()         # distributional setting
 ```
 
-`download=True` fetches the raw data on first use and caches it under `save_dir`. See
+The raw data is fetched on first use and written under `save_dir`; processed matrices
+are memoised under `./.joblib_cache`. See
 [Datasets](datasets.md) for what each matrix contains and which options each loader takes,
 and [`examples/`](../examples/) for complete evaluation scripts per dataset.
 

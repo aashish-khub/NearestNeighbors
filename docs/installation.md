@@ -43,8 +43,8 @@ have to install a data-download stack and a convex solver.
 
 Extras compose: `pip install "nsquared[data,plots]"`.
 
-Both classical baselines (`nsquared.baselines.usvt` and `nsquared.baselines.softimpute`)
-are implemented directly on NumPy, so there is no extra to install for them.
+The baselines (`nsquared.baselines.usvt`, `softimpute`, and `knn_impute`) are
+implemented directly on NumPy, so there is no extra to install for them.
 
 With the `data` extra you should see all five loaders:
 

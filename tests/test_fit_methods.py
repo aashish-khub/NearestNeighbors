@@ -4,8 +4,12 @@ Each fit method holds out a block of observed entries, imputes them, and picks
 the distance threshold(s) that minimise the imputation error.
 """
 
+import warnings
+from typing import cast
+
 import numpy as np
 import pytest
+from hyperopt import Trials
 
 from nsquared import (
     AutoDRTSLeaveBlockOutValidation,
@@ -195,3 +199,90 @@ def test_tuning_beats_a_bad_threshold() -> None:
 
 if __name__ == "__main__":
     pytest.main()
+
+
+@pytest.mark.parametrize("seed", [0, 1])
+def test_single_threshold_search_is_reproducible_with_rng(seed: int) -> None:
+    """Two searches with equally seeded generators pick the same threshold."""
+    data, mask, block = make_problem(seed)
+
+    def run() -> float:
+        cv = LeaveBlockOutValidation(
+            block=block,
+            distance_threshold_range=(0, 1),
+            n_trials=N_TRIALS,
+            data_type=Scalar(),
+            rng=np.random.default_rng(seed),
+        )
+        result = cv.fit(data, mask, row_row())
+        assert isinstance(result, float)
+        return result
+
+    assert run() == run()
+
+
+def test_dual_threshold_search_is_reproducible_with_rng() -> None:
+    """The two-threshold fitters accept ``rng`` and honour it."""
+    data, mask, block = make_problem()
+
+    def run_ts() -> tuple[float, float]:
+        cv = TSLeaveBlockOutValidation(
+            block=block,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            n_trials=N_TRIALS,
+            data_type=Scalar(),
+            rng=np.random.default_rng(3),
+        )
+        return cv.fit(data, mask, ts_nn())  # type: ignore[return-value]
+
+    def run_auto() -> tuple[float, float]:
+        imputer = NearestNeighborImputer(AutoEstimator(), Scalar())
+        cv = AutoDRTSLeaveBlockOutValidation(
+            block=block,
+            distance_threshold_range_row=(0, 1),
+            distance_threshold_range_col=(0, 1),
+            alpha_range=(0, 1),
+            n_trials=N_TRIALS,
+            data_type=Scalar(),
+            rng=np.random.default_rng(3),
+        )
+        cv.fit(data, mask, imputer)
+        return imputer.distance_threshold, imputer.estimation_method.alpha  # type: ignore[return-value]
+
+    assert run_ts() == run_ts()
+    assert run_auto() == run_auto()
+
+
+def test_ts_fit_returns_trials_when_asked() -> None:
+    """Regression test: ``ret_trials`` was silently dropped by the TS fitter."""
+    data, mask, block = make_problem()
+    cv = TSLeaveBlockOutValidation(
+        block=block,
+        distance_threshold_range_row=(0, 1),
+        distance_threshold_range_col=(0, 1),
+        n_trials=N_TRIALS,
+        data_type=Scalar(),
+    )
+    result = cv.fit(data, mask, ts_nn(), ret_trials=True)
+    assert isinstance(result, tuple) and len(result) == 2
+    thresholds, trials = result
+    assert isinstance(thresholds, tuple) and len(thresholds) == 2
+    assert isinstance(trials, Trials)
+    assert len(trials.trials) == N_TRIALS
+
+
+def test_evaluate_imputation_all_nan_is_nan_without_warning() -> None:
+    """When nothing can be imputed the score is nan, reported silently."""
+    data = np.ones((4, 4))
+    mask = np.ones((4, 4), dtype=int)
+
+    class NothingImputer:
+        def impute(self, *args: object, **kwargs: object) -> np.floating:
+            return np.float64(np.nan)
+
+    imputer = cast(NearestNeighborImputer, NothingImputer())
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        score = evaluate_imputation(data, mask, imputer, [(0, 0), (1, 1)], Scalar())
+    assert np.isnan(score)

@@ -84,8 +84,12 @@ barycenter and returns `num_samples` values.
 
 ### `DistributionWassersteinQuantile()`
 
-Same geometry, but entries are represented by their empirical quantile functions rather
-than raw samples. Use this when entries have differing sample counts.
+Same geometry, but each entry is a *quantile function* — a callable mapping an array of
+probabilities in `[0, 1]` to quantile values — rather than an array of samples. Build
+one from samples with `DistributionWassersteinQuantile().empirical_quantile_function(samples)`;
+`data_array` is then an object array of such callables, and `average` returns a
+callable. Passing sample arrays raises `TypeError`. None of the shipped loaders produce
+this representation; use `DistributionWassersteinSamples` for sample-based data.
 
 ---
 
@@ -114,7 +118,8 @@ Uses the same row-row distances as `RowRowEstimator`, but instead of averaging t
 that fall inside a threshold it averages *every* row whose target entry is observed,
 weighting each by `kernel(distance / bandwidth)`. The threshold is therefore a kernel
 bandwidth rather than a cutoff. Supported kernels are `"gaussian"`, `"laplace"`,
-`"box"`, and `"singular_box"`; passing anything else raises `ValueError`.
+`"box"`, `"singular_box"`, `"epanechnikov"`, and `"wendland"`; passing anything else
+raises `ValueError`.
 
 With the `"box"` kernel the estimator reduces exactly to `RowRowEstimator`, since every
 row inside the bandwidth then carries equal weight.
@@ -151,14 +156,14 @@ Every fit method holds out `block` — a list of `(row, column)` pairs that are 
 
 For single-threshold estimators. `fit(...) -> float`.
 
-### `DualThresholdLeaveBlockOutValidation(block, distance_threshold_range_row, distance_threshold_range_col, n_trials, data_type, allow_self_neighbor=False)`
+### `DualThresholdLeaveBlockOutValidation(block, distance_threshold_range_row, distance_threshold_range_col, n_trials, data_type, allow_self_neighbor=False, rng=None)`
 
 Abstract base for two-threshold estimators. Use one of:
 
 - **`TSLeaveBlockOutValidation`** — for `ts_nn`. `fit(...) -> (row, col)`.
 - **`DRLeaveBlockOutValidation`** — for `dr_nn`. `fit(...) -> (row, col)`.
 
-### `AutoDRTSLeaveBlockOutValidation(block, distance_threshold_range_row, distance_threshold_range_col, alpha_range, n_trials, data_type, allow_self_neighbor=False)`
+### `AutoDRTSLeaveBlockOutValidation(block, distance_threshold_range_row, distance_threshold_range_col, alpha_range, n_trials, data_type, allow_self_neighbor=False, rng=None)`
 
 For `AutoEstimator`; additionally searches the mixing weight `alpha`.
 
@@ -175,7 +180,7 @@ The objective all the fit methods minimise: mean imputation error over `test_cel
 | `*_range` | `(lower, upper)` bounds for the search |
 | `n_trials` | Number of hyperopt evaluations |
 | `allow_self_neighbor` | Whether an entry may serve as its own neighbor. Keep `False` for honest validation |
-| `rng` | `numpy.random.Generator` for reproducible search (`LeaveBlockOutValidation` only) |
+| `rng` | `numpy.random.Generator` seeding the search. Without it, two runs on the same data pick different thresholds |
 
 Pass `ret_trials=True` to `fit` to additionally receive the `hyperopt` `Trials` object.
 
@@ -187,7 +192,11 @@ Pass `ret_trials=True` to `fit` to additionally receive the `hyperopt` `Trials` 
 
 Factory for benchmark loaders.
 
-- `NNData.create(dataset_name, download=False, save_dir="./", **kwargs) -> NNDataLoader`
+- `NNData.create(dataset_name, download=False, save_dir="./", **kwargs) -> NNDataLoader`.
+  Raw data files are written to `save_dir` the first time they are needed and reused
+  after that; `download` is accepted for compatibility and has no further effect.
+  Processed results are memoised by `joblib` under `./.joblib_cache` in the working
+  directory.
 - `NNData.get_data_params(dataset_name) -> dict` — the loader's dataset-specific
   parameters, as `{name: (type, default, description)}`.
 - `NNData.help(dataset_name="")` — print available datasets, or one loader's parameters.
@@ -216,7 +225,7 @@ See [Datasets](datasets.md) for the shipped loaders.
 
 ## Baselines
 
-Not exported from the top level; import from `nsquared.baselines`. Both are implemented
+Not exported from the top level; import from `nsquared.baselines`. All are implemented
 directly on NumPy and need no optional dependencies.
 
 - `nsquared.baselines.usvt(A, eta=1e-4)` — universal singular value thresholding
@@ -247,8 +256,7 @@ they drop into the same evaluation loop as the NN imputers.
   including the `--estimation_method` alias registry.
 - `nsquared.utils.plotting_utils` — per-method plot styling used by the `plot_*.py`
   scripts in [`examples/`](../examples/).
-- `nsquared.utils.kernels`, `nsquared.utils.helper_fns` — kernel definitions and shared
-  numerical helpers.
+- `nsquared.utils.kernels` — the kernel functions used by `NadarayaWatsonEstimator`.
 ## Simulations
 
 `nsquared.simulations` holds the data-generating process behind the
@@ -280,5 +288,5 @@ Three self-contained generators return a full problem in one call:
 staggered-adoption data for the distributional setting, returning
 `(Data, Masking, true_Mean, true_Cov)`.
 
-These all draw from NumPy's global random state, so seed with `np.random.seed` for
-reproducibility.
+`gendata_lin_mcar` and `gendata_nonlin_mcar` take a `seed` or an `rng`
+(`numpy.random.Generator`); `gendata_s_adopt` takes a `seed`.

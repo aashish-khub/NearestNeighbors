@@ -86,9 +86,9 @@ To add a new nearest neighbor variant:
 
     ```
 
-3. To ensure compatability with the experiments and plotting functions, add an alias for your method in [`nsquared/utils/experiments.py`](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/src/nsquared/utils/experiments.py#L19) under the parser argument for `--estimation_method` and fill out [`nsquared/utils/plotting_utils.py`](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/src/nsquared/utils/plotting_utils.py#L19) with your desired plot settings.
+3. To ensure compatability with the experiments and plotting functions, add an alias for your method in [`nsquared/utils/experiments.py`](../src/nsquared/utils/experiments.py) under the parser argument for `--estimation_method` and fill out [`nsquared/utils/plotting_utils.py`](../src/nsquared/utils/plotting_utils.py) with your desired plot settings.
 
-4. To test on a given dataset (for example: `heartsteps`), navigate to `examples/heartsteps/run_scalar.py` and add your method following the existing template. In general, all that is required is adding a block to [this conditional structure](https://github.com/aashish-khub/NearestNeighbors/blob/441a382efba2cf68c22ac379bd5750f91d9e03ee/examples/heartsteps/run_scalar.py#L157), but your method is not required to use the exact format of the `run_scalar.py` script. For distributional methods, do the same, but in `run_distribution.py`.
+4. To test on a given dataset (for example: `heartsteps`), navigate to [`examples/heartsteps/run_scalar.py`](../examples/heartsteps/run_scalar.py) and add your method following the existing template. In general, all that is required is adding a branch to the `if estimation_method == ...` chain, but your method is not required to use the exact format of the `run_scalar.py` script. For distributional methods, do the same, but in `run_distribution.py`.
 
 5. Adjust the corresponding `slurm_scripts/*.sh` files in the `examples` directory to add your new methods alias under `METHODS`.
 
@@ -103,7 +103,7 @@ This contains the masked (missingness included) matrix used in our experiments, 
 #### Option 2:
 Use the dataloader in `nsquared.datasets`.
 
-For examples on how the dataloader works, check out the use of the loader [here](https://github.com/aashish-khub/NearestNeighbors/blob/main/examples/heartsteps/run_scalar.py) or [here](https://github.com/aashish-khub/NearestNeighbors/blob/main/examples/prop99/run_scalar.py).
+For examples on how the dataloader works, check out the use of the loader in [`examples/heartsteps/run_scalar.py`](../examples/heartsteps/run_scalar.py) or [`examples/prop99/run_scalar.py`](../examples/prop99/run_scalar.py).
 
 
 ## Adding new datasets

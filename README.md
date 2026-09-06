@@ -38,7 +38,8 @@ them hard to compare and hard to adopt. $N^2$ solves this:
 - **A real benchmark.** $N^2$-Bench auto-downloads four real-world datasets across mobile
   health, recommender systems, causal panel data, and LLM evaluation, so new methods can
   be stress-tested beyond synthetic low-rank matrices.
-- **Baselines included.** USVT and SoftImpute are packaged alongside for comparison.
+- **Baselines included.** USVT, SoftImpute, and k-NN imputation are packaged alongside
+  for comparison.
 
 ## Implemented methods
 
@@ -156,6 +157,7 @@ cv = LeaveBlockOutValidation(
     distance_threshold_range=(0, 1),
     n_trials=20,
     data_type=Scalar(),
+    rng=rng,  # seeds the search; omit it and each run picks a different threshold
 )
 cv.fit(data, mask, imputer)
 

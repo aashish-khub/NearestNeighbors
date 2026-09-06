@@ -837,7 +837,8 @@ class AWNNEstimator(EstimationMethod):
         if vectorize and isinstance(data_type, Scalar):
             X = data_array
             M = mask_array.astype(float)
-            X_masked = X * M
+            # Masked entries may hold nan; 0 * nan is nan, so select instead.
+            X_masked = np.where(M == 1, X, 0.0)
 
             # count of overlapping columns for each pair
             counts = M @ M.T
@@ -888,6 +889,13 @@ class AutoEstimator(EstimationMethod):
     """Estimate the missing entry using "Auto-NN" idea (Kyuseong Choi)."""
 
     def __init__(self, is_percentile: bool = True):
+        """Initialize the Auto-NN estimator.
+
+        Args:
+            is_percentile (bool): Whether to interpret the distance thresholds as
+                quantiles of the observed distances. Defaults to True.
+
+        """
         super().__init__(is_percentile)
         self.row_distances = dict()
         self.col_distances = dict()
@@ -920,7 +928,8 @@ class AutoEstimator(EstimationMethod):
             distance_threshold (float or Tuple[float, float]): Distance threshold for nearest neighbors
             or a tuple of (row_threshold, col_threshold) for row and column respectively.
             data_type (DataType): Data type to use (e.g. scalars, distributions)
-            allow_self_neighbor (bool): Whether to allow self-neighbor. Defaults to False.
+            allow_self_neighbor (bool): Whether the doubly robust component may use
+                the entry itself as a neighbor. Defaults to False.
             **kwargs (Any): Additional keyword arguments
 
         """
@@ -929,7 +938,6 @@ class AutoEstimator(EstimationMethod):
                 "AutoEstimator.impute() missing 1 required keyword-only argument: 'alpha'"
             )
         alpha = self.alpha if self.alpha else kwargs.pop("alpha")
-        # TODO: handle allow self neighbor (Caleb)
         drnn_impute = self.drnn_imputer.impute(
             row,
             column,
@@ -937,8 +945,10 @@ class AutoEstimator(EstimationMethod):
             mask_array,
             distance_threshold,
             data_type,
-            allow_self_neighbor=False,
+            allow_self_neighbor=allow_self_neighbor,
         )
+        # The two-sided component always includes the target row and column in
+        # its neighborhoods, as TSEstimator does by default.
         ts_impute = self.ts_imputer.impute(
             row,
             column,

@@ -9,5 +9,5 @@ To obtain the error values across methods, please run:
 To generate box plots of the absolute error, please run:
 
 ```bash
-python plot_error.py -od OUTPUT_DIR
+python plot_error_and_time.py -od OUTPUT_DIR
 ```

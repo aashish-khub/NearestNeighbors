@@ -1,7 +1,7 @@
-"""Demo: Loading and inspecting the MovieLens dataset using the nearest_neighbors package.
+"""Demo: Loading and inspecting the MovieLens dataset with nsquared.
 
-Run this script from the root of the repository with:
-    python examples/demo_movielens_data_loading.py
+Run from this directory:
+    python demo_movielens_dataloader.py
 """
 
 from nsquared.datasets.dataloader_factory import NNData

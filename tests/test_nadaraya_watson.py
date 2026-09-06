@@ -315,3 +315,25 @@ def test_works_through_nearest_neighbor_imputer() -> None:
     weights = np.exp(-0.5 * EXPECTED_ROW_DISTS / 1.0**2)
     expected = weights @ DATA[:, TARGET_COLUMN] / weights.sum()
     assert np.isclose(estimated_value, expected)
+
+
+def test_nan_at_masked_positions_is_ignored() -> None:
+    """Values stored at masked-out positions must not affect the estimate.
+
+    Regression test: the weighted sum contracted over every row, so a nan in
+    the target column at an unobserved row (weight zero) still produced nan.
+    """
+    rng = np.random.default_rng(0)
+    data = rng.standard_normal((12, 8))
+    mask = (rng.random((12, 8)) < 0.7).astype(int)
+    with_nan = np.where(mask == 1, data, np.nan)
+    with_zero = np.where(mask == 1, data, 0.0)
+
+    r, c = map(int, np.argwhere(mask == 0)[0])
+    imputer = NearestNeighborImputer(
+        NadarayaWatsonEstimator(), Scalar(), distance_threshold=0.5
+    )
+    a = imputer.impute(r, c, with_nan, mask)
+    b = imputer.impute(r, c, with_zero, mask)
+    assert np.isfinite(a)
+    assert np.isclose(a, b)

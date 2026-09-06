@@ -249,7 +249,7 @@ Full templates for all three extension points are in
 
 ## Baselines
 
-For comparison, `nsquared.baselines` packages two classical non-NN matrix completion
+For comparison, `nsquared.baselines` packages classical non-NN matrix completion
 methods:
 
 - `nsquared.baselines.usvt` — universal singular value thresholding (Chatterjee, 2015).
@@ -261,9 +261,9 @@ methods:
   generalize, and is included so that generalization can be measured.
 - `nsquared.baselines.knn_impute_columnwise` — the same over columns.
 
-Both take a matrix with `np.nan` in the missing positions, so they drop into the same
-evaluation loop, and both are implemented directly on NumPy — no optional dependency is
-needed for either.
+All take a matrix with `np.nan` in the missing positions, so they drop into the same
+evaluation loop, and all are implemented directly on NumPy — no optional dependency is
+needed.
 
 ## Further reading
 

@@ -167,3 +167,25 @@ def test_baselines_need_no_optional_dependency() -> None:
 
 if __name__ == "__main__":
     pytest.main()
+
+
+def test_version_is_exposed() -> None:
+    """``nsquared.__version__`` is a non-empty string."""
+    assert isinstance(nsquared.__version__, str)
+    assert nsquared.__version__
+
+
+def test_auto_estimator_forwards_allow_self_neighbor() -> None:
+    """The doubly robust component receives the caller's ``allow_self_neighbor``."""
+    from unittest.mock import patch
+
+    estimator = nsquared.AutoEstimator()
+    data = np.ones((4, 4))
+    mask = np.ones((4, 4), dtype=int)
+    with patch.object(
+        estimator.drnn_imputer, "impute", return_value=np.float64(1.0)
+    ) as dr:
+        estimator.impute(
+            0, 0, data, mask, (0.5, 0.5), nsquared.Scalar(), allow_self_neighbor=True
+        )
+    assert dr.call_args.kwargs["allow_self_neighbor"] is True

@@ -133,3 +133,35 @@ def test_help_lists_available_datasets(capsys: pytest.CaptureFixture) -> None:
 
 if __name__ == "__main__":
     pytest.main()
+
+
+@pytest.mark.parametrize("name", sorted(EXPECTED_DATASETS))
+def test_declared_params_match_constructor_defaults(name: str) -> None:
+    """``NNData.help`` advertises the defaults the constructor actually uses."""
+    import inspect
+    from nsquared.datasets.dataloader_factory import _DATASETS
+
+    signature = inspect.signature(_DATASETS[name].__init__)
+    for param, (_, default, _) in NNData.get_data_params(name).items():
+        assert param in signature.parameters, (
+            f"{name}: {param!r} is not a constructor argument"
+        )
+        assert signature.parameters[param].default == default, (
+            f"{name}: declared default for {param!r} differs from the constructor"
+        )
+
+
+def test_prompteval_scalar_requires_one_model_and_task() -> None:
+    """Scalar mode is a single (template x example) matrix, so ambiguity is an error."""
+    loader = NNData.create("prompteval")
+    with pytest.raises(ValueError, match="single model and task"):
+        loader.process_data_scalar()
+
+
+def test_prop99_reads_local_file_from_save_dir(tmp_path) -> None:  # noqa: ANN001
+    """A locally provided CSV under ``save_dir`` is used without downloading."""
+    from nsquared.datasets.prop99.loader import Prop99DataLoader
+
+    (tmp_path / "The_Tax_Burden_on_Tobacco.csv").write_text("a,b\n1,2\n")
+    df = Prop99DataLoader._load_data(str(tmp_path))
+    assert list(df.columns) == ["a", "b"]

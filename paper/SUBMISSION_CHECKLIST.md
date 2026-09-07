@@ -32,11 +32,9 @@ Reference: <https://joss.readthedocs.io/en/latest/submitting.html>
       the AI systems **and versions** used and exactly where; the scope of assistance; and
       an assertion that humans reviewed, modified, and validated the output and made the
       core design decisions. The section in `paper.md` is written to that structure and
-      names Claude Opus 5 (via Claude Code), used primarily for test generation plus the
-      documentation and repository scaffolding. Two things to resolve:
-      - The bracketed sentence "Generative AI also assisted in drafting portions of this
-        manuscript." — delete it only if the paper text is rewritten from scratch; keep it
-        (unbracketed) if any AI-drafted prose survives revision.
+      names Claude Opus 5 and Claude Fable 5.1 (via Claude Code, July–September 2026),
+      listing the test, baseline, refactor, and documentation work by file. It was
+      checked against `git diff origin/main...JOSS --stat`. One thing to resolve:
       - **Every co-author must confirm the disclosure is complete** for any other AI use
         during development. An incomplete or inaccurate disclosure is treated by JOSS as
         an ethical breach, with desk rejection or post-publication withdrawal as possible
@@ -91,9 +89,10 @@ JOSS requires a tagged release archived with a DOI.
 >    it raises `ValueError` on a row or column with no observed entries — the same
 >    condition `fancyimpute` rejected, with a clearer message.
 
-- [ ] Bump the version in `pyproject.toml` and in `CITATION.cff` (`version:` and
-      `date-released:`). Follow [`RELEASE.md`](../RELEASE.md).
-- [ ] Tag and publish the release on GitHub. The `publish.yml` workflow pushes it to PyPI.
+- [x] Bump the version in `pyproject.toml` and in `CITATION.cff` (`version:` and
+      `date-released:`) — 1.2.0, 2026-09-07.
+- [ ] Tag and publish the release on GitHub. The `publish.yml` workflow pushes it to PyPI
+      (`skip-existing` is set, so a version already uploaded by hand is fine).
 - [ ] Archive the release with [Zenodo](https://zenodo.org) (or figshare) to mint a DOI.
       The metadata — title, author list — must match `paper.md`.
 - [ ] Record the version number and DOI; both go in the submission form.
@@ -140,20 +139,20 @@ Checked against <https://joss.readthedocs.io/en/latest/review_criteria.html>.
 | Installation instructions incl. dependencies | ✅ README; [`docs/installation.md`](../docs/installation.md) |
 | Example usage | ✅ README quickstart; [`docs/quickstart.md`](../docs/quickstart.md); `examples/` |
 | API documentation | ✅ [`docs/api_reference.md`](../docs/api_reference.md) plus docstrings |
-| Automated tests | ✅ 199 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
+| Automated tests | ✅ 216 tests, run in CI on Python 3.10–3.12 and on macOS/Windows |
 | Community guidelines (contribute / report / support) | ✅ [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), issue templates |
 
 ### Paper
 
 | Criterion | Status |
 | --- | --- |
-| 750–1750 words | ✅ ~1,240 |
+| 750–1750 words | ✅ ~1,500 |
 | Summary for a non-specialist | ✅ |
 | Statement of need | ✅ |
-| State of the field | ✅ compares `scikit-learn`, `fancyimpute`, `syntheticNN` |
+| State of the field | ✅ compares and cites `scikit-learn`, `fancyimpute`, `syntheticNN` |
 | Software design | ✅ |
 | Research impact | ⚠️ written; claims need author verification (above) |
-| AI usage disclosure | ⚠️ written; needs co-author sign-off (above) |
+| AI usage disclosure | ⚠️ rewritten to match the branch history; needs co-author sign-off (above) |
 | References with DOIs, full venue names | ✅ `paper.bib` |
 | Authors and affiliations with ROR | ✅ ROR IDs included; three ORCIDs missing |
 

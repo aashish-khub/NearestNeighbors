@@ -52,4 +52,6 @@ jobs:
         if: github.event.release.prerelease == false
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          # A version already uploaded by hand must not fail the release.
+          skip-existing: true
           verbose: true

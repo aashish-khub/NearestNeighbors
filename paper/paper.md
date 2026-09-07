@@ -48,7 +48,7 @@ affiliations:
   - name: University of Pennsylvania, USA
     index: 3
     ror: 00b30xv10
-date: 27 July 2026
+date: 7 September 2026
 bibliography: paper.bib
 ---
 
@@ -66,9 +66,10 @@ column-wise NN [@li2019nearest; @dwivedi2022counterfactual], two-sided NN
 [@sadhukhan2024adaptivity], doubly robust NN [@dwivedi2022doubly], adaptively-weighted NN
 [@sadhukhan2025adaptively], and kernel- and Wasserstein-based *distributional* NN
 [@choi2024learning; @feitelberg2024distributional], together with cross-validation
-routines for their tuning parameters and with two classical non-NN baselines,
-universal singular value thresholding [@chatterjee2015matrix] and SoftImpute
-[@hastie2015matrix].
+routines for their tuning parameters and with three classical non-NN baselines:
+universal singular value thresholding [@chatterjee2015matrix], SoftImpute
+[@hastie2015matrix], and k-nearest-neighbor imputation as in `scikit-learn`
+[@scikit-learn].
 
 Beyond scalar matrices, `N`$^2$ supports *distributional* matrix completion, in which
 each entry is an empirical distribution (for example, the full distribution of a
@@ -115,9 +116,10 @@ The closest widely used tool is `scikit-learn`'s `KNNImputer` [@scikit-learn]. I
 designed for the feature-matrix setting, so neighbors are defined only across samples
 (row-wise), the target is always a scalar, and there is no facility for the two-sided,
 doubly robust, or adaptively-weighted estimators that dominate the recent literature.
-`fancyimpute` provides SoftImpute and related low-rank solvers but no NN variants beyond
+`fancyimpute` [@fancyimpute] provides SoftImpute and related low-rank solvers but no NN variants beyond
 a basic k-NN imputer. Domain-specific packages exist for individual estimators — for
-example, `syntheticNN` implements synthetic nearest neighbors for causal matrix
+example, `syntheticNN` [@syntheticNN] implements synthetic nearest neighbors
+[@agarwal2023causal] for causal matrix
 completion — but each covers one method and one problem framing.
 
 No existing package covers distributional matrix completion, where entries are
@@ -164,7 +166,7 @@ dataset means writing one loader class rather than modifying the harness.
 
 We also keep the dependency footprint deliberately small, since a heavy install is a
 barrier to reuse: all numerical work is built on NumPy [@harris2020array], the estimators
-and both baselines require nothing else, and the data loaders, plotting helpers, and
+and all three baselines require nothing else, and the data loaders, plotting helpers, and
 example scripts sit behind optional extras. SoftImpute is implemented in-package from
 @mazumder2010spectral rather than pulled from a third-party library that would have added
 twenty-six transitive dependencies, including convex solvers the algorithm never uses.
@@ -190,40 +192,37 @@ scripts and data loaders needed to reproduce every experiment in
 
 # AI usage disclosure
 
-**Tools.** Claude Opus 5 (Anthropic), accessed through the Claude Code command-line
-interface, was used under author direction in July 2026.
+**Tools.** Claude Opus 5 and Claude Fable 5.1 (Anthropic), accessed through the Claude
+Code command-line interface, were used under author direction between July and
+September 2026.
 
-**Where it was used, and for what.** The primary use was *test generation*: the assistant
-wrote the test modules covering the kernel MMD and Wasserstein data types
-(`tests/test_dnn_kernel.py`, `tests/test_dnn_wasserstein.py`), the benchmark data loaders
-(`tests/test_datasets.py`), the cross-validation layer (`tests/test_fit_methods.py`), and
-the public API surface (`tests/test_public_api.py`). Four of these files previously existed
-as empty placeholders. It was also used to draft the user-facing documentation (`docs/`,
-`README.md`, `CONTRIBUTING.md`), the repository scaffolding for this submission
-(continuous-integration workflows, issue and pull-request templates, `CITATION.cff`), and
-two small interface refactors: an explicit export list in `nsquared/__init__.py` and
-automatic discovery of dataset loaders in `nsquared/datasets/dataloader_factory.py`.
-[Generative AI also assisted in drafting portions of this manuscript.]
+**Where it was used, and for what.** (i) *Tests*: the assistant wrote
+`tests/test_datasets.py`, `test_dnn_kernel.py`, `test_dnn_wasserstein.py`,
+`test_fit_methods.py`, `test_knn_baseline.py`, `test_public_api.py`,
+`test_simulations.py`, and `test_softimpute.py`, and added cases to the pre-existing
+test files. (ii) *Baselines*: NumPy implementations of SoftImpute
+(`nsquared/baselines/_softimpute.py`, validated against `fancyimpute` to a relative
+error of $3 \times 10^{-4}$) and of k-nearest-neighbor imputation (`_knn.py`,
+validated against `scikit-learn` to machine precision), which replaced a third-party
+dependency. (iii) *Refactors and bug fixes*: the `nsquared.simulations` module, loader
+discovery and `save_dir` handling in `nsquared/datasets/`, in-place mutation in
+`utils/kernels.py`, completion of `NadarayaWatsonEstimator`, `nan` handling in
+`AWNNEstimator`, and reproducible search in `fit_methods.py`. (iv) *Documentation and
+scaffolding*: `docs/`, `README.md`, `CONTRIBUTING.md`, `CITATION.cff`, the
+continuous-integration workflows, the issue and pull-request templates, and a first
+draft of this manuscript.
 
-**Where it was not used.** The nearest neighbor methods, their implementations in
-`nsquared/estimation_methods.py`, `nsquared/data_types.py`, and `nsquared/fit_methods.py`,
-the benchmark design, and the experiments were conceived and written by the authors
-without generative AI assistance.
+**Where it was not used.** The nearest neighbor methods themselves, their original
+implementations in `estimation_methods.py`, `data_types.py`, and `nnimputer.py`, the
+benchmark design, and every experiment reported in @chin2025nsquared were conceived and
+written by the authors without generative AI assistance.
 
-**Human verification.** All architectural and methodological decisions were made by the
-authors. Every AI-generated test was executed and its assertions checked against the
-documented behaviour of the code under test rather than accepted on the basis of a passing
-run; the tests that pin known gaps (the unimplemented MNAR generator) do so deliberately.
-All AI-drafted documentation was read and corrected by the authors, and each factual claim
-about the software was verified against the source. The authors take full responsibility
-for the correctness of all content in the software and this paper.
-
-<!-- BEFORE SUBMISSION:
-1. If you rewrite this paper's text from scratch, delete the bracketed sentence above.
-   If any AI-drafted prose survives your revision, keep it (without the brackets).
-2. All co-authors must confirm this is complete: if generative AI was used anywhere else
-   during development, name the tool and where it was applied.
-JOSS policy: https://joss.readthedocs.io/en/latest/policies.html -->
+**Human verification.** Every AI-written test was executed and its assertions checked
+against the intended behaviour of the code under test, not accepted on the basis of a
+passing run. Every code change was reviewed by an author, and the two reimplemented
+baselines were checked numerically against their reference implementations. All
+AI-drafted documentation and manuscript text was read and corrected by the authors,
+who take full responsibility for the content of the software and of this paper.
 
 # Acknowledgements
 

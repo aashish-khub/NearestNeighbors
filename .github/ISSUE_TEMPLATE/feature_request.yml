@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a new estimator, data type, dataset, or other improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: >
+        Describe the use case rather than only the solution you have in mind — there may
+        already be a way to do it, or a more general change that helps more users.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like the package to do?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of addition is this?
+      options:
+        - New nearest neighbor variant (EstimationMethod)
+        - New data type (DataType)
+        - New benchmark dataset
+        - New cross-validation / fitting strategy
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to papers or existing implementations, if applicable.
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Would you like to implement this?
+      options:
+        - label: I would be willing to open a pull request for this.

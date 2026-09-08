@@ -41,7 +41,7 @@ params = {
         "List of models to evaluate by. By default, returns all.",
     ),
     "seed": (int, None, "Random seed for reproducibility"),
-    "propensity": (float, None, "Proportion of data to keep"),
+    "propensity": (float, 1.0, "Proportion of entries kept observed (MCAR)"),
 }
 
 
@@ -234,8 +234,12 @@ class PromptEvalDataLoader(NNDataLoader):
         if not self.tasks or not self.models:
             raise ValueError("Tasks and models must be specified")
 
-        assert len(self.models) == 1, "Only one model is supported in scalar mode"
-        assert len(self.tasks) == 1, "Only one task is supported in scalar mode"
+        if len(self.models) != 1 or len(self.tasks) != 1:
+            raise ValueError(
+                "process_data_scalar builds one (template x example) matrix for a "
+                "single model and task; pass models=[...] and tasks=[...] with one "
+                "entry each, or use process_data_distribution."
+            )
 
         model = self.models[0]
         task = self.tasks[0]

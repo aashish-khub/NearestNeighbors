@@ -1,0 +1,46 @@
+name: Bug report
+description: Report something that is broken or behaving unexpectedly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much of the
+        form below as you can — a runnable reproduction is by far the most useful thing
+        you can give us.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: A small, self-contained snippet that triggers the problem.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback
+      description: The full error output, if there is one.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Output of:
+        `python -c "import sys, numpy, nsquared; print(sys.version); print(numpy.__version__)"`
+        plus your operating system and how you installed the package (pip / editable).
+      render: shell
+    validations:
+      required: true

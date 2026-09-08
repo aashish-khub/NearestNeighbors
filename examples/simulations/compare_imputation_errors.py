@@ -3,7 +3,7 @@ of aw_nn, row_row, and USVT against increasing matrix sizes.
 
 Example usage (from root of repo):
 ```bash
-python src/nearest_neighbors/simulations/compare_imputation_errors.py
+python examples/simulations/compare_imputation_errors.py
 ```
 """
 

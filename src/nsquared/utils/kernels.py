@@ -55,7 +55,7 @@ def singular(dists: np.ndarray, eta: float) -> np.ndarray:
         np.ndarray: Kernel matrix.
 
     """
-    dists /= eta
+    dists = dists / eta  # not in place: the caller keeps its array
     a = 0.49
     # replace divide by zero with nan
     dists = np.where(dists == 0, np.nan, dists)
@@ -75,7 +75,7 @@ def singular_box(dists: np.ndarray, eta: float) -> np.ndarray:
 
     """
     assert eta > 0
-    dists /= eta
+    dists = dists / eta  # not in place: the caller keeps its array
     a = 0.49
     dists = np.where(dists == 0, np.nan, dists)
     kernel_mat = np.power(dists, -a) * np.where(dists <= 1, 1, 0)
@@ -94,7 +94,7 @@ def box(dists: np.ndarray, eta: float) -> np.ndarray:
 
     """
     assert eta > 0
-    dists /= eta
+    dists = dists / eta  # not in place: the caller keeps its array
     kernel_mat = np.where(dists <= 1, 1, 0)
     return kernel_mat
 
@@ -113,7 +113,7 @@ def epanechnikov(dists: np.ndarray, eta: float) -> np.ndarray:
 
     """
     assert eta > 0
-    dists /= eta
+    dists = dists / eta  # not in place: the caller keeps its array
     kernel_mat = np.where(dists <= 1, 0.75 * (1 - dists**2), 0)
     return kernel_mat
 
@@ -132,6 +132,6 @@ def wendland(dists: np.ndarray, eta: float) -> np.ndarray:
 
     """
     assert eta > 0
-    dists /= eta
+    dists = dists / eta  # not in place: the caller keeps its array
     kernel_mat = np.where(dists <= 1, 1 - dists, 0)
     return kernel_mat

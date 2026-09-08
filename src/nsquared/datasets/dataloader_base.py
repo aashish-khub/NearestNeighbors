@@ -7,6 +7,14 @@ from nsquared.data_types import DataType
 
 
 class NNDataLoader(ABC):
+    """Base class for the N^2-Bench dataset loaders.
+
+    Subclasses implement ``process_data_scalar``, ``process_data_distribution``
+    and ``get_full_state_as_dict``, and are registered with
+    :func:`nsquared.datasets.dataloader_factory.register_dataset` so that
+    ``NNData.create(name)`` can build them.
+    """
+
     # this is an abstract attribute to contain the URLs of the data of subclassers
     urls: dict
     supported_aggs = ["mean", "sum", "median", "std", "variance"]
@@ -15,6 +23,8 @@ class NNDataLoader(ABC):
         self,
         agg: str = "mean",
         save_processed: bool = False,
+        download: bool = False,
+        save_dir: str = "./",
         **kwargs: Any,
     ):
         """Initializes the data loader.
@@ -22,10 +32,15 @@ class NNDataLoader(ABC):
         Args:
             agg (str): aggregation method to use to create scalar dataset. Default: "mean".
             save_processed (bool): whether to save the processed data.  Default: False.
+            download (bool): accepted for compatibility; raw data is fetched on first
+                use whenever it is not already present in ``save_dir``. Default: False.
+            save_dir (str): directory the raw data files are written to. Default: "./".
             **kwargs: additional arguments to be passed to the subclass.
 
         """
         self.save_processed = save_processed
+        self.download = download
+        self.save_dir = save_dir
         if agg not in self.supported_aggs:
             raise ValueError(
                 f"Aggregation method {agg} not supported. Supported methods: {self.supported_aggs}"

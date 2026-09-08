@@ -50,7 +50,10 @@ def evaluate_imputation(
     for row, col in test_cells:
         mask_array[row, col] = 1
 
-    return float(np.nanmean(errors))
+    errors_arr = np.asarray(errors, dtype=float)
+    if errors_arr.size == 0 or np.all(np.isnan(errors_arr)):
+        return float("nan")
+    return float(np.nanmean(errors_arr))
 
 
 class LeaveBlockOutValidation(FitMethod):
@@ -159,6 +162,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
         n_trials: int,
         data_type: DataType,
         allow_self_neighbor: bool = False,
+        rng: np.random.Generator | None = None,
     ):
         """Initialize the dual threshold block fit method.
 
@@ -169,6 +173,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             n_trials (int): Number of trials to run.
             data_type (DataType): Data type to use (e.g. scalars, distributions).
             allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
+            rng (np.random.Generator | None, optional): Random number generator for the search. Defaults to None.
 
         """
         self.block = block
@@ -177,6 +182,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
         self.n_trials = n_trials
         self.data_type = data_type
         self.allow_self_neighbor = allow_self_neighbor
+        self.rng = rng
 
     def fit(
         self,
@@ -237,6 +243,7 @@ class DualThresholdLeaveBlockOutValidation(FitMethod):
             max_evals=self.n_trials,
             verbose=False,
             trials=trials,
+            rstate=self.rng,
         )
 
         if best_params is None:
@@ -318,7 +325,7 @@ class TSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
                 f"The imputer must use a TSEstimator for {self.__class__.__name__}."
             )
         imputer.estimation_method = cast(TSEstimator, imputer.estimation_method)
-        return super().fit(data_array, mask_array, imputer)
+        return super().fit(data_array, mask_array, imputer, ret_trials)
 
 
 class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
@@ -335,6 +342,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
         n_trials: int,
         data_type: DataType,
         allow_self_neighbor: bool = False,
+        rng: np.random.Generator | None = None,
     ):
         """Initialize the dual threshold block fit method with AutoEstimator.
 
@@ -346,6 +354,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             n_trials (int): Number of trials to run.
             data_type (DataType): Data type to use (e.g. scalars, distributions).
             allow_self_neighbor (bool, optional): Whether to allow the entry itself as a neighbor. Defaults to False.
+            rng (np.random.Generator | None, optional): Random number generator for the search. Defaults to None.
 
         """
         self.alpha_range = alpha_range
@@ -355,8 +364,9 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             distance_threshold_range_col,
             n_trials,
             data_type,
+            allow_self_neighbor,
+            rng,
         )
-        self.allow_self_neighbor = allow_self_neighbor
 
     def fit(
         self,
@@ -430,6 +440,7 @@ class AutoDRTSLeaveBlockOutValidation(DualThresholdLeaveBlockOutValidation):
             max_evals=self.n_trials,
             verbose=False,
             trials=trials,
+            rstate=self.rng,
         )
 
         if best_params is None:

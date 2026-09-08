@@ -23,7 +23,7 @@ import os
 import requests
 import shutil
 
-memory = Memory(".joblib_cache", verbose=2)
+memory = Memory(".joblib_cache", verbose=0)
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class MovieLensDataLoader(NNDataLoader):
             mask: Mask for processed data
 
         """
-        df_movies, df_ratings, df_users = self._load_data()
+        df_movies, df_ratings, df_users = self._load_data(self.save_dir)
         data_df = df_ratings.pivot(
             index="UserID", columns="MovieID", values="Rating"
         )  # rows: UserID, columns: MovieID, values: Rating
@@ -140,10 +140,13 @@ class MovieLensDataLoader(NNDataLoader):
 
     @classmethod
     @memory.cache
-    def _load_data(cls) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        """Download and extract the MovieLens 1M dataset and load its contents."""
-        zip_path = "movielens_1m.zip"
-        extract_dir = "movielens_1m"
+    def _load_data(
+        cls, save_dir: str = "./"
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Download and extract the MovieLens 1M dataset into ``save_dir`` and load it."""
+        os.makedirs(save_dir, exist_ok=True)
+        zip_path = os.path.join(save_dir, "movielens_1m.zip")
+        extract_dir = os.path.join(save_dir, "movielens_1m")
 
         # Download if missing or previously corrupted
         needs_download = not os.path.exists(zip_path)

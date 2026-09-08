@@ -25,7 +25,6 @@ def get_base_parser() -> ArgumentParser:
             "softimpute",
             "auto",
             "aw",
-            "usvt",
         ],
         help="Estimation method to use",
     )

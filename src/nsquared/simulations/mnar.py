@@ -47,9 +47,12 @@ def gendata_s_adopt(
     """
     np.random.seed(seed=seed)
 
-    Data = np.zeros((N, T))
-    true_Mean = np.zeros((N, T))
-    true_Cov = np.zeros((N, T))
+    # Shapes follow the documented contract above. These were previously
+    # allocated as (N, T), so the assignments below raised ValueError and this
+    # function could never run.
+    Data = np.zeros((N, T, n, d))
+    true_Mean = np.zeros((N, T, d))
+    true_Cov = np.zeros((N, T, d, d))
 
     u_1 = np.random.uniform(-1, 1, N)
     u_2 = np.random.uniform(0.2, 1, N)
@@ -94,9 +97,8 @@ def gendata_s_adopt(
                         gamma_1[0]
                         + (0.99**t) * gamma_1[1] * u_1[i - 1]
                         + gamma_1[2] * u_1[i]
-                        + (0.99**t) * gamma_1[3] * u_1[i + 1]
+                        + (0.99**t) * gamma_1[3] * u_1[(i + 1) % N]
                     ),
-                    1,
                 )
             pre_A = pre_Masking[i, :]
             if len([i for i in range(len(pre_A)) if pre_A[i] == 0]) == 0:
@@ -117,9 +119,8 @@ def gendata_s_adopt(
                         gamma_2[0]
                         + (1.01**t) * gamma_2[1] * u_1[i - 1]
                         + gamma_2[2] * u_1[i]
-                        + (1.01**t) * gamma_2[3] * u_1[i + 1]
+                        + (1.01**t) * gamma_2[3] * u_1[(i + 1) % N]
                     ),
-                    1,
                 )
             pre_A = pre_Masking[i, :]
             if len([i for i in range(len(pre_A)) if pre_A[i] == 0]) == 0:

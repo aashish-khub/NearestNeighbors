@@ -17,11 +17,13 @@ import pandas as pd
 from typing import Any
 import warnings
 import logging
+import os
+import requests
 from joblib import Memory
 from nsquared.data_types import DataType
 
 
-memory = Memory(".joblib_cache", verbose=2)
+memory = Memory(".joblib_cache", verbose=0)
 
 logger = logging.getLogger(__name__)
 
@@ -95,22 +97,23 @@ class HeartStepsDataLoader(NNDataLoader):
             mask: Mask for processed data
 
         """
-        df_steps, df_suggestions = self._load_data()
+        df_steps, df_suggestions = self._load_data(self.save_dir)
         data, _, mask = self._proc_dist_data(df_steps, df_suggestions)
-        if agg == "mean":
-            data = np.nanmean(data, axis=2)
-        elif agg == "sum":
-            data = np.nansum(data, axis=2)
-        elif agg == "median":
-            data = np.nanmedian(data, axis=2)
-        elif agg == "std":
-            data = np.nanstd(data, axis=2)
-        elif agg == "variance":
-            data = np.nanvar(data, axis=2)
-        else:
+        if agg not in self.supported_aggs:
             raise ValueError(
                 "agg must be one of 'mean', 'sum', 'median', 'std', or 'variance'"
             )
+        reducer = {
+            "mean": np.nanmean,
+            "sum": np.nansum,
+            "median": np.nanmedian,
+            "std": np.nanstd,
+            "variance": np.nanvar,
+        }[agg]
+        with warnings.catch_warnings():
+            # A decision point with no step samples aggregates to nan by design.
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            data = reducer(data, axis=2)
 
         data = np.squeeze(data)
         self.data = data
@@ -130,7 +133,7 @@ class HeartStepsDataLoader(NNDataLoader):
             mask: Mask for processed data
 
         """
-        df_steps, df_suggestions = self._load_data()
+        df_steps, df_suggestions = self._load_data(self.save_dir)
 
         _, data2d, mask = self._proc_dist_data(df_steps, df_suggestions)
         self.data = data2d
@@ -161,20 +164,32 @@ class HeartStepsDataLoader(NNDataLoader):
     ## HELPER FUNCTIONS
     @classmethod
     @memory.cache
-    def _load_data(cls) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Load the data from the remote source through urls
+    def _load_data(cls, save_dir: str = "./") -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Load the raw CSVs, downloading them into ``save_dir`` if absent.
+
+        Args:
+            save_dir: Directory the raw files are stored in.
 
         Returns:
             df_steps: pd.DataFrame
             df_suggestions: pd.DataFrame
 
         """
-        logger.info("Retrieving data from url...")
-        jp_path = cls.urls["jbsteps.csv"]
-        sug_path = cls.urls["suggestions.csv"]
-
-        df_steps = pd.read_csv(jp_path, low_memory=False)
-        df_suggestions = pd.read_csv(sug_path, low_memory=False)
+        os.makedirs(save_dir, exist_ok=True)
+        frames = []
+        for name, url in cls.urls.items():
+            path = os.path.join(save_dir, name)
+            if not os.path.exists(path):
+                logger.info(f"Downloading {name}...")
+                response = requests.get(url)
+                if response.status_code != 200:
+                    raise RuntimeError(
+                        f"Failed to download {name}: {response.status_code}"
+                    )
+                with open(path, "wb") as f:
+                    f.write(response.content)
+            frames.append(pd.read_csv(path, low_memory=False))
+        df_steps, df_suggestions = frames
         return df_steps, df_suggestions
 
     @staticmethod
@@ -296,7 +311,7 @@ class HeartStepsDataLoader(NNDataLoader):
     def _group_steps(df: pd.DataFrame, freq: str) -> pd.DataFrame:
         return df.groupby(
             [
-                # TODO: (Caleb) resolve this Grouper pyright error - says no parameter named 'label' but pd.Grouper param list has 'label'.
+                # NOTE: pyright rejects this Grouper call, saying no parameter named 'label' but pd.Grouper param list has 'label'.
                 # Main issue is that TimeGrouper (which has the param label) was deprecated but is still used under the hood
                 # so the param label is not explicitly exposed in the Grouper init definition but is still accepted/used.
                 pd.Grouper(freq=freq, level="steps.utime", label="right"),  # pyright: ignore
@@ -342,7 +357,7 @@ class HeartStepsDataLoader(NNDataLoader):
         df_sugg_sel["sugg.decision.utime"] = pd.to_datetime(
             df_sugg_sel["sugg.decision.utime"]
         )
-        # TODO: (Caleb) Resolve pyright error with dropna function
+        # NOTE: pyright rejects this dropna call; suppressed below.
         df_sugg_sel = df_sugg_sel.dropna(  # pyright: ignore
             subset=["sugg.decision.utime", "sugg.select.utime", "user.index"]
         )
@@ -378,7 +393,7 @@ class HeartStepsDataLoader(NNDataLoader):
                 left_on="steps.utime",
                 right_on="sugg.decision.utime",
                 by="user.index",
-                # TODO: (Caleb) Resolve pyright error with pd.Timedelta. This is due to another incompatibility in the pandas type specification.
+                # NOTE: pyright rejects pd.Timedelta here, another pandas type-stub gap.
                 # tolerance does not accept NaT, but Timedelta could return NaT. Pandas documentation uses pd.Timedelta in this way exactly, so unsure of solution.
                 tolerance=pd.Timedelta(self.freq),  # pyright: ignore
                 allow_exact_matches=False,

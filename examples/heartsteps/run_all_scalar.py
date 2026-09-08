@@ -22,7 +22,7 @@ from argparse import ArgumentParser
 from typing import Tuple
 from joblib import Memory, Parallel, delayed
 
-from baselines import usvt
+from nsquared.baselines import usvt
 from nsquared.data_types import Scalar
 from nsquared.estimation_methods import DREstimator, TSEstimator
 from nsquared import NearestNeighborImputer

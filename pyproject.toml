@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nsquared"
 requires-python = ">=3.10"
 description = "A comprehensive nearest neighbors library for matrix completion with scalar and distributional entries"
-version = "1.1.0"
+version = "1.2.0"
 authors = [
     {name="Aashish Khubchandani", email="akk223@cornell.edu"},
     {name="Albert Gong", email="agong@cs.cornell.edu"},
@@ -35,24 +35,45 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
+# Kept deliberately small: what the imputers and their cross-validation need,
+# and nothing else. Everything for the bundled datasets, baselines, plotting,
+# and example scripts lives in an extra below.
 dependencies = [
     "numpy",
-    "pandas",
-    "matplotlib",
-    "hyperopt",
-    "joblib",
-    "requests",
-    "seaborn",
-    "SyntheticControlMethods",
-    "fancyimpute",
-    "datasets",
-    "tabulate",
-    "tqdm",
-    "wrds",
+    "hyperopt",  # threshold search in nsquared.fit_methods
+    "tqdm",      # progress reporting in nsquared.estimation_methods
 ]
 
 [project.optional-dependencies]
+# The N^2-Bench data loaders (nsquared.datasets). Needed for
+# NNData.create("heartsteps"), ("movielens"), ("prompteval"), ("prop99").
+# The synthetic loader needs no extra.
+data = [
+    "pandas",
+    "joblib",
+    "requests",
+    "datasets",
+]
+# NOTE: there is deliberately no "baselines" extra. Both classical baselines in
+# nsquared.baselines (USVT and SoftImpute) are implemented directly on NumPy, so
+# they need nothing beyond the core dependencies.
+# Plot styling helpers (nsquared.utils.plotting_utils).
+plots = [
+    "matplotlib",
+]
+# Everything the scripts under examples/ and bench/ import.
+examples = [
+    "nsquared[data,plots]",
+    "seaborn",
+    "tabulate",
+    "SyntheticControlMethods",
+    "wrds",
+]
+all = [
+    "nsquared[examples]",
+]
 dev = [
+    "nsquared[all]",
     "pre-commit",
     "ruff",
     "pytest",
@@ -66,6 +87,9 @@ Issues = "https://github.com/aashish-khub/NearestNeighbors/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# Guard against shipping a top-level package alongside nsquared: a generic name
+# like "baselines" would squat the importing user's namespace.
+include = ["nsquared*"]
 
 [tool.setuptools.package-dir]
 "" = "src"
@@ -75,7 +99,6 @@ where = ["src"]
 exclude = [
     ".git",
     "__pycache__",
-    "unconsolidated_code/*",
     "docs/*",
 ]
 
@@ -155,7 +178,12 @@ lint.fixable = [
 lint.unfixable = []
 
 [tool.pyright]
+# The pre-commit pyright hook runs inside pre-commit's own isolated environment,
+# so the interpreter on PATH is pre-commit's, not this project's. pyright must
+# therefore be pointed at the project venv explicitly, or every third-party
+# import resolves as missing. Anything running pyright needs a populated .venv
+# here -- see the lint job in .github/workflows/ci.yml.
 venv = ".venv"
 venvPath = "."
-include = ["src"]
+include = ["src", "tests"]
 pythonVersion = "3.10"

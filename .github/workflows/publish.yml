@@ -27,10 +27,8 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install -U pip
-          pip install .
-          pip install pytest
+          pip install -e ".[dev]"
           pip install build
-          pip install pre-commit
 
       - name: Run tests
         run: |
@@ -54,4 +52,6 @@ jobs:
         if: github.event.release.prerelease == false
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          # A version already uploaded by hand must not fail the release.
+          skip-existing: true
           verbose: true

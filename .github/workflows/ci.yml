@@ -3,7 +3,7 @@ name: CI Workflow and Project Management
 on:
   push:
     branches:
-      - "*"
+      - "**"
   pull_request:
     branches:
       - main
@@ -16,26 +16,63 @@ permissions:
 jobs:
   test:
     if: github.event_name != 'issues'
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.10', '3.11', '3.12']
+        include:
+          # Confirm the package works off Linux too, on one Python version.
+          - os: macos-latest
+            python-version: '3.12'
+          - os: windows-latest
+            python-version: '3.12'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: pyproject.toml
+    - name: Install dependencies
+      run: |
+        python -m pip install -U pip
+        pip install -e ".[dev]"
+    - name: Run tests with pytest
+      # No .venv here on purpose: these jobs exercise the library across OSes
+      # and Python versions. Linting is the lint job's responsibility, and
+      # tests/test_precommit.py skips itself when there is no .venv to point
+      # pyright at.
+      run: pytest
+
+  lint:
+    if: github.event_name != 'issues'
+    name: Lint and type check
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: pip
+        cache-dependency-path: pyproject.toml
     - name: Install dependencies
+      # Installed into .venv rather than the runner's Python because
+      # [tool.pyright] in pyproject.toml pins venv = ".venv": the pre-commit
+      # pyright hook runs in its own isolated environment, so it cannot see the
+      # ambient interpreter and needs this path to resolve imports.
       run: |
         python -m venv .venv
-        source .venv/bin/activate
-        pip install -U pip
-        pip install .
-        pip install pytest
-        pip install pre-commit
-    - name: Run tests with pytest
-      run: |
-        source .venv/bin/activate
-        pytest
+        .venv/bin/python -m pip install -U pip
+        .venv/bin/pip install -e ".[dev]"
+    - name: Run pre-commit
+      run: .venv/bin/pre-commit run --all-files --show-diff-on-failure
 
   add-to-project:
     if: github.event_name == 'issues' && github.event.action == 'opened'  # Only run when an issue is opened

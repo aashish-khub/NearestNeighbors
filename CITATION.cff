@@ -1,0 +1,88 @@
+cff-version: 1.2.0
+title: "N^2: A unified Python package and test bench for nearest neighbor matrix completion"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - given-names: Caleb
+    family-names: Chin
+    affiliation: Cornell University
+  - given-names: Aashish
+    family-names: Khubchandani
+    orcid: "https://orcid.org/0009-0003-2638-9472"
+    affiliation: Cornell University
+  - given-names: Harshvardhan
+    family-names: Maskara
+    affiliation: Cornell University
+  - given-names: Kyuseong
+    family-names: Choi
+    orcid: "https://orcid.org/0000-0002-3380-2849"
+    affiliation: Cornell University
+  - given-names: Jacob
+    family-names: Feitelberg
+    orcid: "https://orcid.org/0000-0002-4551-0245"
+    affiliation: Columbia University
+  - given-names: Albert
+    family-names: Gong
+    orcid: "https://orcid.org/0009-0005-1687-0240"
+    affiliation: Cornell University
+  - given-names: Manit
+    family-names: Paul
+    orcid: "https://orcid.org/0000-0002-1735-3289"
+    affiliation: University of Pennsylvania
+  - given-names: Tathagata
+    family-names: Sadhukhan
+    orcid: "https://orcid.org/0009-0001-1549-1469"
+    affiliation: Cornell University
+  - given-names: Anish
+    family-names: Agarwal
+    affiliation: Columbia University
+  - given-names: Raaz
+    family-names: Dwivedi
+    orcid: "https://orcid.org/0000-0002-9993-8554"
+    affiliation: Cornell University
+repository-code: "https://github.com/aashish-khub/NearestNeighbors"
+url: "https://github.com/aashish-khub/NearestNeighbors"
+abstract: >-
+  N^2 is a Python package that unifies nearest neighbor methods for scalar and
+  distributional matrix completion behind a single interface, together with
+  N^2-Bench, a benchmark suite of real-world matrix completion tasks spanning
+  mobile health, recommender systems, causal panel data, and large language
+  model evaluation.
+keywords:
+  - matrix completion
+  - nearest neighbors
+  - imputation
+  - causal inference
+  - panel data
+  - machine learning
+license: MIT
+version: 1.2.0
+date-released: "2026-09-07"
+preferred-citation:
+  type: article
+  title: "N^2: A unified Python package and test bench for nearest neighbor-based matrix completion"
+  authors:
+    - given-names: Caleb
+      family-names: Chin
+    - given-names: Aashish
+      family-names: Khubchandani
+    - given-names: Harshvardhan
+      family-names: Maskara
+    - given-names: Kyuseong
+      family-names: Choi
+    - given-names: Jacob
+      family-names: Feitelberg
+    - given-names: Albert
+      family-names: Gong
+    - given-names: Manit
+      family-names: Paul
+    - given-names: Tathagata
+      family-names: Sadhukhan
+    - given-names: Anish
+      family-names: Agarwal
+    - given-names: Raaz
+      family-names: Dwivedi
+  journal: "arXiv preprint arXiv:2506.04166"
+  year: 2025
+  doi: 10.48550/arXiv.2506.04166
+  url: "https://arxiv.org/abs/2506.04166"

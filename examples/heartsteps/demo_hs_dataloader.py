@@ -5,9 +5,9 @@ It includes step data on 37 participants over a ~52 day period. The default data
 The data can be processed into the distributional setting (4d tensor) or the scalar setting (2d matrix). The dimensions of the tensor are N x T x n x 1, where N is the number of participants,
 T is the number of time points (5 notification per day for 52 days = 270), and n is the number of step samples (by default 12)/
 
-To run this script, ensure you're in the root directory of the package and run:
+Run from this directory:
 ```
-    python examples/demo_hs_dataloader.py
+    python demo_hs_dataloader.py
 ```
 """
 

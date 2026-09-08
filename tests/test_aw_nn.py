@@ -217,3 +217,23 @@ def test_invalid_inputs() -> None:
     # Column index out of bounds
     with pytest.raises(Exception):  # Could be IndexError
         imputer.impute(1, COLS + 5, data, mask)
+
+
+def test_nan_at_masked_positions_is_ignored() -> None:
+    """Values stored at masked-out positions must not affect the estimate.
+
+    Regression test: the vectorised distance computation multiplied the data
+    by the mask, so a nan at a masked position turned every distance into nan
+    and every imputation into nan.
+    """
+    rng = np.random.default_rng(0)
+    data = rng.standard_normal((ROWS, COLS))
+    mask = (rng.random((ROWS, COLS)) < 0.7).astype(int)
+    with_nan = np.where(mask == 1, data, np.nan)
+    with_zero = np.where(mask == 1, data, 0.0)
+
+    r, c = map(int, np.argwhere(mask == 0)[0])
+    a = aw_nn(noise_variance=1.0).impute(r, c, with_nan, mask)
+    b = aw_nn(noise_variance=1.0).impute(r, c, with_zero, mask)
+    assert np.isfinite(a)
+    assert np.isclose(a, b)

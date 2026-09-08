@@ -1,7 +1,7 @@
-"""Demo: Loading and inspecting the Tax Burden on Tobacco dataset using the nearest_neighbors package.
+"""Demo: Loading and inspecting the Tax Burden on Tobacco dataset with nsquared.
 
-Run this script from the root of the repository with:
-    python examples/demo_prop99_data_loading.py
+Run from this directory:
+    python demo_prop99_dataloader.py
 """
 
 from nsquared.datasets.dataloader_factory import NNData
@@ -27,11 +27,11 @@ print(mask[:5, :5])
 # Load with custom parameters
 print("\n====== Example 2: Custom Parameters ======")
 loader_custom = NNData.create(
-    "prop99", seed=42, start_year=1980, end_year=2000, sample_states=10
+    "prop99", seed=42, start_year=1980, end_year=2000, state="NY"
 )
 data_custom, mask_custom = loader_custom.process_data_scalar()
 
-print("Custom-Sized Consumption Matrix:")
+print("Custom Consumption Matrix (New York treated, 1980-2000):")
 print(data_custom)
 print("\nCustom Mask Matrix:")
 print(mask_custom)
